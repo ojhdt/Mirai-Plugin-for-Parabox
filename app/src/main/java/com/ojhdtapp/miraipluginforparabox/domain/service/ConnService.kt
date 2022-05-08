@@ -21,6 +21,7 @@ class ConnService : LifecycleService() {
     }
 
     override fun onBind(intent: Intent): IBinder {
+        Log.d("parabox", "service bound")
         super.onBind(intent)
         sMessenger = Messenger(ConnHandler())
         return sMessenger.binder
@@ -31,6 +32,7 @@ class ConnService : LifecycleService() {
             super.handleMessage(msg)
             cMessenger = msg.replyTo
             val str = (msg.obj as Bundle).getString("str") ?: "error"
+            Log.d("parabox", "message from cliect: $str")
             try {
                 cMessenger.send(Message().apply {
                     obj = Bundle().apply {
