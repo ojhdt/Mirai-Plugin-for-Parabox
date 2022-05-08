@@ -7,8 +7,23 @@ import android.util.Log
 import androidx.lifecycle.LifecycleService
 
 class ConnService : LifecycleService() {
-    private lateinit var sMessenger: Messenger
-    private lateinit var cMessenger: Messenger
+    private val sMessenger: Messenger = Messenger(ConnHandler())
+    private var cMessenger: Messenger? = null
+
+    fun send(str: String) {
+        if (cMessenger == null) {
+            throw RemoteException("not connected")
+        }
+        try {
+            cMessenger!!.send(Message().apply {
+                obj = Bundle().apply {
+                    putString("str", str)
+                }
+            })
+        } catch (e: RemoteException) {
+            e.printStackTrace()
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -16,14 +31,13 @@ class ConnService : LifecycleService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("parabox", "service started")
+        val obj = intent?.extras as Bundle
         return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onBind(intent: Intent): IBinder {
         Log.d("parabox", "service bound")
         super.onBind(intent)
-        sMessenger = Messenger(ConnHandler())
         return sMessenger.binder
     }
 
@@ -33,15 +47,7 @@ class ConnService : LifecycleService() {
             cMessenger = msg.replyTo
             val str = (msg.obj as Bundle).getString("str") ?: "error"
             Log.d("parabox", "message from cliect: $str")
-            try {
-                cMessenger.send(Message().apply {
-                    obj = Bundle().apply {
-                        putString("str", "$str--connected!")
-                    }
-                })
-            } catch (e: RemoteException) {
-                e.printStackTrace()
-            }
+
         }
     }
 }
