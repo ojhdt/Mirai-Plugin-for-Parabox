@@ -1,27 +1,85 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import android.widget.EditText
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 
 @Composable
 fun StatusPage(
     modifier: Modifier = Modifier,
-    onBtnCLicked: (accountNum: Long, passwd: String) -> Unit
+    onLoginBtnCLicked: (accountNum: Long, passwd: String) -> Unit,
+    onKillBtnCLicked: () -> Unit
 ) {
     val viewModel: StatusPageViewModel = hiltViewModel()
+    LaunchedEffect(true) {
+        viewModel.uiEventFlow.collect { event ->
+            when (event) {
+                else -> {
+                }
+            }
+        }
+    }
 
-    Box(
+    Column(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Button(onClick = { onBtnCLicked("2371065280".toLong(), "b20011007") }) {
+        val loginResource by viewModel.loginStateFlow.collectAsState()
+
+        Button(onClick = { onLoginBtnCLicked("3560863379".toLong(), "a20011007") }) {
             Text(text = "Login")
+        }
+        Button(onClick = { onKillBtnCLicked() }) {
+            Text(text = "Kill")
+        }
+        when (loginResource) {
+            is LoginResource.None -> {
+            }
+            is LoginResource.PicCaptcha -> {
+                Row() {
+                    TextField(
+                        modifier = modifier.weight(1f),
+                        value = viewModel.loginTextState.value,
+                        onValueChange = viewModel::setLoginTextState
+                    )
+                    Image(
+                        bitmap = (loginResource as LoginResource.PicCaptcha).bm.asImageBitmap(),
+                        contentDescription = "PicCaptcha"
+                    )
+                    Button(onClick = {
+                        viewModel.onEvent(StatusPageEvent.OnPicCaptchaConfirm(viewModel.loginTextState.value))
+                    }) {
+                        Text(text = "Confirm")
+                    }
+                }
+            }
+            is LoginResource.UnsafeDeviceLoginVerify -> {
+                Row() {
+                    Text(
+                        modifier = modifier.weight(1f),
+                        text = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url
+                    )
+                    Button(onClick = {
+                        viewModel.onEvent(StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm)
+                    }) {
+                        Text(text = "Confirm")
+                    }
+                }
+            }
         }
     }
 }

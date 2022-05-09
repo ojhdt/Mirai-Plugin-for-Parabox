@@ -21,12 +21,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             MiraiPluginForParaboxTheme {
                 // A surface container using the 'background' color from the theme
-                StatusPage(onBtnCLicked = {accountNum, passwd ->
+                StatusPage(onLoginBtnCLicked = {accountNum, passwd ->
                     startService(Intent(this, ConnService::class.java).apply {
-                        putExtra("accountNum", accountNum)
-                        putExtra("passwd", passwd)
+                        putExtra("data", Bundle().apply {
+                            putLong("accountNum", accountNum)
+                            putString("passwd", passwd)
+                        })
                     })
-                })
+                },
+                onKillBtnCLicked = {ConnService.stop()})
             }
         }
     }
