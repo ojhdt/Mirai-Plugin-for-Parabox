@@ -18,7 +18,6 @@ class StatusPageViewModel @Inject constructor(
     // emit to this when wanting toasting
     private val _uiEventFlow = MutableSharedFlow<StatusPageUiEvent>()
     val uiEventFlow = _uiEventFlow.asSharedFlow()
-    private val loginSolver = ConnService.instance.mLoginSolver
 
     fun onEvent(event: StatusPageEvent) {
         when (event) {
@@ -27,7 +26,7 @@ class StatusPageViewModel @Inject constructor(
             }
             is StatusPageEvent.OnPicCaptchaConfirm -> {
                 event.captcha?.let{
-                    loginSolver.submitVerificationResult(it)
+                    ConnService.instance.mLoginSolver.submitVerificationResult(it)
                 }
             }
             is StatusPageEvent.OnSliderCaptchaConfirm -> {
@@ -42,7 +41,7 @@ class StatusPageViewModel @Inject constructor(
         }
     }
 
-    private var _loginResourceStateFlow = loginSolver.getLoginResourceStateFlow()
+    private var _loginResourceStateFlow = ConnService.loginResourceStateFlow
     val loginResourceStateFlow = _loginResourceStateFlow.asStateFlow()
 
     private val _loginTextState = mutableStateOf<String>("")

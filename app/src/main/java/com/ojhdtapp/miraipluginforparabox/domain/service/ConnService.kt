@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import net.mamoe.mirai.Bot
@@ -24,6 +25,8 @@ class ConnService : LifecycleService() {
         fun stop() {
             instance.stopSelf()
         }
+
+        val loginResourceStateFlow = MutableStateFlow<LoginResource>(LoginResource.None)
 
     }
 
@@ -96,4 +99,48 @@ class ConnService : LifecycleService() {
 
         }
     }
+
+    inner class AndroidLoginSolver() : LoginSolver() {
+        lateinit var verificationResult: CompletableDeferred<String>
+        //    lateinit var captchaData: ByteArray
+//    lateinit var url: String
+
+        fun submitVerificationResult(result: String) {
+            verificationResult.complete(result)
+        }
+
+        override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String {
+            verificationResult = CompletableDeferred()
+//        captchaData = data
+            val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
+            loginResourceStateFlow.emit(LoginResource.PicCaptcha(bm))
+            val res = verificationResult.await()
+            loginResourceStateFlow.emit(LoginResource.None)
+            return res
+        }
+
+        override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
+            verificationResult = CompletableDeferred()
+//        this.url = url
+            loginResourceStateFlow.emit(LoginResource.SliderCaptcha(url))
+            val res = verificationResult.await()
+            loginResourceStateFlow.emit(LoginResource.None)
+            return res
+        }
+
+        override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
+            verificationResult = CompletableDeferred()
+//        this.url = url
+            loginResourceStateFlow.emit(LoginResource.UnsafeDeviceLoginVerify(url))
+            val res = verificationResult.await()
+            loginResourceStateFlow.emit(LoginResource.None)
+            return res
+        }
+
+        override val isSliderCaptchaSupported: Boolean
+            get() = true
+
+    }
+
+
 }
