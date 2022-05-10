@@ -30,6 +30,9 @@ class StatusPageViewModel @Inject constructor(
                     loginSolver.submitVerificationResult(it)
                 }
             }
+            is StatusPageEvent.OnSliderCaptchaConfirm -> {
+
+            }
             is StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm -> {
 
             }

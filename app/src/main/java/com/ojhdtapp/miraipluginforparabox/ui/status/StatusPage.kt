@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
@@ -21,6 +22,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 fun StatusPage(
     modifier: Modifier = Modifier,
     onLoginBtnCLicked: (accountNum: Long, passwd: String) -> Unit,
+    onSolvingLoginClick : (url :String) -> Unit,
     onKillBtnCLicked: () -> Unit
 ) {
     val viewModel: StatusPageViewModel = hiltViewModel()
@@ -67,17 +69,22 @@ fun StatusPage(
                     }
                 }
             }
-            is LoginResource.UnsafeDeviceLoginVerify -> {
-                Row() {
-                    Text(
-                        modifier = modifier.weight(1f),
-                        text = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url
-                    )
-                    Button(onClick = {
-                        viewModel.onEvent(StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm)
-                    }) {
-                        Text(text = "Confirm")
-                    }
+            is LoginResource.UnsafeDeviceLoginVerify-> {
+                Button(
+                    enabled = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url.isNotEmpty()
+                    ,onClick = {
+                    onSolvingLoginClick((loginResource as LoginResource.UnsafeDeviceLoginVerify).url)
+                }) {
+                    Text(text = "Solve")
+                }
+            }
+            is LoginResource.SliderCaptcha-> {
+                Button(
+                    enabled = (loginResource as LoginResource.SliderCaptcha).url.isNotEmpty()
+                    ,onClick = {
+                    onSolvingLoginClick((loginResource as LoginResource.SliderCaptcha).url)
+                }) {
+                    Text(text = "Solve")
                 }
             }
         }

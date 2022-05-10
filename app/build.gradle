@@ -61,6 +61,9 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
 
+    // Chrome Custom Tab
+    implementation "androidx.browser:browser:1.4.0"
+
     // Mirai
     implementation 'net.mamoe:mirai-core:2.9.1'
 
