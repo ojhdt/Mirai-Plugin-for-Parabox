@@ -15,6 +15,7 @@ import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.LoginSolver
+import kotlin.coroutines.suspendCoroutine
 
 class ConnService : LifecycleService() {
     companion object {
@@ -24,41 +25,17 @@ class ConnService : LifecycleService() {
             instance.stopSelf()
         }
 
-        val loginResourceStateFLow = MutableStateFlow<LoginResource>(LoginResource.None)
-
     }
+
+    val mLoginSolver = AndroidLoginSolver()
 
     private val sMessenger: Messenger = Messenger(ConnHandler())
     private var cMessenger: Messenger? = null
 
-
-    // 用户登陆验证类
-    inner class MyLoginSolver : LoginSolver() {
-        override val isSliderCaptchaSupported: Boolean
-            get() = false
-
-        override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String? {
-            val bm = BitmapFactory.decodeByteArray(data, 0, data.size) // 验证码的图像
-            // 希望用户填写验证码
-            return xxxxxxx //返回用户填写的验证码
-        }
-
-
-
-        loginResourceStateFLow.emit(LoginResource.PicCaptcha(bm))
-        override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
-            return null
-        }
-
-        override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
-            loginResourceStateFLow.emit(LoginResource.UnsafeDeviceLoginVerify(url))
-        }
-
-    }
-
     private fun miraiMain(accountNum: Long, passwd: String) {
         val bot = BotFactory.newBot(accountNum, passwd) {
             parentCoroutineContext = lifecycleScope.coroutineContext
+            loginSolver = mLoginSolver
         }
         lifecycleScope.launch {
             try {
@@ -66,6 +43,7 @@ class ConnService : LifecycleService() {
             } catch (e: LoginFailedException) {
                 e.printStackTrace()
             }
+
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<GroupMessageEvent> { event ->
             Log.d("parabox", "${event.senderName}:${event.message}")

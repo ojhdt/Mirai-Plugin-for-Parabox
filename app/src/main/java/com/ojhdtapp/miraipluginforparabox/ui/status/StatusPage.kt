@@ -38,7 +38,7 @@ fun StatusPage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        val loginResource by viewModel.loginStateFlow.collectAsState()
+        val loginResource by viewModel.loginResourceStateFlow.collectAsState()
 
         Button(onClick = { onLoginBtnCLicked("3560863379".toLong(), "a20011007") }) {
             Text(text = "Login")
@@ -57,7 +57,7 @@ fun StatusPage(
                         onValueChange = viewModel::setLoginTextState
                     )
                     Image(
-                        bitmap = (loginResource as LoginResource.PicCaptcha).bm.asImageBitmap(),
+                        bitmap = (loginResource as LoginResource.PicCaptcha).captchaBitMap.asImageBitmap(),
                         contentDescription = "PicCaptcha"
                     )
                     Button(onClick = {
