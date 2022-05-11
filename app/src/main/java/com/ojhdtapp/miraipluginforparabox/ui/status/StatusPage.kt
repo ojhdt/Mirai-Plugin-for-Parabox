@@ -2,6 +2,7 @@ package com.ojhdtapp.miraipluginforparabox.ui.status
 
 import android.widget.EditText
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
@@ -12,9 +13,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 
@@ -22,7 +25,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 fun StatusPage(
     modifier: Modifier = Modifier,
     onLoginBtnCLicked: (accountNum: Long, passwd: String) -> Unit,
-    onSolvingLoginClick : (url :String) -> Unit,
+    onSolvingLoginClick: (url: String) -> Unit,
     onKillBtnCLicked: () -> Unit
 ) {
     val viewModel: StatusPageViewModel = hiltViewModel()
@@ -63,29 +66,29 @@ fun StatusPage(
                         contentDescription = "PicCaptcha"
                     )
                     Button(onClick = {
-                        viewModel.onEvent(StatusPageEvent.OnPicCaptchaConfirm(viewModel.loginTextState.value))
+
                     }) {
                         Text(text = "Confirm")
                     }
                 }
             }
-            is LoginResource.UnsafeDeviceLoginVerify-> {
-                Button(
-                    enabled = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url.isNotEmpty()
-                    ,onClick = {
-                    onSolvingLoginClick((loginResource as LoginResource.UnsafeDeviceLoginVerify).url)
-                }) {
-                    Text(text = "Solve")
-                }
+            is LoginResource.UnsafeDeviceLoginVerify -> {
+                UnSafeWebView(
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .background(Color.Black),
+                    url = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url
+                )
             }
-            is LoginResource.SliderCaptcha-> {
-                Button(
-                    enabled = (loginResource as LoginResource.SliderCaptcha).url.isNotEmpty()
-                    ,onClick = {
-                    onSolvingLoginClick((loginResource as LoginResource.SliderCaptcha).url)
-                }) {
-                    Text(text = "Solve")
-                }
+            is LoginResource.SliderCaptcha -> {
+                UnSafeWebView(
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .background(Color.Black),
+                    url = (loginResource as LoginResource.SliderCaptcha).url
+                )
             }
         }
     }
