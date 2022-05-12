@@ -33,7 +33,7 @@ class StatusPageViewModel @Inject constructor(
                 ConnService.instance.mLoginSolver.submitVerificationResult(event.ticket)
             }
             is StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm -> {
-                ConnService.instance.mLoginSolver.submitVerificationResult("")
+                ConnService.instance.mLoginSolver.submitVerificationResult("success")
             }
             else -> {
 

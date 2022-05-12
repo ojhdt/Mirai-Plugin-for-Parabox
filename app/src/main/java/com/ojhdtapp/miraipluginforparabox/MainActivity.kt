@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
                         })
                     },
                     onKillBtnCLicked = { ConnService.stop() },
-                    onSolvingLoginClick = ::initUnsafeLoginWebView
+                    onLogBot = {ConnService.instance.log()}
                 )
             }
         }

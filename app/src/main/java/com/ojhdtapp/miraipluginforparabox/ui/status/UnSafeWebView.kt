@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
+import android.util.Log
 import android.webkit.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember

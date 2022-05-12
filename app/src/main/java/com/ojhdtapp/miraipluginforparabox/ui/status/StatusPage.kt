@@ -25,8 +25,8 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 fun StatusPage(
     modifier: Modifier = Modifier,
     onLoginBtnCLicked: (accountNum: Long, passwd: String) -> Unit,
-    onSolvingLoginClick: (url: String) -> Unit,
-    onKillBtnCLicked: () -> Unit
+    onKillBtnCLicked: () -> Unit,
+    onLogBot: () -> Unit,
 ) {
     val viewModel: StatusPageViewModel = hiltViewModel()
     LaunchedEffect(true) {
@@ -45,7 +45,7 @@ fun StatusPage(
     ) {
         val loginResource by viewModel.loginResourceStateFlow.collectAsState()
 
-        Button(onClick = { onLoginBtnCLicked("3560863379".toLong(), "a20011007") }) {
+        Button(onClick = { onLoginBtnCLicked("2371065280".toLong(), "b20011007") }) {
             Text(text = "Login")
         }
         Button(onClick = { onKillBtnCLicked() }) {
@@ -90,6 +90,9 @@ fun StatusPage(
                     url = (loginResource as LoginResource.SliderCaptcha).url
                 )
             }
+        }
+        Button(onClick = { onLogBot() }) {
+            Text(text = "Log")
         }
     }
 }

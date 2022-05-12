@@ -30,26 +30,51 @@ class ConnService : LifecycleService() {
 
     }
 
+    fun log() {
+        Log.d("aaa", bot.isOnline.toString()) // false
+        Log.d("aaa", Bot.instances.toString()) // [Bot(2371065280)]
+    }
+
+    lateinit var bot: Bot
     val mLoginSolver = AndroidLoginSolver()
 
     private val sMessenger: Messenger = Messenger(ConnHandler())
     private var cMessenger: Messenger? = null
 
     private fun miraiMain(accountNum: Long, passwd: String) {
-        val bot = BotFactory.newBot(accountNum, passwd) {
-            parentCoroutineContext = lifecycleScope.coroutineContext
+        bot = BotFactory.newBot(accountNum, passwd) {
+//            parentCoroutineContext = lifecycleScope.coroutineContext
             loginSolver = mLoginSolver
         }
         lifecycleScope.launch {
             try {
-                bot.login()
+                bot.login() //在这被挂起了
+                registerMessageReceiver() //未执行
+                onLoginSucceed() // 未执行
             } catch (e: LoginFailedException) {
-                e.printStackTrace()
+                Log.d("aaa", "error occurred") // 未执行
+                onLoginFailed()
             }
-
         }
-        GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<GroupMessageEvent> { event ->
-            Log.d("parabox", "${event.senderName}:${event.message}")
+//        GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<GroupMessageEvent> { event ->
+//            Log.d("parabox", "message comming!")
+//            Log.d("parabox", "${event.senderName}:${event.message}")
+//        }
+    }
+
+    private fun onLoginSucceed() {
+
+    }
+
+    private fun onLoginFailed() {
+
+    }
+
+    private fun registerMessageReceiver() {
+        Log.d("aaa", "before register")
+        bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
+            Log.d("aaa", "${event.senderName}:${event.message}")
+            event.subject.sendMessage("Hello from mirai!")
         }
     }
 
