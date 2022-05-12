@@ -16,6 +16,7 @@ import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.LoginSolver
+import java.io.File
 import kotlin.coroutines.suspendCoroutine
 
 class ConnService : LifecycleService() {
@@ -42,18 +43,16 @@ class ConnService : LifecycleService() {
     private var cMessenger: Messenger? = null
 
     private fun miraiMain(accountNum: Long, passwd: String) {
+        bot = BotFactory.newBot(accountNum, passwd) {
+            loginSolver = mLoginSolver
+            cacheDir = getExternalFilesDir("cache")!!.absoluteFile
+        }
         lifecycleScope.launch {
-            bot = BotFactory.newBot(accountNum, passwd) {
-//            parentCoroutineContext = lifecycleScope.coroutineContext
-                inheritCoroutineContext()
-                loginSolver = mLoginSolver
-            }
             try {
-                bot.login() //在这被挂起了
-                registerMessageReceiver() //未执行
-                onLoginSucceed() // 未执行
+                bot.login()
+                onLoginSucceed()
             } catch (e: LoginFailedException) {
-                Log.d("aaa", "error occurred") // 未执行
+                Log.d("aaa", "error occurred")
                 onLoginFailed()
             }
         }
@@ -61,6 +60,9 @@ class ConnService : LifecycleService() {
 //            Log.d("parabox", "message comming!")
 //            Log.d("parabox", "${event.senderName}:${event.message}")
 //        }
+        lifecycleScope.launch {
+            registerMessageReceiver()
+        }
     }
 
     private fun onLoginSucceed() {
