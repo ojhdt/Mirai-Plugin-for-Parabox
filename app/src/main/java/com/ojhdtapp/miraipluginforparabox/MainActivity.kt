@@ -32,13 +32,10 @@ class MainActivity : ComponentActivity() {
                         })
                     },
                     onKillBtnCLicked = { ConnService.stop() },
-                    onLogBot = {ConnService.instance.log()}
+                    onLogBot = {}
                 )
             }
         }
     }
 
-    fun initUnsafeLoginWebView(url: String) {
-        BrowserUtil.launchURL(this, url.replace("verify", "qrcode"))
-    }
 }

@@ -31,42 +31,30 @@ class ConnService : LifecycleService() {
 
     }
 
-    fun log() {
-        Log.d("aaa", bot.isOnline.toString()) // false
-        Log.d("aaa", Bot.instances.toString()) // [Bot(2371065280)]
-    }
-
     lateinit var bot: Bot
     val mLoginSolver = AndroidLoginSolver()
-
     private val sMessenger: Messenger = Messenger(ConnHandler())
     private var cMessenger: Messenger? = null
 
     private fun miraiMain(accountNum: Long, passwd: String) {
-        bot = BotFactory.newBot(accountNum, passwd) {
-            loginSolver = mLoginSolver
-            cacheDir = getExternalFilesDir("cache")!!.absoluteFile
-        }
+
         lifecycleScope.launch {
+            bot = BotFactory.newBot(accountNum, passwd) {
+                loginSolver = mLoginSolver
+                cacheDir = getExternalFilesDir("cache")!!.absoluteFile
+                inheritCoroutineContext()
+            }
             try {
                 bot.login()
                 onLoginSucceed()
             } catch (e: LoginFailedException) {
-                Log.d("aaa", "error occurred")
                 onLoginFailed()
             }
-        }
-//        GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<GroupMessageEvent> { event ->
-//            Log.d("parabox", "message comming!")
-//            Log.d("parabox", "${event.senderName}:${event.message}")
-//        }
-        lifecycleScope.launch {
-            registerMessageReceiver()
         }
     }
 
     private fun onLoginSucceed() {
-
+        registerMessageReceiver()
     }
 
     private fun onLoginFailed() {
@@ -74,7 +62,6 @@ class ConnService : LifecycleService() {
     }
 
     private fun registerMessageReceiver() {
-        Log.d("aaa", "before register")
         bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
             Log.d("aaa", "${event.senderName}:${event.message}")
             event.subject.sendMessage("Hello from mirai!")
@@ -84,7 +71,6 @@ class ConnService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        Log.d("parabox", "service created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -98,7 +84,6 @@ class ConnService : LifecycleService() {
     }
 
     override fun onBind(intent: Intent): IBinder {
-        Log.d("parabox", "service bound")
         super.onBind(intent)
         return sMessenger.binder
     }
