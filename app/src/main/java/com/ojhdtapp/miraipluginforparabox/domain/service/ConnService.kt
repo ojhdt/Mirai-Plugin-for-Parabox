@@ -42,11 +42,12 @@ class ConnService : LifecycleService() {
     private var cMessenger: Messenger? = null
 
     private fun miraiMain(accountNum: Long, passwd: String) {
-        bot = BotFactory.newBot(accountNum, passwd) {
-//            parentCoroutineContext = lifecycleScope.coroutineContext
-            loginSolver = mLoginSolver
-        }
         lifecycleScope.launch {
+            bot = BotFactory.newBot(accountNum, passwd) {
+//            parentCoroutineContext = lifecycleScope.coroutineContext
+                inheritCoroutineContext()
+                loginSolver = mLoginSolver
+            }
             try {
                 bot.login() //在这被挂起了
                 registerMessageReceiver() //未执行
@@ -140,6 +141,7 @@ class ConnService : LifecycleService() {
             val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
             loginResourceStateFlow.emit(LoginResource.PicCaptcha(bm))
             val res = verificationResult.await()
+            Log.d("aaa", res)
             loginResourceStateFlow.emit(LoginResource.None)
             return res
         }
@@ -149,6 +151,7 @@ class ConnService : LifecycleService() {
 //        this.url = url
             loginResourceStateFlow.emit(LoginResource.SliderCaptcha(url))
             val res = verificationResult.await()
+            Log.d("aaa", res)
             loginResourceStateFlow.emit(LoginResource.None)
             return res
         }
@@ -158,6 +161,7 @@ class ConnService : LifecycleService() {
 //        this.url = url
             loginResourceStateFlow.emit(LoginResource.UnsafeDeviceLoginVerify(url))
             val res = verificationResult.await()
+            Log.d("aaa", res)
             loginResourceStateFlow.emit(LoginResource.None)
             return res
         }
