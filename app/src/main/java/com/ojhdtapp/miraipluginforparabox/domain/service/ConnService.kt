@@ -6,35 +6,35 @@ import android.os.*
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.miraipluginforparabox.domain.service.ConnKey
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
+import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.event.GlobalEventChannel
+import net.mamoe.mirai.event.Listener
+import net.mamoe.mirai.event.events.FriendMessageEvent
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.LoginSolver
 import java.io.File
 import kotlin.coroutines.suspendCoroutine
+import kotlin.system.exitProcess
 
-class ConnService : LifecycleService() {
-    companion object {
-        lateinit var instance: ConnService
+class ConnService : ConnCommandInterface, LifecycleService() {
 
-        fun stop() {
-            instance.stopSelf()
-        }
-
-        val loginResourceStateFlow = MutableStateFlow<LoginResource>(LoginResource.None)
-
-    }
-
-    lateinit var bot: Bot
-    val mLoginSolver = AndroidLoginSolver()
-    private val sMessenger: Messenger = Messenger(ConnHandler())
+    private lateinit var bot: Bot
+    private var listener: Listener<FriendMessageEvent>? = null
+    private lateinit var mLoginSolver: AndroidLoginSolver
+    private lateinit var sMessenger: Messenger
     private var cMessenger: Messenger? = null
+    private var interfaceMessenger: Messenger? = null
+
+    private var isRunning = false
 
     private fun miraiMain(accountNum: Long, passwd: String) {
 
@@ -46,31 +46,31 @@ class ConnService : LifecycleService() {
             }
             try {
                 bot.login()
-                onLoginSucceed()
+                registerMessageReceiver()
             } catch (e: LoginFailedException) {
-                onLoginFailed()
             }
         }
     }
 
-    private fun onLoginSucceed() {
-        registerMessageReceiver()
-    }
-
-    private fun onLoginFailed() {
-
-    }
-
     private fun registerMessageReceiver() {
-        bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
-            Log.d("aaa", "${event.senderName}:${event.message}")
-            event.subject.sendMessage("Hello from mirai!")
+        listener =
+            bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
+                Log.d("aaa", "${event.senderName}:${event.message}")
+                event.subject.sendMessage("Hello from mirai!")
+            }
+    }
+
+    private fun unRegisterMessageReceiver() {
+        if (listener?.isActive == true) {
+            listener!!.complete()
+            listener = null
         }
     }
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
+        mLoginSolver = AndroidLoginSolver()
+        sMessenger = Messenger(ConnHandler())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -93,6 +93,7 @@ class ConnService : LifecycleService() {
             throw RemoteException("not connected")
         }
         try {
+            // Message.obtain
             cMessenger!!.send(Message().apply {
                 obj = Bundle().apply {
                     putString("str", str)
@@ -105,12 +106,27 @@ class ConnService : LifecycleService() {
 
     inner class ConnHandler : Handler() {
         override fun handleMessage(msg: Message) {
-            super.handleMessage(msg)
+            when (msg.what) {
+                ConnKey.MSG_MESSAGE -> {
+                    cMessenger = msg.replyTo
+                    val str = (msg.obj as Bundle).getString("str") ?: "error"
+                    Log.d("parabox", "message from cliect: $str")
+                }
+                ConnKey.MSG_COMMAND -> {
+                    interfaceMessenger = msg.replyTo
+                    when ((msg.obj as Bundle).getInt("command", 10)) {
+                        ConnKey.MSG_COMMAND_START_SERVICE -> {}
+                        ConnKey.MSG_COMMAND_STOP_SERVICE -> {}
+                        ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT -> {}
+                        else -> {}
+                    }
+                }
+                else -> super.handleMessage(msg)
+            }
             cMessenger = msg.replyTo
-            val str = (msg.obj as Bundle).getString("str") ?: "error"
-            Log.d("parabox", "message from cliect: $str")
 
         }
+
     }
 
     inner class AndroidLoginSolver() : LoginSolver() {
@@ -126,36 +142,67 @@ class ConnService : LifecycleService() {
             verificationResult = CompletableDeferred()
 //        captchaData = data
             val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
-            loginResourceStateFlow.emit(LoginResource.PicCaptcha(bm))
+            onLoginStateChanged(LoginResource.PicCaptcha(bm))
             val res = verificationResult.await()
-            Log.d("aaa", res)
-            loginResourceStateFlow.emit(LoginResource.None)
+            onLoginStateChanged(LoginResource.None)
             return res
         }
 
         override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
             verificationResult = CompletableDeferred()
 //        this.url = url
-            loginResourceStateFlow.emit(LoginResource.SliderCaptcha(url))
+            onLoginStateChanged(LoginResource.SliderCaptcha(url))
             val res = verificationResult.await()
-            Log.d("aaa", res)
-            loginResourceStateFlow.emit(LoginResource.None)
+            onLoginStateChanged(LoginResource.None)
             return res
         }
 
         override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
             verificationResult = CompletableDeferred()
 //        this.url = url
-            loginResourceStateFlow.emit(LoginResource.UnsafeDeviceLoginVerify(url))
+            onLoginStateChanged(LoginResource.UnsafeDeviceLoginVerify(url))
             val res = verificationResult.await()
-            Log.d("aaa", res)
-            loginResourceStateFlow.emit(LoginResource.None)
+            onLoginStateChanged(LoginResource.None)
             return res
         }
 
         override val isSliderCaptchaSupported: Boolean
             get() = true
 
+    }
+
+    override fun miraiStart() {
+        if (isRunning) return
+        //miraiMain()
+        isRunning = true
+    }
+
+    override fun miraiStop() {
+        unRegisterMessageReceiver()
+        lifecycleScope.cancel()
+        stopSelf()
+        exitProcess(0)
+    }
+
+    override fun onLoginStateChanged(resource: LoginResource) {
+        interfaceMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
+                putInt("command", ConnKey.MSG_COMMAND_ON_LOGIN_STATE_CHANGED)
+                putInt(
+                    "type", when (resource) {
+                        is LoginResource.None -> LoginResourceType.None
+                        is LoginResource.PicCaptcha -> LoginResourceType.PicCaptcha
+                        is LoginResource.SliderCaptcha -> LoginResourceType.SliderCaptcha
+                        is LoginResource.UnsafeDeviceLoginVerify -> LoginResourceType.UnsafeDeviceLoginVerify
+                    }
+                )
+                putParcelable("value", resource)
+            })
+        )
+    }
+
+    override fun submitVerificationResult(result: String) {
+        mLoginSolver.submitVerificationResult(result)
     }
 
 
