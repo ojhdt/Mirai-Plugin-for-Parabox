@@ -31,7 +31,9 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
             sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT)
                 putString("value", result)
-            }))
+            }).apply {
+                replyTo = interfaceMessenger
+            })
         }
     }
 
@@ -41,13 +43,17 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
         context.bindService(intent, Connection(), Context.BIND_AUTO_CREATE)
         sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
             putInt("command", ConnKey.MSG_COMMAND_START_SERVICE)
-        }))
+        }).apply {
+            replyTo = interfaceMessenger
+        })
     }
 
     override fun miraiStop() {
         sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
             putInt("command", ConnKey.MSG_COMMAND_STOP_SERVICE)
-        }))
+        }).apply {
+            replyTo = interfaceMessenger
+        })
     }
 
     inner class Connection : ServiceConnection {
@@ -81,7 +87,7 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
                                     LoginResourceType.SliderCaptcha -> (msg.obj as Bundle).getParcelable<LoginResource.SliderCaptcha>(
                                         "value"
                                     ) ?: LoginResource.None
-                                    LoginResourceType.UnsafeDeviceLoginVerify -> (msg.obj as Bundle).getParcelable<LoginResource.SliderCaptcha>(
+                                    LoginResourceType.UnsafeDeviceLoginVerify -> (msg.obj as Bundle).getParcelable<LoginResource.UnsafeDeviceLoginVerify>(
                                         "value"
                                     ) ?: LoginResource.None
                                     else -> LoginResource.None

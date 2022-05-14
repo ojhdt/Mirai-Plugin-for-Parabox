@@ -43,7 +43,7 @@ fun StatusPage(
     ) {
         val loginResource by viewModel.loginResourceStateFlow.collectAsState()
 
-        Button(onClick = { onEvent(StatusPageEvent.OnLoginClick("2371065280".toLong(), "b20011007")) }) {
+        Button(onClick = { onEvent(StatusPageEvent.OnLoginClick) }) {
             Text(text = "Login")
         }
         Button(onClick = { onEvent(StatusPageEvent.OnKillClick) }) {
@@ -76,6 +76,7 @@ fun StatusPage(
                         .fillMaxWidth()
                         .height(300.dp)
                         .background(Color.Black),
+                    onEvent = onEvent,
                     url = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url
                 )
             }
@@ -85,6 +86,7 @@ fun StatusPage(
                         .fillMaxWidth()
                         .height(300.dp)
                         .background(Color.Black),
+                    onEvent = onEvent,
                     url = (loginResource as LoginResource.SliderCaptcha).url
                 )
             }

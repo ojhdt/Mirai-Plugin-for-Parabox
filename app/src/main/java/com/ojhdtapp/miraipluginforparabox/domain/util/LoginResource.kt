@@ -5,7 +5,8 @@ import android.os.Parcelable
 import kotlinx.android.parcel.Parcelize
 
 sealed class LoginResource : Parcelable {
-    @Parcelize object None: LoginResource()
+    @Parcelize
+    object None: LoginResource()
     @Parcelize data class PicCaptcha(val captchaBitMap: Bitmap) : LoginResource()
     @Parcelize data class SliderCaptcha(val url:String): LoginResource()
     @Parcelize data class UnsafeDeviceLoginVerify(val url: String) : LoginResource()

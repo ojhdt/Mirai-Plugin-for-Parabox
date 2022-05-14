@@ -2,8 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-kapt'
-    id 'kotlin-android'
-    id 'kotlin-android-extensions'
+    id 'org.jetbrains.kotlin.plugin.parcelize'
     id 'dagger.hilt.android.plugin'
 }
 

@@ -37,13 +37,12 @@ class ConnService : ConnCommandInterface, LifecycleService() {
     private var isRunning = false
 
     private fun miraiMain(accountNum: Long, passwd: String) {
-
+        Log.d("parabox", "$accountNum - $passwd")
+        bot = BotFactory.newBot(accountNum, passwd) {
+            loginSolver = mLoginSolver
+            cacheDir = getExternalFilesDir("cache")!!.absoluteFile
+        }
         lifecycleScope.launch {
-            bot = BotFactory.newBot(accountNum, passwd) {
-                loginSolver = mLoginSolver
-                cacheDir = getExternalFilesDir("cache")!!.absoluteFile
-                inheritCoroutineContext()
-            }
             try {
                 bot.login()
                 registerMessageReceiver()
@@ -53,11 +52,14 @@ class ConnService : ConnCommandInterface, LifecycleService() {
     }
 
     private fun registerMessageReceiver() {
-        listener =
-            bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
-                Log.d("aaa", "${event.senderName}:${event.message}")
-                event.subject.sendMessage("Hello from mirai!")
-            }
+        Log.d("parabox", "receiver registered")
+        lifecycleScope.launch {
+            listener =
+                bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
+                    Log.d("aaa", "${event.senderName}:${event.message}")
+                    event.subject.sendMessage("Hello from mirai!")
+                }
+        }
     }
 
     private fun unRegisterMessageReceiver() {
@@ -75,11 +77,6 @@ class ConnService : ConnCommandInterface, LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("parabox", "service started")
-        val obj = intent?.extras?.getBundle("data") ?: Bundle()
-        val accountNum = obj.getLong("accountNum")
-        val passwd = obj.getString("passwd") ?: ""
-        Log.d("parabox", "$accountNum - $passwd")
-        miraiMain(accountNum, passwd)
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -115,9 +112,19 @@ class ConnService : ConnCommandInterface, LifecycleService() {
                 ConnKey.MSG_COMMAND -> {
                     interfaceMessenger = msg.replyTo
                     when ((msg.obj as Bundle).getInt("command", 10)) {
-                        ConnKey.MSG_COMMAND_START_SERVICE -> {}
-                        ConnKey.MSG_COMMAND_STOP_SERVICE -> {}
-                        ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT -> {}
+                        ConnKey.MSG_COMMAND_START_SERVICE -> {
+                            miraiStart()
+                            Log.d("parabox", "received")
+                            miraiMain("2371065280".toLong(), "b20011007")
+                        }
+                        ConnKey.MSG_COMMAND_STOP_SERVICE -> {
+                            miraiStop()
+                        }
+                        ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT -> {
+                            (msg.obj as Bundle).getString("value")?.let {
+                                mLoginSolver.submitVerificationResult(it)
+                            }
+                        }
                         else -> {}
                     }
                 }
@@ -139,6 +146,7 @@ class ConnService : ConnCommandInterface, LifecycleService() {
         }
 
         override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String {
+            Log.d("parabox", "onSolvePicCaptcha")
             verificationResult = CompletableDeferred()
 //        captchaData = data
             val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
@@ -149,6 +157,7 @@ class ConnService : ConnCommandInterface, LifecycleService() {
         }
 
         override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
+            Log.d("parabox", "onSolveSliderCaptcha")
             verificationResult = CompletableDeferred()
 //        this.url = url
             onLoginStateChanged(LoginResource.SliderCaptcha(url))
@@ -158,6 +167,7 @@ class ConnService : ConnCommandInterface, LifecycleService() {
         }
 
         override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
+            Log.d("parabox", "onSolveUnsafeDeviceLoginVerify")
             verificationResult = CompletableDeferred()
 //        this.url = url
             onLoginStateChanged(LoginResource.UnsafeDeviceLoginVerify(url))
@@ -181,10 +191,10 @@ class ConnService : ConnCommandInterface, LifecycleService() {
         unRegisterMessageReceiver()
         lifecycleScope.cancel()
         stopSelf()
-        exitProcess(0)
     }
 
     override fun onLoginStateChanged(resource: LoginResource) {
+        Log.d("parabox", (interfaceMessenger == null).toString())
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_ON_LOGIN_STATE_CHANGED)

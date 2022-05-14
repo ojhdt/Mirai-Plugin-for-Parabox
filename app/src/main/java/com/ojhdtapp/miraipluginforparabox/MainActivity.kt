@@ -39,7 +39,10 @@ class MainActivity : ComponentActivity() {
     private fun onEvent(event: StatusPageEvent) {
         when (event) {
             is StatusPageEvent.OnLoginClick -> {
-
+                connector.miraiStart()
+            }
+            is StatusPageEvent.OnKillClick -> {
+                connector.miraiStop()
             }
             is StatusPageEvent.OnPicCaptchaConfirm -> {
                 event.captcha?.let {
