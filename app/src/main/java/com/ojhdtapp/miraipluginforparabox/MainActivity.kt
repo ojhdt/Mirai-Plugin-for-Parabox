@@ -18,7 +18,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPage
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
-import com.ojhdtapp.miraipluginforparabox.ui.theme.MiraiPluginForParaboxTheme
+import com.ojhdtapp.miraipluginforparabox.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var connector: ServiceConnector
@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         val viewModel: StatusPageViewModel by viewModels()
         connector = ServiceConnector(this, viewModel)
         setContent {
-            MiraiPluginForParaboxTheme {
+            AppTheme() {
                 // A surface container using the 'background' color from the theme
                 StatusPage(onEvent = { onEvent(it) }
                 )
@@ -54,9 +54,6 @@ class MainActivity : ComponentActivity() {
             }
             is StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm -> {
                 connector.submitVerificationResult("success")
-            }
-            else -> {
-
             }
         }
     }

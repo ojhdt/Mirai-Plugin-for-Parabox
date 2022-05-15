@@ -27,9 +27,24 @@ class StatusPageViewModel @Inject constructor(
         _loginResourceStateFlow.tryEmit(value)
     }
 
-    private val _loginTextState = mutableStateOf<String>("")
-    val loginTextState : State<String> = _loginTextState
-    fun setLoginTextState(value: String){
-        _loginTextState.value = value
+    private val _mainSwitchState = mutableStateOf<Boolean>(false)
+    val mainSwitchState : State<Boolean> = _mainSwitchState
+    fun setMainSwitchState(value : Boolean){
+        _mainSwitchState.value = value
     }
+
+    private val _autoLoginSwitchState = mutableStateOf<Boolean>(false)
+    val autoLoginSwitchState : State<Boolean> = _autoLoginSwitchState
+    fun setAutoLoginSwitchState(value : Boolean){
+        _autoLoginSwitchState.value = value
+    }
+    
+    private val _foregroundServiceSwitchState = mutableStateOf<Boolean>(false)
+    val foregroundServiceSwitchState : State<Boolean> = _foregroundServiceSwitchState
+    
+    fun setForegroundServiceSwitchState(value : Boolean){
+        _foregroundServiceSwitchState.value = value
+    }
+
+    val appVersion = "1.0"
 }
