@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun PreferencesCategory(modifier: Modifier = Modifier, text: String) {
@@ -39,8 +40,9 @@ fun SwitchPreference(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column() {
-            Text(text = title, style = MaterialTheme.typography.titleLarge)
+            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
             subtitle?.let {
+                Spacer(modifier = modifier.height(4.dp))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
@@ -68,8 +70,9 @@ fun NormalPreference(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column() {
-            Text(text = title, style = MaterialTheme.typography.titleLarge)
+            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
             subtitle?.let {
+                Spacer(modifier = modifier.height(4.dp))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,

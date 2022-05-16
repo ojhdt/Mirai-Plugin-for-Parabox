@@ -12,10 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -95,16 +92,16 @@ fun StatusPage(
             )
         },
         content = {
-            val scrollState = rememberScrollState()
+//            val scrollState = rememberScrollState()
             Column(
                 modifier = modifier
                     .padding(it)
                     .fillMaxSize()
-                    .scrollable(
-                        state = scrollState,
-                        orientation = Orientation.Vertical,
-                        enabled = true
-                    )
+//                    .scrollable(
+//                        state = scrollState,
+//                        orientation = Orientation.Vertical,
+//                        enabled = true
+//                    )
             ) {
                 MainSwitch(
                     modifier = modifier
@@ -113,27 +110,39 @@ fun StatusPage(
                     checked = viewModel.mainSwitchState.value,
                     viewModel::setMainSwitchState
                 )
-                Spacer(modifier = modifier.height(16.dp))
-                PreferencesCategory(text = "行为")
-                SwitchPreference(
-                    title = "自动登录",
-                    subtitle = "以默认账户启动服务",
-                    checked = viewModel.autoLoginSwitchState.value,
-                    onCheckedChange = viewModel::setAutoLoginSwitchState
-                )
-                SwitchPreference(
-                    title = "前台服务",
-                    subtitle = "提高后台留存能力",
-                    checked = viewModel.foregroundServiceSwitchState.value,
-                    onCheckedChange = viewModel::setForegroundServiceSwitchState
-                )
-                NormalPreference(title = "忽略电池优化", subtitle = "提高后台留存能力") {
+                if (viewModel.mainSwitchState.value) {
+                    Spacer(modifier = modifier.height(16.dp))
+                    PreferencesCategory(text = "行为")
+                    SwitchPreference(
+                        title = "自动登录",
+                        subtitle = "以默认账户启动服务",
+                        checked = viewModel.autoLoginSwitchState.value,
+                        onCheckedChange = viewModel::setAutoLoginSwitchState
+                    )
+                    SwitchPreference(
+                        title = "前台服务",
+                        subtitle = "提高后台留存能力",
+                        checked = viewModel.foregroundServiceSwitchState.value,
+                        onCheckedChange = viewModel::setForegroundServiceSwitchState
+                    )
+                    NormalPreference(title = "忽略电池优化", subtitle = "提高后台留存能力") {
 
-                }
-                Spacer(modifier = modifier.height(16.dp))
-                PreferencesCategory(text = "故障排除")
-                NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
+                    }
+                    Spacer(modifier = modifier.height(16.dp))
+                    PreferencesCategory(text = "故障排除")
+                    NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
 
+                    }
+                } else {
+                    Column(modifier = modifier.padding(24.dp, 0.dp)) {
+                        Icon(imageVector = Icons.Outlined.Info, contentDescription = "info", tint = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = modifier.height(4.dp))
+                        Text(
+                            text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
                 Spacer(modifier = modifier.height(16.dp))
                 PreferencesCategory(text = "关于")
@@ -148,7 +157,7 @@ fun StatusPage(
                 }
             }
 //            LazyColumn(modifier = modifier.fillMaxSize(),contentPadding = it) {
-//                item(true) {
+//                item {
 //
 //                }
 //                item {
@@ -230,7 +239,7 @@ fun MainSwitch(
             .clip(RoundedCornerShape(24.dp))
             .background(if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer)
             .clickable { onCheckedChange(!checked) }
-            .padding(16.dp),
+            .padding(24.dp, 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
