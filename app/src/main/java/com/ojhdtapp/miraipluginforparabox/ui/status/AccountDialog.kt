@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
+import android.view.KeyEvent.ACTION_DOWN
 import android.widget.RadioGroup
 import android.widget.Space
 import androidx.compose.animation.AnimatedVisibility
@@ -23,10 +24,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -164,6 +172,7 @@ fun AccountItem(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AddAccountDialog(
     modifier: Modifier = Modifier,
@@ -189,6 +198,7 @@ fun AddAccountDialog(
             title = { Text(text = "添加账户") },
             text = {
                 Column(modifier = modifier.verticalScroll(rememberScrollState())) {
+                    val focusManager = LocalFocusManager.current
                     OutlinedTextField(
                         value = accountNum,
                         onValueChange = {
@@ -202,7 +212,11 @@ fun AddAccountDialog(
                         },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
                             keyboardType = KeyboardType.Number
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
                         isError = accountNumError
                     )
@@ -219,8 +233,25 @@ fun AddAccountDialog(
                             )
                         },
                         singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (accountNum.isNotBlank() && passwd.isNotBlank()) {
+                                    onHandleSecrets(
+                                        Secrets(
+                                            account = accountNum.toLong(),
+                                            password = passwd
+                                        )
+                                    )
+                                    onDismissRequest()
+                                } else {
+                                    accountNumError = accountNum.isBlank()
+                                    passwdError = passwd.isBlank()
+                                }
+                            }
                         ),
                         isError = passwdError
                     )
@@ -232,7 +263,7 @@ fun AddAccountDialog(
                     )
                     Spacer(modifier = modifier.height(16.dp))
                     Text(
-                        text = "新添加的账户将被自动选中",
+                        text = "软件将会保存你的账号和密码并在服务启动时完成登录。一切信息仅将被保存于本地。",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
