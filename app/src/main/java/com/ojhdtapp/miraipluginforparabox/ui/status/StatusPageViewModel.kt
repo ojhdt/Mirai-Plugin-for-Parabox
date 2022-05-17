@@ -40,11 +40,16 @@ class StatusPageViewModel @Inject constructor(
             _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已成功添加账户"))
         }
     }
-
     fun deleteAccount(secrets: Secrets) {
         viewModelScope.launch {
             repository.deleteAccount(secrets)
             _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已成功删除账户"))
+        }
+    }
+    fun updateAccounts(secretList: List<Secrets>){
+        viewModelScope.launch {
+            repository.addAllAccounts(secretList)
+            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已保存更改"))
         }
     }
 

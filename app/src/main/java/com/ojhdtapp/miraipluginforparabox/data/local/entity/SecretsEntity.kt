@@ -12,15 +12,17 @@ import io.ktor.client.request.*
 class SecretsEntity(
     @PrimaryKey var account: Long,
     var password: String,
-    var avatarUrl: String? = null,
+    var selected: Boolean = false,
+    var avatarUrl: String? = null
 ) {
     fun toSecrets(): Secrets = Secrets(
-        account, password, avatarUrl
+        account, password, selected ,avatarUrl
     )
 
     suspend fun toAvatarDownloadedSecrets(): Secrets = Secrets(
         account = account,
         password = password,
+        selected = selected,
         avatarUrl = avatarUrl,
         bitmap = downloadAvatar()
     )

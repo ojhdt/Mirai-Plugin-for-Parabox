@@ -11,12 +11,14 @@ import net.mamoe.mirai.Bot
 data class Secrets(
     val account: Long,
     val password: String,
+    val selected: Boolean = false,
     val avatarUrl: String? = null,
     var bitmap: Bitmap? = null
 ) {
     suspend fun toAvatarDownloadedSecrets(): Secrets = Secrets(
         account = account,
         password = password,
+        selected = selected,
         avatarUrl = avatarUrl,
         bitmap = downloadAvatar()
     )
@@ -35,6 +37,6 @@ data class Secrets(
 
     fun toSecretsEntity() =
         SecretsEntity(
-            account, password, avatarUrl
+            account, password, selected ,avatarUrl
         )
 }

@@ -43,4 +43,8 @@ class MainRepositoryImpl @Inject constructor(
         dao.deleteSecrets(secrets.toSecretsEntity())
     }
 
+    override suspend fun addAllAccounts(secretList: List<Secrets>) {
+        dao.insertAllSecrets(secretList.map { it.toSecretsEntity() })
+    }
+
 }

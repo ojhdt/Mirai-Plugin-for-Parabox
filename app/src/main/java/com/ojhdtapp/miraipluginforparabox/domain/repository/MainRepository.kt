@@ -9,4 +9,6 @@ interface MainRepository {
     suspend fun addNewAccount(secrets: Secrets)
 
     suspend fun deleteAccount(secrets: Secrets)
+
+    suspend fun addAllAccounts(secretList: List<Secrets>)
 }

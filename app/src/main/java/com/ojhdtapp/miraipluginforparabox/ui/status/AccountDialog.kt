@@ -51,7 +51,6 @@ fun AccountDialog(
     onHandleSecrets: (secret: Secrets) -> Unit,
     onDeleteSecrets: (secret: Secrets) -> Unit
 ) {
-    val viewModel: StatusPageViewModel = hiltViewModel()
     var selectedIndex by remember {
         mutableStateOf(0)
     }
@@ -61,7 +60,10 @@ fun AccountDialog(
     if (isOpen) {
         AlertDialog(onDismissRequest = onDismissRequest,
             confirmButton = {
-                TextButton(onClick = onDismissRequest) {
+                TextButton(onClick = {
+                    TODO("use selectedIndex")
+                    onDismissRequest()
+                }) {
                     Text(text = "确定")
                 }
             },
@@ -172,7 +174,6 @@ fun AccountItem(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AddAccountDialog(
     modifier: Modifier = Modifier,
@@ -239,18 +240,14 @@ fun AddAccountDialog(
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = {
-                                if (accountNum.isNotBlank() && passwd.isNotBlank()) {
-                                    onHandleSecrets(
-                                        Secrets(
-                                            account = accountNum.toLong(),
-                                            password = passwd
-                                        )
-                                    )
-                                    onDismissRequest()
-                                } else {
-                                    accountNumError = accountNum.isBlank()
-                                    passwdError = passwd.isBlank()
-                                }
+                                checkAndSubmit(
+                                    accountNum,
+                                    passwd,
+                                    onHandleSecrets,
+                                    onDismissRequest,
+                                    {accountNumError = it},
+                                    {passwdError = it}
+                                )
                             }
                         ),
                         isError = passwdError
@@ -271,18 +268,14 @@ fun AddAccountDialog(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    if (accountNum.isNotBlank() && passwd.isNotBlank()) {
-                        onHandleSecrets(
-                            Secrets(
-                                account = accountNum.toLong(),
-                                password = passwd
-                            )
-                        )
-                        onDismissRequest()
-                    } else {
-                        accountNumError = accountNum.isBlank()
-                        passwdError = passwd.isBlank()
-                    }
+                    checkAndSubmit(
+                        accountNum,
+                        passwd,
+                        onHandleSecrets,
+                        onDismissRequest,
+                        {accountNumError = it},
+                        {passwdError = it}
+                    )
                 }) {
                     Text(text = "确定")
                 }
@@ -294,5 +287,27 @@ fun AddAccountDialog(
             },
         )
 
+    }
+}
+
+private fun checkAndSubmit(
+    accountNum: String,
+    passwd: String,
+    onHandleSecrets: (secret: Secrets) -> Unit,
+    onDismissRequest: () -> Unit,
+    onAccountNumError: (Boolean) -> Unit,
+    onPasswdError: (Boolean) -> Unit
+) {
+    if (accountNum.isNotBlank() && passwd.isNotBlank()) {
+        onHandleSecrets(
+            Secrets(
+                account = accountNum.toLong(),
+                password = passwd
+            )
+        )
+        onDismissRequest()
+    } else {
+        onAccountNumError(accountNum.isBlank())
+        onPasswdError(passwd.isBlank())
     }
 }
