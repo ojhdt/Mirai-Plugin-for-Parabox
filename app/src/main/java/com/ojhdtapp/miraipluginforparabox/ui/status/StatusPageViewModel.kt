@@ -3,6 +3,8 @@ package com.ojhdtapp.miraipluginforparabox.ui.status
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.ojhdtapp.miraipluginforparabox.data.repository.MainRepositoryImpl
+import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StatusPageViewModel @Inject constructor(
-
+    repository: MainRepository
 ) : ViewModel() {
 
     // emit to this when wanting toasting
@@ -27,6 +29,24 @@ class StatusPageViewModel @Inject constructor(
         _loginResourceStateFlow.tryEmit(value)
     }
 
+    // Account Dialog
+    val accountFLow = repository.getAccountListFlow()
+
+    private val _accountNum = mutableStateOf<String>("")
+    val accountNum : State<String> = _accountNum
+
+    fun setAccountNum(value : String){
+        _accountNum.value = value
+    }
+
+    private val _passwd = mutableStateOf<String>("")
+    val passwd : State<String> = _passwd
+
+    fun setPasswd(value : String){
+        _passwd.value = value
+    }
+
+    // Switches
     private val _mainSwitchState = mutableStateOf<Boolean>(false)
     val mainSwitchState : State<Boolean> = _mainSwitchState
     fun setMainSwitchState(value : Boolean){
@@ -41,7 +61,6 @@ class StatusPageViewModel @Inject constructor(
     
     private val _foregroundServiceSwitchState = mutableStateOf<Boolean>(false)
     val foregroundServiceSwitchState : State<Boolean> = _foregroundServiceSwitchState
-    
     fun setForegroundServiceSwitchState(value : Boolean){
         _foregroundServiceSwitchState.value = value
     }

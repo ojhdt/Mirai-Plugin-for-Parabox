@@ -2,14 +2,12 @@ package com.ojhdtapp.miraipluginforparabox.ui.status
 
 import android.widget.EditText
 import androidx.compose.animation.rememberSplineBasedDecay
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -55,13 +53,13 @@ fun StatusPage(
     var openAccountDialog by remember {
         mutableStateOf(false)
     }
-    if (openAccountDialog) {
-        Dialog(onDismissRequest = { openAccountDialog = false }) {
-            Column() {
-                Text("选择账号")
-            }
-        }
-    }
+    AccountDialog(
+        isOpen = openAccountDialog,
+        onDismissRequest = { openAccountDialog = false },
+        accountList = viewModel.accountFLow.collectAsState(
+            initial = emptyList()
+        ).value
+    )
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -92,16 +90,12 @@ fun StatusPage(
             )
         },
         content = {
-//            val scrollState = rememberScrollState()
+            val scrollState = rememberScrollState()
             Column(
                 modifier = modifier
                     .padding(it)
                     .fillMaxSize()
-//                    .scrollable(
-//                        state = scrollState,
-//                        orientation = Orientation.Vertical,
-//                        enabled = true
-//                    )
+                    .verticalScroll(scrollState)
             ) {
                 MainSwitch(
                     modifier = modifier
@@ -135,7 +129,11 @@ fun StatusPage(
                     }
                 } else {
                     Column(modifier = modifier.padding(24.dp, 0.dp)) {
-                        Icon(imageVector = Icons.Outlined.Info, contentDescription = "info", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "info",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                         Spacer(modifier = modifier.height(4.dp))
                         Text(
                             text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
@@ -156,17 +154,6 @@ fun StatusPage(
 
                 }
             }
-//            LazyColumn(modifier = modifier.fillMaxSize(),contentPadding = it) {
-//                item {
-//
-//                }
-//                item {
-//
-//                }
-//                item{
-//
-//                }
-//            }
         }
     )
 

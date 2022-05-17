@@ -19,7 +19,9 @@ import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPage
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.theme.AppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private lateinit var connector: ServiceConnector
 
