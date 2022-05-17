@@ -1,18 +1,17 @@
 package com.ojhdtapp.miraipluginforparabox.data.repository
 
-import com.ojhdtapp.miraipluginforparabox.data.local.SecretsDao
-import com.ojhdtapp.miraipluginforparabox.domain.model.Secrets
+import com.ojhdtapp.miraipluginforparabox.data.local.SecretDao
+import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 class MainRepositoryImpl @Inject constructor(
-    private val dao: SecretsDao
+    private val dao: SecretDao
 ) : MainRepository {
     @OptIn(ExperimentalCoroutinesApi::class)
-    override fun getAccountListFlow(): Flow<List<Secrets>> {
+    override fun getAccountListFlow(): Flow<List<Secret>> {
 //        return flow {
 //            val accounts = dao.getAllSecrets()
 //            emit(accounts.map {
@@ -29,21 +28,21 @@ class MainRepositoryImpl @Inject constructor(
 //            }
         return dao.getAllSecretsFlow().flatMapLatest {
             flow {
-                emit(it.map { it.toSecrets() })
-                emit(it.map { it.toAvatarDownloadedSecrets() })
+                emit(it.map { it.toSecret() })
+                emit(it.map { it.toAvatarDownloadedSecret() })
             }
         }
     }
 
-    override suspend fun addNewAccount(secrets: Secrets) {
-        dao.insertSecrets(secrets.toSecretsEntity())
+    override suspend fun addNewAccount(secret: Secret) {
+        dao.insertSecret(secret.toSecretsEntity())
     }
 
-    override suspend fun deleteAccount(secrets: Secrets) {
-        dao.deleteSecrets(secrets.toSecretsEntity())
+    override suspend fun deleteAccount(secret: Secret) {
+        dao.deleteSecret(secret.toSecretsEntity())
     }
 
-    override suspend fun addAllAccounts(secretList: List<Secrets>) {
+    override suspend fun addAllAccounts(secretList: List<Secret>) {
         dao.insertAllSecrets(secretList.map { it.toSecretsEntity() })
     }
 

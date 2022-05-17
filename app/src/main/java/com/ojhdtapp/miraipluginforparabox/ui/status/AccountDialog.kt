@@ -1,14 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
-import android.view.KeyEvent.ACTION_DOWN
-import android.widget.RadioGroup
-import android.widget.Space
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import android.util.Log
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -21,39 +14,33 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.ojhdtapp.miraipluginforparabox.domain.model.Secrets
+import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun AccountDialog(
     modifier: Modifier = Modifier,
     isOpen: Boolean,
     onDismissRequest: () -> Unit,
-    accountList: List<Secrets>,
-    onHandleSecrets: (secret: Secrets) -> Unit,
-    onDeleteSecrets: (secret: Secrets) -> Unit
+    accountList: List<Secret>,
+    onAddSecret: (secret: Secret) -> Unit,
+    onDeleteSecret: (secret: Secret) -> Unit,
+    onUpdateSelectedSecret: (selectedIndex: Int, accountList: List<Secret>) -> Unit,
 ) {
     var selectedIndex by remember {
-        mutableStateOf(0)
+        TODO("always return -1")
+        mutableStateOf(accountList.indexOfFirst { it.selected })
     }
+    Log.d("parabox", accountList.toString())
     var isEditing by remember {
         mutableStateOf(false)
     }
@@ -61,7 +48,7 @@ fun AccountDialog(
         AlertDialog(onDismissRequest = onDismissRequest,
             confirmButton = {
                 TextButton(onClick = {
-                    TODO("use selectedIndex")
+                    onUpdateSelectedSecret(selectedIndex, accountList)
                     onDismissRequest()
                 }) {
                     Text(text = "确定")
@@ -88,14 +75,14 @@ fun AccountDialog(
                     if (accountList.isEmpty()) {
                         Text(text = "无数据，请先至少添加一个账户。")
                     }
-                    accountList.forEachIndexed { index, secrets ->
+                    accountList.forEachIndexed { index, secret ->
                         AccountItem(
-                            data = secrets,
+                            data = secret,
                             selected = selectedIndex == index,
                             index = index,
                             onOptionSelected = { newIndex -> selectedIndex = newIndex },
                             onDelete = {
-                                onDeleteSecrets(accountList[it])
+                                onDeleteSecret(accountList[it])
                                 onDismissRequest()
                             }
                         )
@@ -108,9 +95,11 @@ fun AccountDialog(
     AddAccountDialog(
         isOpen = isEditing,
         onDismissRequest = { isEditing = false },
-        onHandleSecrets = {
+        onAddSecret = {
             onDismissRequest()
-            onHandleSecrets(it)
+            onAddSecret(it.apply {
+                if (accountList.isEmpty()) selected = true
+            })
         })
 }
 
@@ -118,7 +107,7 @@ fun AccountDialog(
 @Composable
 fun AccountItem(
     modifier: Modifier = Modifier,
-    data: Secrets,
+    data: Secret,
     selected: Boolean,
     index: Int,
     onOptionSelected: (index: Int) -> Unit,
@@ -179,7 +168,7 @@ fun AddAccountDialog(
     modifier: Modifier = Modifier,
     isOpen: Boolean,
     onDismissRequest: () -> Unit,
-    onHandleSecrets: (secret: Secrets) -> Unit
+    onAddSecret: (secret: Secret) -> Unit
 ) {
     var accountNum by remember {
         mutableStateOf("")
@@ -243,10 +232,14 @@ fun AddAccountDialog(
                                 checkAndSubmit(
                                     accountNum,
                                     passwd,
-                                    onHandleSecrets,
+                                    {
+                                        onAddSecret(it)
+                                        accountNum = ""
+                                        passwd = ""
+                                    },
                                     onDismissRequest,
-                                    {accountNumError = it},
-                                    {passwdError = it}
+                                    { accountNumError = it },
+                                    { passwdError = it }
                                 )
                             }
                         ),
@@ -271,10 +264,14 @@ fun AddAccountDialog(
                     checkAndSubmit(
                         accountNum,
                         passwd,
-                        onHandleSecrets,
+                        {
+                            onAddSecret(it)
+                            accountNum = ""
+                            passwd = ""
+                        },
                         onDismissRequest,
-                        {accountNumError = it},
-                        {passwdError = it}
+                        { accountNumError = it },
+                        { passwdError = it }
                     )
                 }) {
                     Text(text = "确定")
@@ -293,14 +290,14 @@ fun AddAccountDialog(
 private fun checkAndSubmit(
     accountNum: String,
     passwd: String,
-    onHandleSecrets: (secret: Secrets) -> Unit,
+    onAddSecret: (secret: Secret) -> Unit,
     onDismissRequest: () -> Unit,
     onAccountNumError: (Boolean) -> Unit,
     onPasswdError: (Boolean) -> Unit
 ) {
     if (accountNum.isNotBlank() && passwd.isNotBlank()) {
-        onHandleSecrets(
-            Secrets(
+        onAddSecret(
+            Secret(
                 account = accountNum.toLong(),
                 password = passwd
             )

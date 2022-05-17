@@ -1,31 +1,26 @@
-package com.ojhdtapp.miraipluginforparabox.data.local.entity
+package com.ojhdtapp.miraipluginforparabox.domain.model
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import com.ojhdtapp.miraipluginforparabox.domain.model.Secrets
+import com.ojhdtapp.miraipluginforparabox.data.local.entity.SecretEntity
 import io.ktor.client.*
 import io.ktor.client.request.*
 
-@Entity
-class SecretsEntity(
-    @PrimaryKey var account: Long,
+data class Secret(
+    var account: Long,
     var password: String,
     var selected: Boolean = false,
-    var avatarUrl: String? = null
+    var avatarUrl: String? = null,
+    var bitmap: Bitmap? = null
 ) {
-    fun toSecrets(): Secrets = Secrets(
-        account, password, selected ,avatarUrl
-    )
-
-    suspend fun toAvatarDownloadedSecrets(): Secrets = Secrets(
+    suspend fun toAvatarDownloadedSecret(): Secret = Secret(
         account = account,
         password = password,
         selected = selected,
         avatarUrl = avatarUrl,
         bitmap = downloadAvatar()
     )
+
     private suspend fun downloadAvatar(): Bitmap? =
         avatarUrl?.let {
             try {
@@ -37,4 +32,9 @@ class SecretsEntity(
                 null
             }
         }
+
+    fun toSecretsEntity() =
+        SecretEntity(
+            account, password, selected ,avatarUrl
+        )
 }

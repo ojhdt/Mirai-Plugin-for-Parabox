@@ -4,10 +4,8 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ojhdtapp.miraipluginforparabox.data.repository.MainRepositoryImpl
-import com.ojhdtapp.miraipluginforparabox.domain.model.Secrets
+import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
-import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,21 +32,27 @@ class StatusPageViewModel @Inject constructor(
 
     // Account Dialog
     val accountFLow = repository.getAccountListFlow()
-    fun addNewAccount(secrets: Secrets) {
+    fun addNewAccount(secret: Secret) {
         viewModelScope.launch {
-            repository.addNewAccount(secrets)
+            repository.addNewAccount(secret)
             _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已成功添加账户"))
         }
     }
-    fun deleteAccount(secrets: Secrets) {
+
+    fun deleteAccount(secret: Secret) {
         viewModelScope.launch {
-            repository.deleteAccount(secrets)
+            repository.deleteAccount(secret)
             _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已成功删除账户"))
         }
     }
-    fun updateAccounts(secretList: List<Secrets>){
+
+    fun updateAccounts(selectedIndex: Int, accountList: List<Secret>) {
         viewModelScope.launch {
-            repository.addAllAccounts(secretList)
+            repository.addAllAccounts(accountList.toList().mapIndexed { index, secret ->
+                secret.apply {
+                    selected = index == selectedIndex
+                }
+            })
             _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已保存更改"))
         }
     }

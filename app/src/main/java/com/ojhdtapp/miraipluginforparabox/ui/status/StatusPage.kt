@@ -1,31 +1,20 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
-import android.widget.EditText
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
-import androidx.compose.material.rememberScaffoldState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.PreferencesCategory
@@ -67,8 +56,9 @@ fun StatusPage(
         accountList = viewModel.accountFLow.collectAsState(
             initial = emptyList()
         ).value,
-        onHandleSecrets = viewModel::addNewAccount,
-        onDeleteSecrets = viewModel::deleteAccount
+        onAddSecret = viewModel::addNewAccount,
+        onDeleteSecret = viewModel::deleteAccount,
+        onUpdateSelectedSecret = viewModel::updateAccounts
     )
 
     // menu
