@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
@@ -66,10 +67,14 @@ fun StatusPage(
         accountList = viewModel.accountFLow.collectAsState(
             initial = emptyList()
         ).value,
-        onHandleSecrets = {
-            viewModel.addNewAccount(it)
-        }
+        onHandleSecrets = viewModel::addNewAccount,
+        onDeleteSecrets = viewModel::deleteAccount
     )
+
+    // menu
+    var menuExpanded by remember {
+        mutableStateOf(false)
+    }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -87,8 +92,23 @@ fun StatusPage(
                             contentDescription = "account"
                         )
                     }
-                    IconButton(onClick = { /*TODO*/ }) {
-                        Icon(imageVector = Icons.Outlined.MoreVert, contentDescription = "menu")
+                    Box() {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(imageVector = Icons.Outlined.MoreVert, contentDescription = "menu")
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text(text = "强行停止服务") },
+                                onClick = { /*TODO*/ },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Close,
+                                        contentDescription = "stop service"
+                                    )
+                                })
+                        }
                     }
                 },
                 navigationIcon = {

@@ -41,6 +41,13 @@ class StatusPageViewModel @Inject constructor(
         }
     }
 
+    fun deleteAccount(secrets: Secrets) {
+        viewModelScope.launch {
+            repository.deleteAccount(secrets)
+            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已成功删除账户"))
+        }
+    }
+
     private val _accountNum = mutableStateOf<String>("")
     val accountNum: State<String> = _accountNum
 

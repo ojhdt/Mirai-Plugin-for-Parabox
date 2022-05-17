@@ -7,4 +7,6 @@ interface MainRepository {
     fun getAccountListFlow() : Flow<List<Secrets>>
 
     suspend fun addNewAccount(secrets: Secrets)
+
+    suspend fun deleteAccount(secrets: Secrets)
 }

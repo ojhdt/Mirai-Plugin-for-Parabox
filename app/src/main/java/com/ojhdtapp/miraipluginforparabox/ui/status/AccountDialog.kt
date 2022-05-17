@@ -6,15 +6,17 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +24,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -37,7 +40,8 @@ fun AccountDialog(
     isOpen: Boolean,
     onDismissRequest: () -> Unit,
     accountList: List<Secrets>,
-    onHandleSecrets: (secret: Secrets) -> Unit
+    onHandleSecrets: (secret: Secrets) -> Unit,
+    onDeleteSecrets: (secret: Secrets) -> Unit
 ) {
     val viewModel: StatusPageViewModel = hiltViewModel()
     var selectedIndex by remember {
@@ -66,7 +70,11 @@ fun AccountDialog(
             },
             title = { Text(text = "选择账户") },
             text = {
-                Column() {
+                Column(
+                    modifier = modifier
+                        .verticalScroll(rememberScrollState())
+//                        .weight(weight = 1f, fill = false)
+                ) {
                     if (accountList.isEmpty()) {
                         Text(text = "无数据，请先至少添加一个账户。")
                     }
@@ -75,7 +83,12 @@ fun AccountDialog(
                             data = secrets,
                             selected = selectedIndex == index,
                             index = index,
-                            onOptionSelected = { newIndex -> selectedIndex = newIndex })
+                            onOptionSelected = { newIndex -> selectedIndex = newIndex },
+                            onDelete = {
+                                onDeleteSecrets(accountList[it])
+                                onDismissRequest()
+                            }
+                        )
                     }
                 }
             }
@@ -98,20 +111,38 @@ fun AccountItem(
     data: Secrets,
     selected: Boolean,
     index: Int,
-    onOptionSelected: (index: Int) -> Unit
+    onOptionSelected: (index: Int) -> Unit,
+    onDelete: (index: Int) -> Unit,
 ) {
+    var menuExpanded by remember {
+        mutableStateOf(false)
+    }
     Row(
         Modifier
             .fillMaxWidth()
             .height(56.dp)
             .selectable(
                 selected = selected,
-                onClick = { onOptionSelected(index) },
+                onClick = {
+                    onOptionSelected(index)
+                    if (selected) menuExpanded = true
+                },
                 role = Role.RadioButton
             )
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+            DropdownMenuItem(
+                text = { Text(text = "删除") },
+                onClick = { onDelete(index) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = "delete"
+                    )
+                })
+        }
         RadioButton(
             selected = selected,
             onClick = null // null recommended for accessibility with screenreaders
@@ -157,7 +188,7 @@ fun AddAccountDialog(
             onDismissRequest = onDismissRequest,
             title = { Text(text = "添加账户") },
             text = {
-                Column() {
+                Column(modifier = modifier.verticalScroll(rememberScrollState())) {
                     OutlinedTextField(
                         value = accountNum,
                         onValueChange = {

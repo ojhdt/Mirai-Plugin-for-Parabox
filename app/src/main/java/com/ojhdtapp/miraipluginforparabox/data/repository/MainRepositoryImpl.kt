@@ -11,7 +11,7 @@ import javax.inject.Inject
 class MainRepositoryImpl @Inject constructor(
     private val dao: SecretsDao
 ) : MainRepository {
-    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getAccountListFlow(): Flow<List<Secrets>> {
 //        return flow {
 //            val accounts = dao.getAllSecrets()
@@ -37,6 +37,10 @@ class MainRepositoryImpl @Inject constructor(
 
     override suspend fun addNewAccount(secrets: Secrets) {
         dao.insertSecrets(secrets.toSecretsEntity())
+    }
+
+    override suspend fun deleteAccount(secrets: Secrets) {
+        dao.deleteSecrets(secrets.toSecretsEntity())
     }
 
 }
