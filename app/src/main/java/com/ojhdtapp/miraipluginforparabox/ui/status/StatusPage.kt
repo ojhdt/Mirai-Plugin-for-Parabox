@@ -1,6 +1,9 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
 import android.widget.EditText
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.Orientation
@@ -35,10 +38,14 @@ fun StatusPage(
 ) {
     // viewModel
     val viewModel: StatusPageViewModel = hiltViewModel()
+    val snackBarHostState = remember { SnackbarHostState() }
     // snackBar & navigation
     LaunchedEffect(true) {
         viewModel.uiEventFlow.collect { event ->
             when (event) {
+                is StatusPageUiEvent.ShowSnackBar -> {
+                    snackBarHostState.showSnackbar(event.message)
+                }
                 else -> {
                 }
             }
@@ -58,7 +65,10 @@ fun StatusPage(
         onDismissRequest = { openAccountDialog = false },
         accountList = viewModel.accountFLow.collectAsState(
             initial = emptyList()
-        ).value
+        ).value,
+        onHandleSecrets = {
+            viewModel.addNewAccount(it)
+        }
     )
 
     Scaffold(
@@ -89,12 +99,12 @@ fun StatusPage(
                 scrollBehavior = scrollBehavior
             )
         },
+        snackbarHost = { SnackbarHost(hostState = snackBarHostState) },
         content = {
             val scrollState = rememberScrollState()
             Column(
                 modifier = modifier
                     .padding(it)
-                    .fillMaxSize()
                     .verticalScroll(scrollState)
             ) {
                 MainSwitch(
@@ -104,41 +114,44 @@ fun StatusPage(
                     checked = viewModel.mainSwitchState.value,
                     viewModel::setMainSwitchState
                 )
-                if (viewModel.mainSwitchState.value) {
-                    Spacer(modifier = modifier.height(16.dp))
-                    PreferencesCategory(text = "行为")
-                    SwitchPreference(
-                        title = "自动登录",
-                        subtitle = "以默认账户启动服务",
-                        checked = viewModel.autoLoginSwitchState.value,
-                        onCheckedChange = viewModel::setAutoLoginSwitchState
-                    )
-                    SwitchPreference(
-                        title = "前台服务",
-                        subtitle = "提高后台留存能力",
-                        checked = viewModel.foregroundServiceSwitchState.value,
-                        onCheckedChange = viewModel::setForegroundServiceSwitchState
-                    )
-                    NormalPreference(title = "忽略电池优化", subtitle = "提高后台留存能力") {
+                AnimatedVisibility(visible = viewModel.mainSwitchState.value) {
+                    Column() {
+                        Spacer(modifier = modifier.height(16.dp))
+                        PreferencesCategory(text = "行为")
+                        SwitchPreference(
+                            title = "自动登录",
+                            subtitle = "以默认账户启动服务",
+                            checked = viewModel.autoLoginSwitchState.value,
+                            onCheckedChange = viewModel::setAutoLoginSwitchState
+                        )
+                        SwitchPreference(
+                            title = "前台服务",
+                            subtitle = "提高后台留存能力",
+                            checked = viewModel.foregroundServiceSwitchState.value,
+                            onCheckedChange = viewModel::setForegroundServiceSwitchState
+                        )
+                        NormalPreference(title = "忽略电池优化", subtitle = "提高后台留存能力") {
 
-                    }
-                    Spacer(modifier = modifier.height(16.dp))
-                    PreferencesCategory(text = "故障排除")
-                    NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
+                        }
+                        Spacer(modifier = modifier.height(16.dp))
+                        PreferencesCategory(text = "故障排除")
+                        NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
 
+                        }
                     }
-                } else {
-                    Column(modifier = modifier.padding(24.dp, 0.dp)) {
+                }
+                AnimatedVisibility(visible = !viewModel.mainSwitchState.value) {
+                    Column(modifier = modifier.padding(24.dp, 16.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Info,
                             contentDescription = "info",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = modifier.height(4.dp))
+                        Spacer(modifier = modifier.height(16.dp))
                         Text(
                             text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -221,10 +234,11 @@ fun MainSwitch(
     checked: Boolean,
     onCheckedChange: (value: Boolean) -> Unit
 ) {
+    val switchColor by animateColorAsState(targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer)
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(24.dp))
-            .background(if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer)
+            .background(switchColor)
             .clickable { onCheckedChange(!checked) }
             .padding(24.dp, 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

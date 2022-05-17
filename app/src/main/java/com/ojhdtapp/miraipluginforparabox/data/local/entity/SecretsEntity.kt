@@ -10,10 +10,9 @@ import io.ktor.client.request.*
 
 @Entity
 class SecretsEntity(
-    var account: Long,
+    @PrimaryKey var account: Long,
     var password: String,
     var avatarUrl: String? = null,
-    @PrimaryKey var id: Int? = null,
 ) {
     fun toSecrets(): Secrets = Secrets(
         account, password, avatarUrl

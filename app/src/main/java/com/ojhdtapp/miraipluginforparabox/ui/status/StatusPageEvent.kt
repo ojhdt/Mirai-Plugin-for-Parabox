@@ -11,5 +11,5 @@ sealed class StatusPageEvent {
 }
 
 sealed class StatusPageUiEvent {
-
+    data class ShowSnackBar(val message: String) : StatusPageUiEvent()
 }

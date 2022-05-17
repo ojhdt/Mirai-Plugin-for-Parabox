@@ -2,6 +2,7 @@ package com.ojhdtapp.miraipluginforparabox.domain.model
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.ojhdtapp.miraipluginforparabox.data.local.entity.SecretsEntity
 import io.ktor.client.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.delay
@@ -31,4 +32,9 @@ data class Secrets(
                 null
             }
         }
+
+    fun toSecretsEntity() =
+        SecretsEntity(
+            account, password, avatarUrl
+        )
 }
