@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,38 +19,47 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 
 @Composable
 fun AccountDialog(
     modifier: Modifier = Modifier,
+    onEvent: (StatusPageEvent) -> Unit,
     isOpen: Boolean,
     onDismissRequest: () -> Unit,
     accountList: List<Secret>,
+    initialSelectedIndex: Int,
     onAddSecret: (secret: Secret) -> Unit,
     onDeleteSecret: (secret: Secret) -> Unit,
     onUpdateSelectedSecret: (selectedIndex: Int, accountList: List<Secret>) -> Unit,
 ) {
-    var selectedIndex by remember {
-        TODO("always return -1")
-        mutableStateOf(accountList.indexOfFirst { it.selected })
+    var selectedIndex by remember(initialSelectedIndex) {
+        mutableStateOf(initialSelectedIndex)
     }
-    Log.d("parabox", accountList.toString())
     var isEditing by remember {
         mutableStateOf(false)
     }
     if (isOpen) {
-        AlertDialog(onDismissRequest = onDismissRequest,
+        AlertDialog(onDismissRequest = {
+            onDismissRequest()
+            selectedIndex = initialSelectedIndex
+        },
             confirmButton = {
                 TextButton(onClick = {
-                    onUpdateSelectedSecret(selectedIndex, accountList)
-                    onDismissRequest()
+                    if (selectedIndex >= 0) {
+                        onUpdateSelectedSecret(selectedIndex, accountList)
+                        onDismissRequest()
+                    } else {
+                        onEvent(StatusPageEvent.OnShowToast("未选择任何选项"))
+                    }
                 }) {
                     Text(text = "确定")
                 }
@@ -83,7 +93,7 @@ fun AccountDialog(
                             onOptionSelected = { newIndex -> selectedIndex = newIndex },
                             onDelete = {
                                 onDeleteSecret(accountList[it])
-                                onDismissRequest()
+                                selectedIndex = initialSelectedIndex
                             }
                         )
                     }

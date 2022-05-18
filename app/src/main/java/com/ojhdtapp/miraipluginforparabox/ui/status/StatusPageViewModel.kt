@@ -8,10 +8,8 @@ import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -32,6 +30,11 @@ class StatusPageViewModel @Inject constructor(
 
     // Account Dialog
     val accountFLow = repository.getAccountListFlow()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedIndexFlow = repository.getAccountListFlow().mapLatest {
+        it.indexOfFirst { secret -> secret.selected }
+    }
+
     fun addNewAccount(secret: Secret) {
         viewModelScope.launch {
             repository.addNewAccount(secret)

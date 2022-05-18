@@ -51,11 +51,13 @@ fun StatusPage(
         mutableStateOf(false)
     }
     AccountDialog(
+        onEvent = onEvent,
         isOpen = openAccountDialog,
         onDismissRequest = { openAccountDialog = false },
         accountList = viewModel.accountFLow.collectAsState(
             initial = emptyList()
         ).value,
+        initialSelectedIndex = viewModel.selectedIndexFlow.collectAsState(initial = -1).value,
         onAddSecret = viewModel::addNewAccount,
         onDeleteSecret = viewModel::deleteAccount,
         onUpdateSelectedSecret = viewModel::updateAccounts

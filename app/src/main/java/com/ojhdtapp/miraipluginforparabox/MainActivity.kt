@@ -2,6 +2,7 @@ package com.ojhdtapp.miraipluginforparabox
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -56,6 +57,9 @@ class MainActivity : ComponentActivity() {
             }
             is StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm -> {
                 connector.submitVerificationResult("success")
+            }
+            is StatusPageEvent.OnShowToast -> {
+                Toast.makeText(this, event.message, Toast.LENGTH_SHORT).show()
             }
         }
     }
