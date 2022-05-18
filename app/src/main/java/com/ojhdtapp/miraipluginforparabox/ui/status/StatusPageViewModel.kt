@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
+import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -22,10 +23,18 @@ class StatusPageViewModel @Inject constructor(
     private val _uiEventFlow = MutableSharedFlow<StatusPageUiEvent>()
     val uiEventFlow = _uiEventFlow.asSharedFlow()
 
+    // Login Resource
     private var _loginResourceStateFlow = MutableStateFlow<LoginResource>(LoginResource.None)
     val loginResourceStateFlow = _loginResourceStateFlow.asStateFlow()
     fun updateLoginResourceStateFlow(value: LoginResource) {
         _loginResourceStateFlow.tryEmit(value)
+    }
+
+    // Service Status
+    private val _serviceStatusStateFlow = MutableStateFlow<ServiceStatus>(ServiceStatus.Stop)
+    val serviceStatusStateFlow = _serviceStatusStateFlow.asStateFlow()
+    fun updateServiceStatusStateFlow(value: ServiceStatus){
+        _serviceStatusStateFlow.tryEmit(value)
     }
 
     // Account Dialog

@@ -36,8 +36,6 @@ fun StatusPage(
                 is StatusPageUiEvent.ShowSnackBar -> {
                     snackBarHostState.showSnackbar(event.message)
                 }
-                else -> {
-                }
             }
         }
     }
@@ -111,76 +109,81 @@ fun StatusPage(
                 scrollBehavior = scrollBehavior
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackBarHostState) },
-        content = {
-            val scrollState = rememberScrollState()
-            Column(
+        snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
+    ) {
+        val scrollState = rememberScrollState()
+        Column(
+            modifier = modifier
+                .padding(it)
+                .verticalScroll(scrollState)
+        ) {
+            MainSwitch(
                 modifier = modifier
-                    .padding(it)
-                    .verticalScroll(scrollState)
-            ) {
-                MainSwitch(
-                    modifier = modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    checked = viewModel.mainSwitchState.value,
-                    viewModel::setMainSwitchState
-                )
-                AnimatedVisibility(visible = viewModel.mainSwitchState.value) {
-                    Column() {
-                        Spacer(modifier = modifier.height(16.dp))
-                        PreferencesCategory(text = "行为")
-                        SwitchPreference(
-                            title = "自动登录",
-                            subtitle = "以默认账户启动服务",
-                            checked = viewModel.autoLoginSwitchState.value,
-                            onCheckedChange = viewModel::setAutoLoginSwitchState
-                        )
-                        SwitchPreference(
-                            title = "前台服务",
-                            subtitle = "提高后台留存能力",
-                            checked = viewModel.foregroundServiceSwitchState.value,
-                            onCheckedChange = viewModel::setForegroundServiceSwitchState
-                        )
-                        NormalPreference(title = "忽略电池优化", subtitle = "提高后台留存能力") {
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                checked = viewModel.mainSwitchState.value,
+                viewModel::setMainSwitchState
+            )
+            StatusIndicator(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                status = viewModel.serviceStatusStateFlow.collectAsState().value
+            )
+            AnimatedVisibility(visible = viewModel.mainSwitchState.value) {
+                Column() {
+                    Spacer(modifier = modifier.height(16.dp))
+                    PreferencesCategory(text = "行为")
+                    SwitchPreference(
+                        title = "自动登录",
+                        subtitle = "以默认账户启动服务",
+                        checked = viewModel.autoLoginSwitchState.value,
+                        onCheckedChange = viewModel::setAutoLoginSwitchState
+                    )
+                    SwitchPreference(
+                        title = "前台服务",
+                        subtitle = "提高后台留存能力",
+                        checked = viewModel.foregroundServiceSwitchState.value,
+                        onCheckedChange = viewModel::setForegroundServiceSwitchState
+                    )
+                    NormalPreference(title = "忽略电池优化", subtitle = "提高后台留存能力") {
 
-                        }
-                        Spacer(modifier = modifier.height(16.dp))
-                        PreferencesCategory(text = "故障排除")
-                        NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
-
-                        }
                     }
-                }
-                AnimatedVisibility(visible = !viewModel.mainSwitchState.value) {
-                    Column(modifier = modifier.padding(24.dp, 16.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = "info",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = modifier.height(16.dp))
-                        Text(
-                            text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Spacer(modifier = modifier.height(16.dp))
+                    PreferencesCategory(text = "故障排除")
+                    NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
+
                     }
-                }
-                Spacer(modifier = modifier.height(16.dp))
-                PreferencesCategory(text = "关于")
-                NormalPreference(title = "版本", subtitle = viewModel.appVersion) {
-
-                }
-                NormalPreference(title = "项目地址") {
-
-                }
-                NormalPreference(title = "开放源代码许可") {
-
                 }
             }
+            AnimatedVisibility(visible = !viewModel.mainSwitchState.value) {
+                Column(modifier = modifier.padding(24.dp, 16.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = "info",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = modifier.height(16.dp))
+                    Text(
+                        text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = modifier.height(16.dp))
+            PreferencesCategory(text = "关于")
+            NormalPreference(title = "版本", subtitle = viewModel.appVersion) {
+
+            }
+            NormalPreference(title = "项目地址") {
+
+            }
+            NormalPreference(title = "开放源代码许可") {
+
+            }
         }
-    )
+    }
 
 //    Column(
 //        modifier = modifier.fillMaxSize(),

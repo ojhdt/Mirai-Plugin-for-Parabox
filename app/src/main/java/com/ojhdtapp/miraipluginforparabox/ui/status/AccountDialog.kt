@@ -144,7 +144,10 @@ fun AccountItem(
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             DropdownMenuItem(
                 text = { Text(text = "删除") },
-                onClick = { onDelete(index) },
+                onClick = {
+                    menuExpanded = false
+                    onDelete(index)
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Delete,
