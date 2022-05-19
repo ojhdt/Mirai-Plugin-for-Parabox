@@ -110,19 +110,24 @@ fun StatusPage(
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
-    ) {
+    ) { paddingValues ->
         val scrollState = rememberScrollState()
         Column(
             modifier = modifier
-                .padding(it)
+                .padding(paddingValues)
                 .verticalScroll(scrollState)
         ) {
             MainSwitch(
                 modifier = modifier
                     .padding(16.dp)
                     .fillMaxWidth(),
+                onEvent = onEvent,
                 checked = viewModel.mainSwitchState.value,
-                viewModel::setMainSwitchState
+                onCheckedChange = {
+                    viewModel.setMainSwitchState(it)
+                    if (it) onEvent(StatusPageEvent.OnServiceStart)
+                },
+                enabled = viewModel.mainSwitchEnabledState.value
             )
             StatusIndicator(
                 modifier = modifier
@@ -246,15 +251,20 @@ fun StatusPage(
 @Composable
 fun MainSwitch(
     modifier: Modifier = Modifier,
+    onEvent: (StatusPageEvent) -> Unit,
     checked: Boolean,
-    onCheckedChange: (value: Boolean) -> Unit
+    onCheckedChange: (value: Boolean) -> Unit,
+    enabled: Boolean
 ) {
     val switchColor by animateColorAsState(targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer)
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(24.dp))
             .background(switchColor)
-            .clickable { onCheckedChange(!checked) }
+            .clickable {
+                if (enabled) onCheckedChange(!checked)
+                else onEvent(StatusPageEvent.OnShowToast("操作进行中，请勿重复点击"))
+            }
             .padding(24.dp, 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -264,6 +274,6 @@ fun MainSwitch(
             style = MaterialTheme.typography.titleLarge,
             color = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }

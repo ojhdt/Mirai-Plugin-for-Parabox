@@ -3,6 +3,8 @@ package com.ojhdtapp.miraipluginforparabox.ui.status
 import android.graphics.Bitmap
 
 sealed class StatusPageEvent {
+    object OnServiceStart: StatusPageEvent()
+
     object OnLoginClick : StatusPageEvent()
     object OnKillClick : StatusPageEvent()
     data class OnPicCaptchaConfirm(val captcha: String?): StatusPageEvent()

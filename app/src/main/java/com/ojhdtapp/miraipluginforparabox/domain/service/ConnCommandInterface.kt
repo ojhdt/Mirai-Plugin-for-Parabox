@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.domain.service
 
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
+import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 
 interface ConnCommandInterface {
 

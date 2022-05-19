@@ -29,10 +29,10 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     private lateinit var connector: ServiceConnector
     var serviceStartJob: Job? = null
+    private val viewModel: StatusPageViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val viewModel: StatusPageViewModel by viewModels()
         connector = ServiceConnector(this, viewModel)
         setContent {
             AppTheme() {
@@ -45,6 +45,10 @@ class MainActivity : ComponentActivity() {
 
     private fun onEvent(event: StatusPageEvent) {
         when (event) {
+            is StatusPageEvent.OnServiceStart -> {
+                serviceStart()
+            }
+
             is StatusPageEvent.OnLoginClick -> {
                 connector.miraiStart()
             }
@@ -69,6 +73,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun serviceStart(){
+        viewModel.setMainSwitchEnabledState(false)
         serviceStartJob = lifecycleScope.launch {
 
         }
