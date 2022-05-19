@@ -85,33 +85,44 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun serviceStart() {
-        fun cancel() {
-            Log.d("parabox", "123")
-            viewModel.setMainSwitchEnabledState(true)
-            viewModel.setMainSwitchState(false)
-            serviceStartJob?.cancel()
-        }
         viewModel.setMainSwitchEnabledState(false)
         serviceStartJob = lifecycleScope.launch {
+            fun cancel() {
+                viewModel.setMainSwitchEnabledState(true)
+                viewModel.setMainSwitchState(false)
+                serviceStartJob?.cancel()
+                Log.d("parabox", "cancel")
+            }
             connector.startAndBind().also {
                 viewModel.updateServiceStatusStateFlow(it)
-                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                    cancel()
+                    return@launch
+                }
             }
             connector.miraiStart().also {
-                Log.d("parabox", it.toString())
                 viewModel.updateServiceStatusStateFlow(it)
-                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                    cancel()
+                    return@launch
+                }
             }
             connector.miraiLogin().also {
                 viewModel.updateServiceStatusStateFlow(it)
-                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                    cancel()
+                    return@launch
+                }
                 var temp = it
                 while (temp is ServiceStatus.Pause) {
                     val newTimestamp = temp.timestamp
                     listeningDeferred = CompletableDeferredWithTag(newTimestamp)
                     connector.submitVerificationResult(listeningDeferred!!.await()).also {
                         viewModel.updateServiceStatusStateFlow(it)
-                        if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                        if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                            cancel()
+                            return@launch
+                        }
                         else if (it is ServiceStatus.Pause) temp = it
                     }
                 }
@@ -124,8 +135,9 @@ class MainActivity : ComponentActivity() {
 //                    }
 //                }
             }
+            Log.d("parabox", "end")
             viewModel.setMainSwitchState(true)
-            viewModel.setMainSwitchEnabledState(false)
+            viewModel.setMainSwitchEnabledState(true)
         }
     }
 
