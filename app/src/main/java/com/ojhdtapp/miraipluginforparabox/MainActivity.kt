@@ -2,6 +2,7 @@ package com.ojhdtapp.miraipluginforparabox
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -85,8 +86,9 @@ class MainActivity : ComponentActivity() {
 
     private fun serviceStart() {
         fun cancel() {
-            viewModel.setMainSwitchState(false)
+            Log.d("parabox", "123")
             viewModel.setMainSwitchEnabledState(true)
+            viewModel.setMainSwitchState(false)
             serviceStartJob?.cancel()
         }
         viewModel.setMainSwitchEnabledState(false)

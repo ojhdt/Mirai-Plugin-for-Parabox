@@ -29,9 +29,9 @@ import kotlin.coroutines.suspendCoroutine
 import kotlin.system.exitProcess
 
 @AndroidEntryPoint
-class ConnService @Inject constructor(
-    private val repository: MainRepository
-) : LifecycleService() {
+class ConnService : LifecycleService() {
+    @Inject
+    lateinit var repository : MainRepository
 
     private lateinit var bot: Bot
     private var listener: Listener<FriendMessageEvent>? = null
@@ -87,9 +87,9 @@ class ConnService @Inject constructor(
     }
 
     override fun onCreate() {
+        sMessenger = Messenger(ConnHandler())
         super.onCreate()
 //        mLoginSolver = AndroidLoginSolver()
-        sMessenger = Messenger(ConnHandler())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
