@@ -93,8 +93,12 @@ class MainActivity : ComponentActivity() {
         }
         viewModel.setMainSwitchEnabledState(false)
         serviceStartJob = lifecycleScope.launch {
-            connector.startAndBind()
+            connector.startAndBind().also {
+                viewModel.updateServiceStatusStateFlow(it)
+                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+            }
             connector.miraiStart().also {
+                Log.d("parabox", it.toString())
                 viewModel.updateServiceStatusStateFlow(it)
                 if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
             }

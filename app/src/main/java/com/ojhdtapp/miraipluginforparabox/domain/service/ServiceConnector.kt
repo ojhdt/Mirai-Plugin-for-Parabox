@@ -18,19 +18,22 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
     ConnCommandInterface {
     private var sMessenger: Messenger? = null
     private val interfaceMessenger = Messenger(ConnHandler())
+    private var connectionDeferred : CompletableDeferred<ServiceStatus>? = null
     private var listeningDeferred: CompletableDeferredWithTag<Long, ServiceStatus>? = null
-    var isConnected = false
-        private set
+    private var isConnected = false
 
     fun initializeAllState() {
         vm.updateLoginResourceStateFlow(LoginResource.None)
         vm.updateServiceStatusStateFlow(ServiceStatus.Stop)
     }
 
-    fun startAndBind() {
+    suspend fun startAndBind() : ServiceStatus{
+        val timestamp = System.currentTimeMillis()
         val intent = Intent(context, ConnService::class.java)
         context.startService(intent)
         context.bindService(intent, Connection(), Context.BIND_AUTO_CREATE)
+        connectionDeferred = CompletableDeferred()
+        return connectionDeferred!!.await()
     }
 
     override suspend fun miraiStart(): ServiceStatus =
@@ -99,14 +102,18 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
 
     inner class Connection : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            Log.d("parabox", "service connected")
             isConnected = true
             sMessenger = Messenger(service)
+            connectionDeferred?.complete(ServiceStatus.Loading("正在启动主服务"))
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            Log.d("parabox", "service disconnected")
             isConnected = false
             sMessenger = null
             initializeAllState()
+            connectionDeferred?.complete(ServiceStatus.Error("启动主服务时发生错误"))
         }
 
     }

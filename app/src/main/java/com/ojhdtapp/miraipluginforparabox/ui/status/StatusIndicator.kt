@@ -1,7 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,7 +23,10 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 
 @Composable
 fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
-    AnimatedVisibility(visible = status !is ServiceStatus.Stop) {
+    AnimatedVisibility(visible = status !is ServiceStatus.Stop,
+    enter = expandVertically(),
+    exit = shrinkVertically()
+    ) {
         val backgroundColor by animateColorAsState(
             targetValue = when (status) {
                 is ServiceStatus.Error -> MaterialTheme.colorScheme.errorContainer
