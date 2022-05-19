@@ -15,7 +15,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.JsonParser
 import javax.inject.Inject
 
 @Composable
-fun UnSafeWebView(modifier: Modifier = Modifier, onEvent: (StatusPageEvent) -> Unit, url: String) {
+fun UnSafeWebView(modifier: Modifier = Modifier, url: String, onConfirm : (res : String) -> Unit) {
     val viewModel: StatusPageViewModel = hiltViewModel()
     AndroidView(factory = { context ->
         WebView.setWebContentsDebuggingEnabled(true)
@@ -35,7 +35,7 @@ fun UnSafeWebView(modifier: Modifier = Modifier, onEvent: (StatusPageEvent) -> U
                     val msg = consoleMessage?.message()
                     // 按下回到qq按钮之后会打印这句话，于是就用这个解决了。。。。
                     if (msg?.startsWith("手Q扫码验证") == true) {
-                        onEvent(StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm)
+                        onConfirm("success")
                     }
                     return super.onConsoleMessage(consoleMessage)
                 }
@@ -45,7 +45,7 @@ fun UnSafeWebView(modifier: Modifier = Modifier, onEvent: (StatusPageEvent) -> U
                 domStorageEnabled = true
             }
             addJavascriptInterface(Bridge(GsonParser()) {
-                onEvent(StatusPageEvent.OnSliderCaptchaConfirm(it))
+                onConfirm(it)
             }, "bridge")
             loadUrl(url)
         }

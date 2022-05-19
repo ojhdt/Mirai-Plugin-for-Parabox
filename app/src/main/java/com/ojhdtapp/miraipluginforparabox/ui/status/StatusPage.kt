@@ -13,9 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.PreferencesCategory
 import com.ojhdtapp.miraipluginforparabox.ui.util.SwitchPreference
@@ -135,6 +138,53 @@ fun StatusPage(
                     .padding(16.dp),
                 status = viewModel.serviceStatusStateFlow.collectAsState().value
             )
+            val loginResource by viewModel.loginResourceStateFlow.collectAsState()
+            when (loginResource) {
+                is LoginResource.None -> {
+                }
+                is LoginResource.PicCaptcha -> {
+                    Row() {
+//                    TextField(
+//                        modifier = modifier.weight(1f),
+//                        value = viewModel.loginTextState.value,
+//                        onValueChange = viewModel::setLoginTextState
+//                    )
+                        Image(
+                            bitmap = (loginResource as LoginResource.PicCaptcha).captchaBitMap.asImageBitmap(),
+                            contentDescription = "PicCaptcha"
+                        )
+                        Button(onClick = {
+                            onEvent(StatusPageEvent.OnLoginResourceConfirm("asdf", loginResource.timestamp))
+                        }) {
+                            Text(text = "Confirm")
+                        }
+                    }
+                }
+                is LoginResource.UnsafeDeviceLoginVerify -> {
+                    UnSafeWebView(
+                        modifier = modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .background(Color.Black),
+                        url = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url,
+                        onConfirm = {
+                            onEvent(StatusPageEvent.OnLoginResourceConfirm(it, loginResource.timestamp))
+                        }
+                    )
+                }
+                is LoginResource.SliderCaptcha -> {
+                    UnSafeWebView(
+                        modifier = modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .background(Color.Black),
+                        url = (loginResource as LoginResource.SliderCaptcha).url,
+                        onConfirm = {
+                            onEvent(StatusPageEvent.OnLoginResourceConfirm(it, loginResource.timestamp))
+                        }
+                    )
+                }
+            }
             AnimatedVisibility(visible = viewModel.mainSwitchState.value) {
                 Column() {
                     Spacer(modifier = modifier.height(16.dp))

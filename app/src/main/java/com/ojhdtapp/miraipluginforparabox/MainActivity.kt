@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.core.util.BrowserUtil
+import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var connector: ServiceConnector
     var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
+    private var listeningDeferred: CompletableDeferredWithTag<Long, String>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,23 +53,30 @@ class MainActivity : ComponentActivity() {
                 serviceStart()
             }
 
-            is StatusPageEvent.OnLoginClick -> {
+//            is StatusPageEvent.OnLoginClick -> {
+//
+//            }
+//            is StatusPageEvent.OnKillClick -> {
+//
+//            }
+            is StatusPageEvent.OnLoginResourceConfirm -> {
+                listeningDeferred?.complete(event.timestamp, event.res)
+            }
 
-            }
-            is StatusPageEvent.OnKillClick -> {
-
-            }
-            is StatusPageEvent.OnPicCaptchaConfirm -> {
-                event.captcha?.let {
-                    connector.submitVerificationResult(it)
-                }
-            }
-            is StatusPageEvent.OnSliderCaptchaConfirm -> {
-                connector.submitVerificationResult(event.ticket)
-            }
-            is StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm -> {
-                connector.submitVerificationResult("success")
-            }
+//            is StatusPageEvent.OnPicCaptchaConfirm -> {
+//                event.captcha?.let {
+//                    listeningDeferred?.complete(,it)
+////                    connector.submitVerificationResult(it)
+//                }
+//            }
+//            is StatusPageEvent.OnSliderCaptchaConfirm -> {
+//                listeningDeferred?.complete(,event.ticket)
+////                connector.submitVerificationResult(event.ticket)
+//            }
+//            is StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm -> {
+//                listeningDeferred?.complete(,"success")
+////                connector.submitVerificationResult("success")
+//            }
             is StatusPageEvent.OnShowToast -> {
                 Toast.makeText(this, event.message, Toast.LENGTH_SHORT).show()
             }
@@ -83,19 +92,32 @@ class MainActivity : ComponentActivity() {
         viewModel.setMainSwitchEnabledState(false)
         serviceStartJob = lifecycleScope.launch {
             connector.startAndBind()
-            viewModel.updateServiceStatusStateFlow(
-                connector.miraiStart().also {
-                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
-                }
-            )
-            viewModel.updateServiceStatusStateFlow(
-                connector.miraiLogin().also {
-                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
-                    else if(it is ServiceStatus.Pause) {
-                        TODO()
+            connector.miraiStart().also {
+                viewModel.updateServiceStatusStateFlow(it)
+                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+            }
+            connector.miraiLogin().also {
+                viewModel.updateServiceStatusStateFlow(it)
+                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                var temp = it
+                while (temp is ServiceStatus.Pause) {
+                    val newTimestamp = temp.timestamp
+                    listeningDeferred = CompletableDeferredWithTag(newTimestamp)
+                    connector.submitVerificationResult(listeningDeferred!!.await()).also {
+                        viewModel.updateServiceStatusStateFlow(it)
+                        if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                        else if (it is ServiceStatus.Pause) temp = it
                     }
                 }
-            )
+//                else if (it is ServiceStatus.Pause) {
+//                    val timestampFromServer = it.timestamp
+//                    listeningDeferred = CompletableDeferredWithTag(timestampFromServer)
+//                    connector.submitVerificationResult(listeningDeferred!!.await()).also {
+//                        viewModel.updateServiceStatusStateFlow(it)
+//                        if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+//                    }
+//                }
+            }
             viewModel.setMainSwitchState(true)
             viewModel.setMainSwitchEnabledState(false)
         }

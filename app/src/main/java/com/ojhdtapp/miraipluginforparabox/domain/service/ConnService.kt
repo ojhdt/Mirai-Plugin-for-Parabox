@@ -54,6 +54,7 @@ class ConnService @Inject constructor(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
                     putInt("status", ConnKey.SUCCESS)
+                    putLong("timestamp", mLoginSolver.timestamp)
                     putParcelable("value", ServiceStatus.Running("Mirai Core - "))
                 })
             )
@@ -62,6 +63,7 @@ class ConnService @Inject constructor(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
                     putInt("status", ConnKey.FAILURE)
+                    putLong("timestamp", mLoginSolver.timestamp)
                     putParcelable("value", ServiceStatus.Error("登陆失败，请检查账户信息和网络连接"))
                 })
             )
@@ -86,7 +88,7 @@ class ConnService @Inject constructor(
 
     override fun onCreate() {
         super.onCreate()
-        mLoginSolver = AndroidLoginSolver()
+//        mLoginSolver = AndroidLoginSolver()
         sMessenger = Messenger(ConnHandler())
     }
 
@@ -139,7 +141,7 @@ class ConnService @Inject constructor(
                         }
                         ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT -> {
                             (msg.obj as Bundle).getString("value")?.let {
-                                mLoginSolver.submitVerificationResult(it)
+                                submitVerificationResult(it, timestamp)
                             }
                         }
                         else -> {}
@@ -153,43 +155,53 @@ class ConnService @Inject constructor(
 
     }
 
-    inner class AndroidLoginSolver() : LoginSolver() {
-        lateinit var verificationResult: CompletableDeferred<String>
-        //    lateinit var captchaData: ByteArray
-//    lateinit var url: String
+    inner class AndroidLoginSolver(var timestamp: Long) : LoginSolver() {
+        private lateinit var verificationResult: CompletableDeferred<String>
 
-        fun submitVerificationResult(result: String) {
+        fun submitVerificationResult(result: String, timestampWhenSubmit: Long) {
+            timestamp = timestampWhenSubmit // update the tag to the latest waiting
             verificationResult.complete(result)
         }
 
         override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String {
+            val newTimeStamp = System.currentTimeMillis()
             Log.d("parabox", "onSolvePicCaptcha")
             verificationResult = CompletableDeferred()
 //        captchaData = data
             val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
-            onLoginStateChanged(LoginResource.PicCaptcha(bm))
+            onLoginStateChanged(LoginResource.PicCaptcha(bm, newTimeStamp), timestamp, newTimeStamp)
             val res = verificationResult.await()
-            onLoginStateChanged(LoginResource.None)
+            onLoginStateChanged(LoginResource.None, timestamp, newTimeStamp)
             return res
         }
 
         override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
+            val newTimeStamp = System.currentTimeMillis()
             Log.d("parabox", "onSolveSliderCaptcha")
             verificationResult = CompletableDeferred()
 //        this.url = url
-            onLoginStateChanged(LoginResource.SliderCaptcha(url))
+            onLoginStateChanged(
+                LoginResource.SliderCaptcha(url, newTimeStamp),
+                timestamp,
+                newTimeStamp
+            )
             val res = verificationResult.await()
-            onLoginStateChanged(LoginResource.None)
+            onLoginStateChanged(LoginResource.None, timestamp, newTimeStamp)
             return res
         }
 
         override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
+            val newTimeStamp = System.currentTimeMillis()
             Log.d("parabox", "onSolveUnsafeDeviceLoginVerify")
             verificationResult = CompletableDeferred()
 //        this.url = url
-            onLoginStateChanged(LoginResource.UnsafeDeviceLoginVerify(url))
+            onLoginStateChanged(
+                LoginResource.UnsafeDeviceLoginVerify(url, newTimeStamp),
+                timestamp,
+                newTimeStamp
+            )
             val res = verificationResult.await()
-            onLoginStateChanged(LoginResource.None)
+            onLoginStateChanged(LoginResource.None, timestamp, newTimeStamp)
             return res
         }
 
@@ -241,22 +253,25 @@ class ConnService @Inject constructor(
                     })
                 )
             } else {
+                mLoginSolver = AndroidLoginSolver(timestamp)
                 miraiMain(secret.account, secret.password)
             }
         }
     }
 
-    fun onLoginStateChanged(resource: LoginResource) {
+    fun onLoginStateChanged(resource: LoginResource, timestamp: Long, newTimeStamp: Long) {
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
                 putInt("status", ConnKey.SUCCESS)
-                putParcelable("value", ServiceStatus.Pause("请遵照提示完成身份验证"))
+                putLong("timestamp", timestamp) // The reason we need old timestamp here
+                putParcelable("value", ServiceStatus.Pause("请遵照提示完成身份验证", newTimeStamp))
             })
         )
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_ON_LOGIN_STATE_CHANGED)
+                putInt("status", ConnKey.SUCCESS)
                 putInt(
                     "type", when (resource) {
                         is LoginResource.None -> LoginResourceType.None
@@ -270,9 +285,7 @@ class ConnService @Inject constructor(
         )
     }
 
-    fun submitVerificationResult(result: String) {
-        mLoginSolver.submitVerificationResult(result)
+    fun submitVerificationResult(result: String, timestamp: Long) {
+        mLoginSolver.submitVerificationResult(result, timestamp)
     }
-
-
 }
