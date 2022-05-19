@@ -8,6 +8,8 @@ interface ConnCommandInterface {
 
     fun miraiStop()
 
+    fun miraiLogin()
+
     fun onLoginStateChanged(resource: LoginResource)
 
     fun submitVerificationResult(result: String)

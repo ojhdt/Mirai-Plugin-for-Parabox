@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 interface MainRepository {
     fun getAccountListFlow() : Flow<List<Secret>>
 
+    suspend fun getSelectedAccount() : Secret?
+
     suspend fun addNewAccount(secrets: Secret)
 
     suspend fun deleteAccount(secrets: Secret)

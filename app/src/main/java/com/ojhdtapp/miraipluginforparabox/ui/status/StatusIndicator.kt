@@ -31,6 +31,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                 is ServiceStatus.Loading -> MaterialTheme.colorScheme.primary
                 is ServiceStatus.Running -> MaterialTheme.colorScheme.primary
                 is ServiceStatus.Stop -> MaterialTheme.colorScheme.primary
+                is ServiceStatus.Pause -> MaterialTheme.colorScheme.primary
             }
         )
         val textColor by animateColorAsState(
@@ -39,6 +40,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                 is ServiceStatus.Loading -> MaterialTheme.colorScheme.onPrimary
                 is ServiceStatus.Running -> MaterialTheme.colorScheme.onPrimary
                 is ServiceStatus.Stop -> MaterialTheme.colorScheme.onPrimary
+                is ServiceStatus.Pause -> MaterialTheme.colorScheme.onPrimary
             }
         )
         Row(modifier = modifier
@@ -54,12 +56,14 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                     is ServiceStatus.Loading -> Icons.Outlined.Refresh
                     is ServiceStatus.Running -> Icons.Outlined.CheckCircle
                     is ServiceStatus.Stop -> Icons.Outlined.CheckCircle
+                    is ServiceStatus.Pause -> Icons.Outlined.Warning
                 },
                 contentDescription = when (status) {
                     is ServiceStatus.Error -> "error"
                     is ServiceStatus.Loading -> "loading"
                     is ServiceStatus.Running -> "running"
                     is ServiceStatus.Stop -> "stop"
+                    is ServiceStatus.Pause -> "pause"
                 },
                 tint = textColor
             )
@@ -70,6 +74,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                         is ServiceStatus.Loading -> "服务正在启动"
                         is ServiceStatus.Running -> "服务正常运行"
                         is ServiceStatus.Stop -> "服务已停止"
+                        is ServiceStatus.Pause -> "等待事务处理"
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = textColor

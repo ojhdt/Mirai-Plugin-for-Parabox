@@ -34,6 +34,10 @@ class MainRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getSelectedAccount(): Secret? {
+        return dao.getSelectedSecret()?.toSecret()
+    }
+
     override suspend fun addNewAccount(secret: Secret) {
         dao.insertSecret(secret.toSecretsEntity())
     }

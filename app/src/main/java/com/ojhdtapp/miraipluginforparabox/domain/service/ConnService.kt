@@ -6,13 +6,15 @@ import android.os.*
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
+import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnKey
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.cancel
+import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.event.GlobalEventChannel
@@ -22,10 +24,14 @@ import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.LoginSolver
 import java.io.File
+import javax.inject.Inject
 import kotlin.coroutines.suspendCoroutine
 import kotlin.system.exitProcess
 
-class ConnService : ConnCommandInterface, LifecycleService() {
+@AndroidEntryPoint
+class ConnService @Inject constructor(
+    private val repository: MainRepository
+) : ConnCommandInterface, LifecycleService() {
 
     private lateinit var bot: Bot
     private var listener: Listener<FriendMessageEvent>? = null
@@ -36,30 +42,39 @@ class ConnService : ConnCommandInterface, LifecycleService() {
 
     private var isRunning = false
 
-    private fun miraiMain(accountNum: Long, passwd: String) {
-        Log.d("parabox", "$accountNum - $passwd")
+    private suspend fun miraiMain(accountNum: Long, passwd: String) {
         bot = BotFactory.newBot(accountNum, passwd) {
             loginSolver = mLoginSolver
             cacheDir = getExternalFilesDir("cache")!!.absoluteFile
         }
-        lifecycleScope.launch {
-            try {
-                bot.login()
-                registerMessageReceiver()
-            } catch (e: LoginFailedException) {
-            }
+        try {
+            bot.login()
+            registerMessageReceiver()
+            interfaceMessenger?.send(
+                Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                    putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
+                    putInt("status", ConnKey.SUCCESS)
+                    putParcelable("value", ServiceStatus.Running("Mirai Core - "))
+                })
+            )
+        } catch (e: LoginFailedException) {
+            interfaceMessenger?.send(
+                Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                    putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
+                    putInt("status", ConnKey.FAILURE)
+                    putParcelable("value", ServiceStatus.Error("登陆失败，请检查账户信息和网络连接"))
+                })
+            )
         }
+
     }
 
     private fun registerMessageReceiver() {
-        Log.d("parabox", "receiver registered")
-        lifecycleScope.launch {
-            listener =
-                bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
-                    Log.d("aaa", "${event.senderName}:${event.message}")
-                    event.subject.sendMessage("Hello from mirai!")
-                }
-        }
+        listener =
+            bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
+                Log.d("aaa", "${event.senderName}:${event.message}")
+                event.subject.sendMessage("Hello from mirai!")
+            }
     }
 
     private fun unRegisterMessageReceiver() {
@@ -114,11 +129,12 @@ class ConnService : ConnCommandInterface, LifecycleService() {
                     when ((msg.obj as Bundle).getInt("command", 10)) {
                         ConnKey.MSG_COMMAND_START_SERVICE -> {
                             miraiStart()
-                            Log.d("parabox", "received")
-                            miraiMain("2371065280".toLong(), "b20011007")
                         }
                         ConnKey.MSG_COMMAND_STOP_SERVICE -> {
                             miraiStop()
+                        }
+                        ConnKey.MSG_COMMAND_LOGIN -> {
+                            miraiLogin()
                         }
                         ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT -> {
                             (msg.obj as Bundle).getString("value")?.let {
@@ -182,19 +198,57 @@ class ConnService : ConnCommandInterface, LifecycleService() {
     }
 
     override fun miraiStart() {
+        interfaceMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                putInt("command", ConnKey.MSG_RESPONSE_START_SERVICE)
+                putInt("status", ConnKey.SUCCESS)
+                putParcelable("value", ServiceStatus.Loading("尝试以默认账户登录"))
+            })
+        )
         if (isRunning) return
         //miraiMain()
         isRunning = true
     }
 
     override fun miraiStop() {
+        interfaceMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)
+                putInt("status", ConnKey.SUCCESS)
+            })
+        )
         unRegisterMessageReceiver()
         lifecycleScope.cancel()
         stopSelf()
     }
 
+    override fun miraiLogin() {
+        lifecycleScope.launch {
+            val secret = withContext(Dispatchers.IO) {
+                repository.getSelectedAccount()
+            }
+            if (secret == null) {
+                interfaceMessenger?.send(
+                    Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                        putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)
+                        putInt("status", ConnKey.FAILURE)
+                        putParcelable("value", ServiceStatus.Error("请至少添加并选择一个账户"))
+                    })
+                )
+            } else {
+                miraiMain(secret.account, secret.password)
+            }
+        }
+    }
+
     override fun onLoginStateChanged(resource: LoginResource) {
-        Log.d("parabox", (interfaceMessenger == null).toString())
+        interfaceMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
+                putInt("status", ConnKey.SUCCESS)
+                putParcelable("value", ServiceStatus.Pause("请遵照提示完成身份验证"))
+            })
+        )
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_ON_LOGIN_STATE_CHANGED)

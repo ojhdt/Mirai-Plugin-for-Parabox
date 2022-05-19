@@ -84,6 +84,12 @@ class StatusPageViewModel @Inject constructor(
     }
 
     // Switches
+    private val _mainSwitchEnabledState = mutableStateOf<Boolean>(true)
+    val mainSwitchEnabledState : State<Boolean> = _mainSwitchEnabledState
+
+    fun setMainSwitchEnabledState(value : Boolean){
+        _mainSwitchEnabledState.value = value
+    }
     private val _mainSwitchState = mutableStateOf<Boolean>(false)
     val mainSwitchState: State<Boolean> = _mainSwitchState
     fun setMainSwitchState(value: Boolean) {

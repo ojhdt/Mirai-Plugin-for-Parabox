@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
+import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
 
 class ServiceConnector(private val context: Context, private val vm: StatusPageViewModel) :
@@ -20,6 +21,37 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
 
     fun initializeAllState() {
         vm.updateLoginResourceStateFlow(LoginResource.None)
+        vm.updateServiceStatusStateFlow(ServiceStatus.Stop)
+    }
+
+    fun startAndBind() {
+        val intent = Intent(context, ConnService::class.java)
+        context.startService(intent)
+        context.bindService(intent, Connection(), Context.BIND_AUTO_CREATE)
+    }
+
+    override fun miraiStart() {
+        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
+            putInt("command", ConnKey.MSG_COMMAND_START_SERVICE)
+        }).apply {
+            replyTo = interfaceMessenger
+        })
+    }
+
+    override fun miraiStop() {
+        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
+            putInt("command", ConnKey.MSG_COMMAND_STOP_SERVICE)
+        }).apply {
+            replyTo = interfaceMessenger
+        })
+    }
+
+    override fun miraiLogin() {
+        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
+            putInt("command", ConnKey.MSG_COMMAND_LOGIN)
+        }).apply {
+            replyTo = interfaceMessenger
+        })
     }
 
     override fun onLoginStateChanged(resource: LoginResource) {
@@ -35,25 +67,6 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
                 replyTo = interfaceMessenger
             })
         }
-    }
-
-    override fun miraiStart() {
-        val intent = Intent(context, ConnService::class.java)
-        context.startService(intent)
-        context.bindService(intent, Connection(), Context.BIND_AUTO_CREATE)
-        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
-            putInt("command", ConnKey.MSG_COMMAND_START_SERVICE)
-        }).apply {
-            replyTo = interfaceMessenger
-        })
-    }
-
-    override fun miraiStop() {
-        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
-            putInt("command", ConnKey.MSG_COMMAND_STOP_SERVICE)
-        }).apply {
-            replyTo = interfaceMessenger
-        })
     }
 
     inner class Connection : ServiceConnection {
