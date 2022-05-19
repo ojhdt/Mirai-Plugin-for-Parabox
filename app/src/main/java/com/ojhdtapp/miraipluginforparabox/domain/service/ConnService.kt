@@ -31,7 +31,7 @@ import kotlin.system.exitProcess
 @AndroidEntryPoint
 class ConnService @Inject constructor(
     private val repository: MainRepository
-) : ConnCommandInterface, LifecycleService() {
+) : LifecycleService() {
 
     private lateinit var bot: Bot
     private var listener: Listener<FriendMessageEvent>? = null
@@ -126,15 +126,16 @@ class ConnService @Inject constructor(
                 }
                 ConnKey.MSG_COMMAND -> {
                     interfaceMessenger = msg.replyTo
-                    when ((msg.obj as Bundle).getInt("command", 10)) {
+                    val timestamp = (msg.obj as Bundle).getLong("timestamp", -1L)
+                    when ((msg.obj as Bundle).getInt("command", -1)) {
                         ConnKey.MSG_COMMAND_START_SERVICE -> {
-                            miraiStart()
+                            miraiStart(timestamp)
                         }
                         ConnKey.MSG_COMMAND_STOP_SERVICE -> {
-                            miraiStop()
+                            miraiStop(timestamp)
                         }
                         ConnKey.MSG_COMMAND_LOGIN -> {
-                            miraiLogin()
+                            miraiLogin(timestamp)
                         }
                         ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT -> {
                             (msg.obj as Bundle).getString("value")?.let {
@@ -197,11 +198,12 @@ class ConnService @Inject constructor(
 
     }
 
-    override fun miraiStart() {
+    fun miraiStart(timestamp: Long) {
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_START_SERVICE)
                 putInt("status", ConnKey.SUCCESS)
+                putLong("timestamp", timestamp)
                 putParcelable("value", ServiceStatus.Loading("尝试以默认账户登录"))
             })
         )
@@ -210,11 +212,13 @@ class ConnService @Inject constructor(
         isRunning = true
     }
 
-    override fun miraiStop() {
+    fun miraiStop(timestamp: Long) {
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)
                 putInt("status", ConnKey.SUCCESS)
+                putLong("timestamp", timestamp)
+                putParcelable("value", ServiceStatus.Stop)
             })
         )
         unRegisterMessageReceiver()
@@ -222,7 +226,7 @@ class ConnService @Inject constructor(
         stopSelf()
     }
 
-    override fun miraiLogin() {
+    fun miraiLogin(timestamp: Long) {
         lifecycleScope.launch {
             val secret = withContext(Dispatchers.IO) {
                 repository.getSelectedAccount()
@@ -232,6 +236,7 @@ class ConnService @Inject constructor(
                     Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                         putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)
                         putInt("status", ConnKey.FAILURE)
+                        putLong("timestamp", timestamp)
                         putParcelable("value", ServiceStatus.Error("请至少添加并选择一个账户"))
                     })
                 )
@@ -241,7 +246,7 @@ class ConnService @Inject constructor(
         }
     }
 
-    override fun onLoginStateChanged(resource: LoginResource) {
+    fun onLoginStateChanged(resource: LoginResource) {
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
@@ -265,7 +270,7 @@ class ConnService @Inject constructor(
         )
     }
 
-    override fun submitVerificationResult(result: String) {
+    fun submitVerificationResult(result: String) {
         mLoginSolver.submitVerificationResult(result)
     }
 

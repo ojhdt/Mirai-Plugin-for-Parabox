@@ -17,12 +17,14 @@ import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.core.util.BrowserUtil
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
+import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPage
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -50,10 +52,10 @@ class MainActivity : ComponentActivity() {
             }
 
             is StatusPageEvent.OnLoginClick -> {
-                connector.miraiStart()
+
             }
             is StatusPageEvent.OnKillClick -> {
-                connector.miraiStop()
+
             }
             is StatusPageEvent.OnPicCaptchaConfirm -> {
                 event.captcha?.let {
@@ -72,11 +74,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun serviceStart(){
+    private fun serviceStart() {
+        fun cancel() {
+            viewModel.setMainSwitchState(false)
+            viewModel.setMainSwitchEnabledState(true)
+            serviceStartJob?.cancel()
+        }
         viewModel.setMainSwitchEnabledState(false)
         serviceStartJob = lifecycleScope.launch {
-
+            connector.startAndBind()
+            viewModel.updateServiceStatusStateFlow(
+                connector.miraiStart().also {
+                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                }
+            )
+            viewModel.updateServiceStatusStateFlow(
+                connector.miraiLogin().also {
+                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
+                    else if(it is ServiceStatus.Pause) {
+                        TODO()
+                    }
+                }
+            )
+            viewModel.setMainSwitchState(true)
+            viewModel.setMainSwitchEnabledState(false)
         }
+    }
+
+    private fun serviceStop() {
+
     }
 
 }

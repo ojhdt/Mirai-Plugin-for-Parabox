@@ -5,13 +5,13 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 
 interface ConnCommandInterface {
 
-    fun miraiStart()
+    suspend fun miraiStart() : ServiceStatus
 
-    fun miraiStop()
+    suspend fun miraiStop() : ServiceStatus
 
-    fun miraiLogin()
+    suspend fun miraiLogin() : ServiceStatus
 
     fun onLoginStateChanged(resource: LoginResource)
 
-    fun submitVerificationResult(result: String)
+    suspend fun submitVerificationResult(result: String): ServiceStatus
 }

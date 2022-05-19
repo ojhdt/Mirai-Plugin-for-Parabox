@@ -7,15 +7,18 @@ import android.content.ServiceConnection
 import android.os.*
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
+import kotlinx.coroutines.CompletableDeferred
 
 class ServiceConnector(private val context: Context, private val vm: StatusPageViewModel) :
     ConnCommandInterface {
     private var sMessenger: Messenger? = null
     private val interfaceMessenger = Messenger(ConnHandler())
+    private var listeningDeferred: CompletableDeferredWithTag<Long, ServiceStatus>? = null
     var isConnected = false
         private set
 
@@ -30,44 +33,69 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
         context.bindService(intent, Connection(), Context.BIND_AUTO_CREATE)
     }
 
-    override fun miraiStart() {
-        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
-            putInt("command", ConnKey.MSG_COMMAND_START_SERVICE)
-        }).apply {
-            replyTo = interfaceMessenger
-        })
-    }
+    override suspend fun miraiStart(): ServiceStatus =
+        if (isConnected) {
+            val timestamp = System.currentTimeMillis()
+            sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
+                putInt("command", ConnKey.MSG_COMMAND_START_SERVICE)
+                putLong("timestamp", timestamp)
+            }).apply {
+                replyTo = interfaceMessenger
+            })
+            listeningDeferred = CompletableDeferredWithTag(timestamp)
+            listeningDeferred!!.await()
+        } else {
+            ServiceStatus.Error("与服务的连接已断开")
+        }
 
-    override fun miraiStop() {
+
+    override suspend fun miraiStop(): ServiceStatus {
+        val timestamp = System.currentTimeMillis()
         sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
             putInt("command", ConnKey.MSG_COMMAND_STOP_SERVICE)
+            putLong("timestamp", System.currentTimeMillis())
         }).apply {
             replyTo = interfaceMessenger
         })
+        listeningDeferred = CompletableDeferredWithTag(timestamp)
+        return listeningDeferred!!.await()
     }
 
-    override fun miraiLogin() {
-        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
-            putInt("command", ConnKey.MSG_COMMAND_LOGIN)
-        }).apply {
-            replyTo = interfaceMessenger
-        })
-    }
+    override suspend fun miraiLogin(): ServiceStatus =
+        if (isConnected) {
+            val timestamp = System.currentTimeMillis()
+            sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
+                putInt("command", ConnKey.MSG_COMMAND_LOGIN)
+                putLong("timestamp", System.currentTimeMillis())
+            }).apply {
+                replyTo = interfaceMessenger
+            })
+            listeningDeferred = CompletableDeferredWithTag(timestamp)
+            listeningDeferred!!.await()
+        } else {
+            ServiceStatus.Error("与服务的连接已断开")
+        }
 
     override fun onLoginStateChanged(resource: LoginResource) {
         vm.updateLoginResourceStateFlow(resource)
     }
 
-    override fun submitVerificationResult(result: String) {
+    override suspend fun submitVerificationResult(result: String): ServiceStatus =
         if (isConnected) {
+            val timestamp = System.currentTimeMillis()
             sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT)
+                putLong("timestamp", System.currentTimeMillis())
                 putString("value", result)
             }).apply {
                 replyTo = interfaceMessenger
             })
+            listeningDeferred = CompletableDeferredWithTag(timestamp)
+            listeningDeferred!!.await()
+        } else {
+            ServiceStatus.Error("与服务的连接已断开")
         }
-    }
+
 
     inner class Connection : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -106,6 +134,37 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
                                     else -> LoginResource.None
                                 }
                             onLoginStateChanged(value)
+                        }
+                        else -> {}
+                    }
+                }
+                ConnKey.MSG_RESPONSE -> {
+                    val status = (msg.obj as Bundle).getInt("status", ConnKey.FAILURE)
+                    when ((msg.obj as Bundle).getInt("command", -1)) {
+                        ConnKey.MSG_RESPONSE_START_SERVICE -> {
+                            listeningDeferred?.complete(
+                                (msg.obj as Bundle).getLong("timestamp", -1L),
+                                (msg.obj as Bundle).getParcelable<ServiceStatus>("value")
+                                    ?: ServiceStatus.Error("服务通信期间发生致命错误")
+                            )
+                        }
+                        ConnKey.MSG_RESPONSE_STOP_SERVICE -> {
+                            listeningDeferred?.complete(
+                                (msg.obj as Bundle).getLong("timestamp", -1L),
+                                (msg.obj as Bundle).getParcelable<ServiceStatus>("value")
+                                    ?: ServiceStatus.Error("服务通信期间发生致命错误")
+                            )
+                        }
+                        ConnKey.MSG_RESPONSE_LOGIN -> {
+                            listeningDeferred?.complete(
+                                (msg.obj as Bundle).getLong("timestamp", -1L),
+                                (msg.obj as Bundle).getParcelable<ServiceStatus>("value")
+                                    ?: ServiceStatus.Error("服务通信期间发生致命错误")
+                            )
+                        }
+                        ConnKey.MSG_RESPONSE_SUBMIT_VERIFICATION_RESULT -> {
+                            (msg.obj as Bundle).getString("value")?.let {
+                            }
                         }
                         else -> {}
                     }
