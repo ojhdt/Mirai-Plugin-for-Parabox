@@ -49,7 +49,6 @@ class ConnService : LifecycleService() {
         }
         try {
             bot.login()
-            registerMessageReceiver()
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
@@ -58,6 +57,7 @@ class ConnService : LifecycleService() {
                     putParcelable("value", ServiceStatus.Running("Mirai Core - "))
                 })
             )
+            registerMessageReceiver()
             repository.getSelectedAccount()?.let {
                 repository.addNewAccount(it.apply {
                     avatarUrl = bot.avatarUrl
