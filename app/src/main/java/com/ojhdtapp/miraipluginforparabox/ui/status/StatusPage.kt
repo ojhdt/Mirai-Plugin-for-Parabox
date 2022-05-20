@@ -19,6 +19,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
+import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
 import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.PreferencesCategory
 import com.ojhdtapp.miraipluginforparabox.ui.util.SwitchPreference
@@ -154,7 +155,12 @@ fun StatusPage(
                             contentDescription = "PicCaptcha"
                         )
                         Button(onClick = {
-                            onEvent(StatusPageEvent.OnLoginResourceConfirm("asdf", loginResource.timestamp))
+                            onEvent(
+                                StatusPageEvent.OnLoginResourceConfirm(
+                                    "asdf",
+                                    loginResource.timestamp
+                                )
+                            )
                         }) {
                             Text(text = "Confirm")
                         }
@@ -168,7 +174,12 @@ fun StatusPage(
                             .background(Color.Black),
                         url = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url,
                         onConfirm = {
-                            onEvent(StatusPageEvent.OnLoginResourceConfirm(it, loginResource.timestamp))
+                            onEvent(
+                                StatusPageEvent.OnLoginResourceConfirm(
+                                    it,
+                                    loginResource.timestamp
+                                )
+                            )
                         }
                     )
                 }
@@ -180,7 +191,12 @@ fun StatusPage(
                             .background(Color.Black),
                         url = (loginResource as LoginResource.SliderCaptcha).url,
                         onConfirm = {
-                            onEvent(StatusPageEvent.OnLoginResourceConfirm(it, loginResource.timestamp))
+                            onEvent(
+                                StatusPageEvent.OnLoginResourceConfirm(
+                                    it,
+                                    loginResource.timestamp
+                                )
+                            )
                         }
                     )
                 }
@@ -322,6 +338,7 @@ fun MainSwitch(
         Text(
             text = "启用插件",
             style = MaterialTheme.typography.titleLarge,
+            fontSize = MaterialTheme.fontSize.title,
             color = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
         )
         Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)

@@ -11,4 +11,5 @@ class CompletableDeferredWithTag<U, V>(
         if (tag == savedTag)
             deferred.complete(value)
         else false
+    fun getCurrentTag(): U = savedTag
 }

@@ -31,7 +31,7 @@ import kotlin.system.exitProcess
 @AndroidEntryPoint
 class ConnService : LifecycleService() {
     @Inject
-    lateinit var repository : MainRepository
+    lateinit var repository: MainRepository
 
     private lateinit var bot: Bot
     private var listener: Listener<FriendMessageEvent>? = null
@@ -260,14 +260,18 @@ class ConnService : LifecycleService() {
     }
 
     fun onLoginStateChanged(resource: LoginResource, timestamp: Long, newTimeStamp: Long) {
-        interfaceMessenger?.send(
-            Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
-                putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
-                putInt("status", ConnKey.SUCCESS)
-                putLong("timestamp", timestamp) // The reason we need old timestamp here
-                putParcelable("value", ServiceStatus.Pause("请遵照提示完成身份验证", newTimeStamp))
-            })
-        )
+        Log.d("parabox", "timestamp need to replace original response: $timestamp")
+        Log.d("parabox", "newTimestamp use to check resource and deffered: $timestamp")
+        if (resource !is LoginResource.None) {
+            interfaceMessenger?.send(
+                Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                    putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
+                    putInt("status", ConnKey.SUCCESS)
+                    putLong("timestamp", timestamp) // The reason we need old timestamp here
+                    putParcelable("value", ServiceStatus.Pause("请遵照提示完成身份验证", newTimeStamp))
+                })
+            )
+        }
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_ON_LOGIN_STATE_CHANGED)

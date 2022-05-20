@@ -10,6 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ojhdtapp.miraipluginforparabox.ui.theme.LocalFontSize
+import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
 
 @Composable
 fun PreferencesCategory(modifier: Modifier = Modifier, text: String) {
@@ -40,7 +42,7 @@ fun SwitchPreference(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column() {
-            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
+            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = MaterialTheme.fontSize.title)
             subtitle?.let {
                 Spacer(modifier = modifier.height(4.dp))
                 Text(
@@ -70,7 +72,7 @@ fun NormalPreference(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column() {
-            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
+            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = MaterialTheme.fontSize.title)
             subtitle?.let {
                 Spacer(modifier = modifier.height(4.dp))
                 Text(

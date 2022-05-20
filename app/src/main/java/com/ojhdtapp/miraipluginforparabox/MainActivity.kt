@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
 //
 //            }
             is StatusPageEvent.OnLoginResourceConfirm -> {
+                Log.d("parabox", "deferred:${listeningDeferred?.getCurrentTag()} now:${event.timestamp}")
                 listeningDeferred?.complete(event.timestamp, event.res)
             }
 
