@@ -99,6 +99,15 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
             ServiceStatus.Error("与服务的连接已断开")
         }
 
+    fun miraiForceStop(){
+        sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
+            putInt("command", ConnKey.MSG_COMMAND_STOP_SERVICE)
+            putLong("timestamp", System.currentTimeMillis())
+        }).apply {
+            replyTo = interfaceMessenger
+        })
+    }
+
 
     inner class Connection : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -113,7 +122,8 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
             isConnected = false
             sMessenger = null
             initializeAllState()
-            connectionDeferred?.complete(ServiceStatus.Error("启动主服务时发生错误"))
+            connectionDeferred?.complete(ServiceStatus.Error("与主服务的连接丢失"))
+            TODO("stop related issue")
         }
 
     }

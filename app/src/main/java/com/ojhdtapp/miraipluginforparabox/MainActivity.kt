@@ -19,15 +19,14 @@ import com.ojhdtapp.miraipluginforparabox.core.util.BrowserUtil
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
+import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPage
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -53,6 +52,12 @@ class MainActivity : ComponentActivity() {
             is StatusPageEvent.OnServiceStart -> {
                 serviceStart()
             }
+            is StatusPageEvent.OnServiceStop -> {
+                serviceStop()
+            }
+            is StatusPageEvent.OnServiceForceStop -> {
+                serviceForceStop()
+            }
 
 //            is StatusPageEvent.OnLoginClick -> {
 //
@@ -61,72 +66,67 @@ class MainActivity : ComponentActivity() {
 //
 //            }
             is StatusPageEvent.OnLoginResourceConfirm -> {
-                Log.d("parabox", "deferred:${listeningDeferred?.getCurrentTag()} now:${event.timestamp}")
+                Log.d(
+                    "parabox",
+                    "deferred:${listeningDeferred?.getCurrentTag()} now:${event.timestamp}"
+                )
                 listeningDeferred?.complete(event.timestamp, event.res)
             }
-
-//            is StatusPageEvent.OnPicCaptchaConfirm -> {
-//                event.captcha?.let {
-//                    listeningDeferred?.complete(,it)
-////                    connector.submitVerificationResult(it)
-//                }
-//            }
-//            is StatusPageEvent.OnSliderCaptchaConfirm -> {
-//                listeningDeferred?.complete(,event.ticket)
-////                connector.submitVerificationResult(event.ticket)
-//            }
-//            is StatusPageEvent.OnUnsafeDeviceLoginVerifyConfirm -> {
-//                listeningDeferred?.complete(,"success")
-////                connector.submitVerificationResult("success")
-//            }
             is StatusPageEvent.OnShowToast -> {
                 Toast.makeText(this, event.message, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    private fun errorOccurred() {
+        listeningDeferred?.cancel()
+        serviceStartJob?.cancel()
+        viewModel.setMainSwitchEnabledState(true)
+        viewModel.setMainSwitchState(false)
+        viewModel.updateLoginResourceStateFlow(LoginResource.None)
+        Log.d("parabox", "cancel")
+    }
+
     private fun serviceStart() {
-        fun cancel() {
-            serviceStartJob?.cancel()
-            viewModel.setMainSwitchEnabledState(true)
-            viewModel.setMainSwitchState(false)
-            Log.d("parabox", "cancel")
-        }
         viewModel.setMainSwitchEnabledState(false)
         serviceStartJob = lifecycleScope.launch {
-            connector.startAndBind().also {
-                viewModel.updateServiceStatusStateFlow(it)
-                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                    cancel()
-                    return@launch
-                }
-            }
-            connector.miraiStart().also {
-                viewModel.updateServiceStatusStateFlow(it)
-                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                    cancel()
-                    return@launch
-                }
-            }
-            connector.miraiLogin().also {
-                viewModel.updateServiceStatusStateFlow(it)
-                if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                    cancel()
-                    return@launch
-                }
-                var temp = it
-                while (temp is ServiceStatus.Pause) {
-                    val newTimestamp = temp.timestamp
-                    listeningDeferred = CompletableDeferredWithTag(newTimestamp)
-                    connector.submitVerificationResult(listeningDeferred!!.await()).also {
-                        viewModel.updateServiceStatusStateFlow(it)
-                        if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                            cancel()
-                            return@launch
-                        }
-                        else if (it is ServiceStatus.Pause) temp = it
+            try {
+                withTimeout(1000) {
+                    connector.startAndBind()
+                }.also {
+                    viewModel.updateServiceStatusStateFlow(it)
+                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                        errorOccurred()
+                        return@launch
                     }
                 }
+                withTimeout(1000) {
+                    connector.miraiStart()
+                }.also {
+                    viewModel.updateServiceStatusStateFlow(it)
+                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                        errorOccurred()
+                        return@launch
+                    }
+                }
+                withTimeout(30000) { connector.miraiLogin() }.also {
+                    viewModel.updateServiceStatusStateFlow(it)
+                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                        errorOccurred()
+                        return@launch
+                    }
+                    var temp = it
+                    while (temp is ServiceStatus.Pause) {
+                        val newTimestamp = temp.timestamp
+                        listeningDeferred = CompletableDeferredWithTag(newTimestamp)
+                        withTimeout(60000) { connector.submitVerificationResult(listeningDeferred!!.await()) }.also {
+                            viewModel.updateServiceStatusStateFlow(it)
+                            if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
+                                errorOccurred()
+                                return@launch
+                            } else if (it is ServiceStatus.Pause) temp = it
+                        }
+                    }
 //                else if (it is ServiceStatus.Pause) {
 //                    val timestampFromServer = it.timestamp
 //                    listeningDeferred = CompletableDeferredWithTag(timestampFromServer)
@@ -135,6 +135,11 @@ class MainActivity : ComponentActivity() {
 //                        if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
 //                    }
 //                }
+                }
+            } catch (e: TimeoutCancellationException) {
+                viewModel.updateServiceStatusStateFlow(ServiceStatus.Error("操作超时"))
+                errorOccurred()
+                return@launch
             }
             Log.d("parabox", "end")
             viewModel.setMainSwitchState(true)
@@ -143,7 +148,30 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun serviceStop() {
-
+        viewModel.setMainSwitchEnabledState(false)
+        lifecycleScope.launch {
+            try {
+                withTimeout(1000) { connector.miraiStop() }.also {
+                    viewModel.updateServiceStatusStateFlow(it)
+                }
+            } catch (e: TimeoutCancellationException) {
+                viewModel.updateServiceStatusStateFlow(ServiceStatus.Error("服务响应超时，请手动检查服务状态"))
+            } finally {
+                listeningDeferred?.cancel()
+                serviceStartJob?.cancel()
+                viewModel.setMainSwitchEnabledState(true)
+                viewModel.setMainSwitchState(false)
+            }
+        }
     }
 
+    private fun serviceForceStop() {
+        connector.miraiForceStop()
+        listeningDeferred?.cancel()
+        serviceStartJob?.cancel()
+        viewModel.updateLoginResourceStateFlow(LoginResource.None)
+        viewModel.updateServiceStatusStateFlow(ServiceStatus.Stop)
+        viewModel.setMainSwitchEnabledState(true)
+        viewModel.setMainSwitchState(false)
+    }
 }

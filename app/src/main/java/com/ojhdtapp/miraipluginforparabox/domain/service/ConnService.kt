@@ -230,6 +230,8 @@ class ConnService : LifecycleService() {
     }
 
     fun miraiStop(timestamp: Long) {
+        unRegisterMessageReceiver()
+        lifecycleScope.cancel()
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)
@@ -238,8 +240,6 @@ class ConnService : LifecycleService() {
                 putParcelable("value", ServiceStatus.Stop)
             })
         )
-        unRegisterMessageReceiver()
-        lifecycleScope.cancel()
         stopSelf()
     }
 

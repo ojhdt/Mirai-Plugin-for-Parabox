@@ -41,17 +41,18 @@ fun SwitchPreference(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column() {
+        Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = MaterialTheme.fontSize.title)
             subtitle?.let {
-                Spacer(modifier = modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
+        Spacer(modifier = Modifier.width(48.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
@@ -71,10 +72,10 @@ fun NormalPreference(
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column() {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = MaterialTheme.fontSize.title)
             subtitle?.let {
-                Spacer(modifier = modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,

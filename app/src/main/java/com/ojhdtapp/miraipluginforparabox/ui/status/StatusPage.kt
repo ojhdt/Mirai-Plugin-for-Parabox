@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.rememberSplineBasedDecay
@@ -19,6 +20,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
+import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
 import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.PreferencesCategory
@@ -80,7 +82,13 @@ fun StatusPage(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { openAccountDialog = true }) {
+                    IconButton(onClick = {
+                        if (viewModel.serviceStatusStateFlow.value is ServiceStatus.Stop) {
+                            openAccountDialog = true
+                        } else {
+                            onEvent(StatusPageEvent.OnShowToast("服务运行期间不可修改账户信息"))
+                        }
+                    }) {
                         Icon(
                             imageVector = Icons.Outlined.AccountCircle,
                             contentDescription = "account"
@@ -95,7 +103,11 @@ fun StatusPage(
                             onDismissRequest = { menuExpanded = false }) {
                             DropdownMenuItem(
                                 text = { Text(text = "强行停止服务") },
-                                onClick = { /*TODO*/ },
+                                onClick = {
+                                    onEvent(StatusPageEvent.OnServiceForceStop)
+                                    viewModel.emitToUiEventFlow(StatusPageUiEvent.ShowSnackBar("已强行停止服务"))
+                                    menuExpanded = false
+                                },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Outlined.Close,
@@ -130,6 +142,7 @@ fun StatusPage(
                 onCheckedChange = {
                     viewModel.setMainSwitchState(it)
                     if (it) onEvent(StatusPageEvent.OnServiceStart)
+                    else onEvent(StatusPageEvent.OnServiceStop)
                 },
                 enabled = viewModel.mainSwitchEnabledState.value
             )
@@ -216,31 +229,40 @@ fun StatusPage(
                     )
                 }
             }
-            AnimatedVisibility(visible = viewModel.mainSwitchEnabledState.value && viewModel.mainSwitchState.value) {
-                Column() {
-                    Spacer(modifier = modifier.height(16.dp))
-                    PreferencesCategory(text = "行为")
-                    SwitchPreference(
-                        title = "自动登录",
-                        subtitle = "以默认账户启动服务",
-                        checked = viewModel.autoLoginSwitchState.value,
-                        onCheckedChange = viewModel::setAutoLoginSwitchState
-                    )
-                    SwitchPreference(
-                        title = "前台服务",
-                        subtitle = "提高后台留存能力",
-                        checked = viewModel.foregroundServiceSwitchState.value,
-                        onCheckedChange = viewModel::setForegroundServiceSwitchState
-                    )
-                    NormalPreference(title = "忽略电池优化", subtitle = "提高后台留存能力") {
+//            AnimatedVisibility(visible = viewModel.mainSwitchEnabledState.value && viewModel.mainSwitchState.value) {}
+            Column() {
+                Spacer(modifier = modifier.height(16.dp))
+                PreferencesCategory(text = "行为")
+                SwitchPreference(
+                    title = "自动登录",
+                    subtitle = "应用启动时同时以默认账户启动服务",
+                    checked = viewModel.autoLoginSwitchState.value,
+                    onCheckedChange = viewModel::setAutoLoginSwitchState
+                )
+                SwitchPreference(
+                    title = "前台服务",
+                    subtitle = "可提高后台留存能力",
+                    checked = viewModel.foregroundServiceSwitchState.value,
+                    onCheckedChange = viewModel::setForegroundServiceSwitchState
+                )
+                SwitchPreference(
+                    title = "列表缓存",
+                    subtitle = "可大幅加速登陆进程，但可能引起列表不同步问题",
+                    checked = viewModel.contactCacheSwitchState.value,
+                    onCheckedChange = viewModel::setContactCacheSwitchState
+                )
+                NormalPreference(title = "切换登陆协议", subtitle = "不明原因登录失败时可尝试切换协议\n通常情况下不需要更改") {
 
-                    }
-                    Spacer(modifier = modifier.height(16.dp))
-                    PreferencesCategory(text = "故障排除")
-                    NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
-
-                    }
                 }
+                NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
+
+                }
+                Spacer(modifier = modifier.height(16.dp))
+                PreferencesCategory(text = "故障排除")
+                NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
+
+                }
+
             }
             Spacer(modifier = modifier.height(16.dp))
             PreferencesCategory(text = "关于")
