@@ -58,6 +58,11 @@ class ConnService : LifecycleService() {
                     putParcelable("value", ServiceStatus.Running("Mirai Core - "))
                 })
             )
+            repository.getSelectedAccount()?.let {
+                repository.addNewAccount(it.apply {
+                    avatarUrl = bot.avatarUrl
+                })
+            }
         } catch (e: LoginFailedException) {
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {

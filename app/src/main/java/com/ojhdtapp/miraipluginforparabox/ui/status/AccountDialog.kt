@@ -164,10 +164,11 @@ fun AccountItem(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(start = 16.dp)
         )
+        Spacer(modifier = Modifier.weight(1f))
         data.bitmap?.let {
             Image(
                 modifier = modifier
-                    .size(48.dp)
+                    .size(36.dp)
                     .clip(CircleShape),
                 bitmap = it.asImageBitmap(),
                 contentDescription = "avatar"

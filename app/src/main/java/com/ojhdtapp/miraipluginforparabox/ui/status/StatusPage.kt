@@ -201,7 +201,22 @@ fun StatusPage(
                     )
                 }
             }
-            AnimatedVisibility(visible = viewModel.mainSwitchState.value) {
+            AnimatedVisibility(visible = !viewModel.mainSwitchState.value || !viewModel.mainSwitchEnabledState.value) {
+                Column(modifier = modifier.padding(24.dp, 16.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = "info",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = modifier.height(16.dp))
+                    Text(
+                        text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            AnimatedVisibility(visible = viewModel.mainSwitchEnabledState.value && viewModel.mainSwitchState.value) {
                 Column() {
                     Spacer(modifier = modifier.height(16.dp))
                     PreferencesCategory(text = "行为")
@@ -225,21 +240,6 @@ fun StatusPage(
                     NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
 
                     }
-                }
-            }
-            AnimatedVisibility(visible = !viewModel.mainSwitchState.value) {
-                Column(modifier = modifier.padding(24.dp, 16.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = "info",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = modifier.height(16.dp))
-                    Text(
-                        text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
             Spacer(modifier = modifier.height(16.dp))

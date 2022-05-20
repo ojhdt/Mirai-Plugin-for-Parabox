@@ -86,14 +86,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun serviceStart() {
+        fun cancel() {
+            serviceStartJob?.cancel()
+            viewModel.setMainSwitchEnabledState(true)
+            viewModel.setMainSwitchState(false)
+            Log.d("parabox", "cancel")
+        }
         viewModel.setMainSwitchEnabledState(false)
         serviceStartJob = lifecycleScope.launch {
-            fun cancel() {
-                viewModel.setMainSwitchEnabledState(true)
-                viewModel.setMainSwitchState(false)
-                serviceStartJob?.cancel()
-                Log.d("parabox", "cancel")
-            }
             connector.startAndBind().also {
                 viewModel.updateServiceStatusStateFlow(it)
                 if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
