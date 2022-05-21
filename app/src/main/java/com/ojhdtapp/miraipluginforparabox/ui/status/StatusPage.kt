@@ -81,6 +81,15 @@ fun StatusPage(
                         text = "Mirai Plugin",
                     )
                 },
+                modifier = Modifier
+                    .background(
+                        TopAppBarDefaults
+                            .largeTopAppBarColors()
+                            .containerColor(
+                                scrollFraction = scrollBehavior.scrollFraction ?: 0f
+                            ).value
+                    )
+                    .statusBarsPadding(),
                 actions = {
                     IconButton(onClick = {
                         if (viewModel.serviceStatusStateFlow.value is ServiceStatus.Stop || viewModel.serviceStatusStateFlow.value is ServiceStatus.Error) {
@@ -127,14 +136,27 @@ fun StatusPage(
         },
         snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
     ) { paddingValues ->
+//        LazyColumn(
+//            contentPadding = paddingValues,
+//            verticalArrangement = Arrangement.spacedBy(8.dp)
+//        ) {
+//            val list = (0..75).map { it.toString() }
+//            items(count = list.size) {
+//                Text(
+//                    text = list[it],
+//                    style = MaterialTheme.typography.bodyLarge,
+//                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+//                )
+//            }
+//        }
         val scrollState = rememberScrollState()
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
         ) {
             MainSwitch(
-                modifier = modifier
+                modifier = Modifier
                     .padding(16.dp)
                     .fillMaxWidth(),
                 onEvent = onEvent,
@@ -147,7 +169,7 @@ fun StatusPage(
                 enabled = viewModel.mainSwitchEnabledState.value
             )
             StatusIndicator(
-                modifier = modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 status = viewModel.serviceStatusStateFlow.collectAsState().value
@@ -159,7 +181,7 @@ fun StatusPage(
                 is LoginResource.PicCaptcha -> {
                     Row() {
 //                    TextField(
-//                        modifier = modifier.weight(1f),
+//                        modifier = Modifier.weight(1f),
 //                        value = viewModel.loginTextState.value,
 //                        onValueChange = viewModel::setLoginTextState
 //                    )
@@ -181,7 +203,7 @@ fun StatusPage(
                 }
                 is LoginResource.UnsafeDeviceLoginVerify -> {
                     UnSafeWebView(
-                        modifier = modifier
+                        modifier = Modifier
                             .fillMaxWidth()
                             .height(300.dp)
                             .background(Color.Black),
@@ -198,7 +220,7 @@ fun StatusPage(
                 }
                 is LoginResource.SliderCaptcha -> {
                     UnSafeWebView(
-                        modifier = modifier
+                        modifier = Modifier
                             .fillMaxWidth()
                             .height(300.dp)
                             .background(Color.Black),
@@ -215,13 +237,13 @@ fun StatusPage(
                 }
             }
             AnimatedVisibility(visible = !viewModel.mainSwitchState.value || !viewModel.mainSwitchEnabledState.value) {
-                Column(modifier = modifier.padding(24.dp, 16.dp)) {
+                Column(modifier = Modifier.padding(24.dp, 16.dp)) {
                     Icon(
                         imageVector = Icons.Outlined.Info,
                         contentDescription = "info",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
                         style = MaterialTheme.typography.labelLarge,
@@ -231,7 +253,7 @@ fun StatusPage(
             }
 //            AnimatedVisibility(visible = viewModel.mainSwitchEnabledState.value && viewModel.mainSwitchState.value) {}
             Column() {
-                Spacer(modifier = modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 PreferencesCategory(text = "行为")
                 SwitchPreference(
                     title = "自动登录",
@@ -257,14 +279,14 @@ fun StatusPage(
                 NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
 
                 }
-                Spacer(modifier = modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 PreferencesCategory(text = "故障排除")
                 NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
 
                 }
 
             }
-            Spacer(modifier = modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             PreferencesCategory(text = "关于")
             NormalPreference(title = "版本", subtitle = viewModel.appVersion) {
 

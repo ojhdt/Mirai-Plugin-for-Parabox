@@ -7,14 +7,17 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.ojhdtapp.miraipluginforparabox.core.util.BrowserUtil
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
@@ -38,11 +41,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         connector = ServiceConnector(this, viewModel)
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
-            AppTheme() {
-                // A surface container using the 'background' color from the theme
-                StatusPage(onEvent = { onEvent(it) }
+            val systemUiController = rememberSystemUiController()
+            val useDarkIcons = !isSystemInDarkTheme()
+            Log.d("parabox", useDarkIcons.toString())
+            SideEffect {
+                systemUiController.setSystemBarsColor(
+                    color = Color.Transparent,
+                    darkIcons = useDarkIcons
                 )
+            }
+            AppTheme() {
+                StatusPage(onEvent = { onEvent(it) })
             }
         }
     }
