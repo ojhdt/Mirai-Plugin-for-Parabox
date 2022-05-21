@@ -49,6 +49,7 @@ class ConnService : LifecycleService() {
         }
         try {
             bot.login()
+            isRunning = true
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
@@ -105,6 +106,11 @@ class ConnService : LifecycleService() {
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
         return sMessenger.binder
+    }
+
+    override fun onDestroy() {
+        Log.d("parabox", "on destr oy")
+        super.onDestroy()
     }
 
     fun send(str: String) {
@@ -221,17 +227,21 @@ class ConnService : LifecycleService() {
                 putInt("command", ConnKey.MSG_RESPONSE_START_SERVICE)
                 putInt("status", ConnKey.SUCCESS)
                 putLong("timestamp", timestamp)
-                putParcelable("value", ServiceStatus.Loading("尝试以默认账户登录"))
+                putParcelable(
+                    "value",
+                    if (isRunning) ServiceStatus.Error("服务正在运行，请勿重复启动") else ServiceStatus.Loading("尝试以默认账户登录")
+                )
             })
         )
-        if (isRunning) return
-        //miraiMain()
-        isRunning = true
     }
 
     fun miraiStop(timestamp: Long) {
+        // movement
         unRegisterMessageReceiver()
+        bot.close()
         lifecycleScope.cancel()
+        // res
+        isRunning = false
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)
@@ -240,6 +250,7 @@ class ConnService : LifecycleService() {
                 putParcelable("value", ServiceStatus.Stop)
             })
         )
+        Log.d("parabox", "before stop self")
         stopSelf()
     }
 

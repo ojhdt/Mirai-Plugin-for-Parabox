@@ -20,18 +20,23 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
     private val interfaceMessenger = Messenger(ConnHandler())
     private var connectionDeferred : CompletableDeferred<ServiceStatus>? = null
     private var listeningDeferred: CompletableDeferredWithTag<Long, ServiceStatus>? = null
+    private var connection : Connection? = null
     private var isConnected = false
 
     fun initializeAllState() {
         vm.updateLoginResourceStateFlow(LoginResource.None)
         vm.updateServiceStatusStateFlow(ServiceStatus.Stop)
+        connectionDeferred = null
+        listeningDeferred = null
+        Log.d("parabox", "initialize all state")
     }
 
     suspend fun startAndBind() : ServiceStatus{
         val timestamp = System.currentTimeMillis()
         val intent = Intent(context, ConnService::class.java)
         context.startService(intent)
-        context.bindService(intent, Connection(), Context.BIND_AUTO_CREATE)
+        connection = Connection()
+        context.bindService(intent, connection!!, Context.BIND_AUTO_CREATE)
         connectionDeferred = CompletableDeferred()
         return connectionDeferred!!.await()
     }
@@ -56,12 +61,14 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
         val timestamp = System.currentTimeMillis()
         sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
             putInt("command", ConnKey.MSG_COMMAND_STOP_SERVICE)
-            putLong("timestamp", System.currentTimeMillis())
+            putLong("timestamp", timestamp)
         }).apply {
             replyTo = interfaceMessenger
         })
         listeningDeferred = CompletableDeferredWithTag(timestamp)
-        return listeningDeferred!!.await()
+        return listeningDeferred!!.await().also {
+            connection?.let { conn -> context.unbindService(conn) }
+        }
     }
 
     override suspend fun miraiLogin(): ServiceStatus =
@@ -69,7 +76,7 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
             val timestamp = System.currentTimeMillis()
             sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_LOGIN)
-                putLong("timestamp", System.currentTimeMillis())
+                putLong("timestamp", timestamp)
             }).apply {
                 replyTo = interfaceMessenger
             })
@@ -88,7 +95,7 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
             val timestamp = System.currentTimeMillis()
             sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
                 putInt("command", ConnKey.MSG_COMMAND_SUBMIT_VERIFICATION_RESULT)
-                putLong("timestamp", System.currentTimeMillis())
+                putLong("timestamp", timestamp)
                 putString("value", result)
             }).apply {
                 replyTo = interfaceMessenger
@@ -102,10 +109,10 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
     fun miraiForceStop(){
         sMessenger?.send(Message.obtain(null, ConnKey.MSG_COMMAND, Bundle().apply {
             putInt("command", ConnKey.MSG_COMMAND_STOP_SERVICE)
-            putLong("timestamp", System.currentTimeMillis())
         }).apply {
             replyTo = interfaceMessenger
         })
+        connection?.let { context.unbindService(it) }
     }
 
 
@@ -123,7 +130,6 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
             sMessenger = null
             initializeAllState()
             connectionDeferred?.complete(ServiceStatus.Error("与主服务的连接丢失"))
-            TODO("stop related issue")
         }
 
     }

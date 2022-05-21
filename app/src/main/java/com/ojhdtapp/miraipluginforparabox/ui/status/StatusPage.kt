@@ -83,7 +83,7 @@ fun StatusPage(
                 },
                 actions = {
                     IconButton(onClick = {
-                        if (viewModel.serviceStatusStateFlow.value is ServiceStatus.Stop) {
+                        if (viewModel.serviceStatusStateFlow.value is ServiceStatus.Stop || viewModel.serviceStatusStateFlow.value is ServiceStatus.Error) {
                             openAccountDialog = true
                         } else {
                             onEvent(StatusPageEvent.OnShowToast("服务运行期间不可修改账户信息"))
