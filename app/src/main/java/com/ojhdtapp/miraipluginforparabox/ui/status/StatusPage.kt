@@ -168,9 +168,11 @@ fun StatusPage(
 
             item {
                 val loginResource by viewModel.loginResourceStateFlow.collectAsState()
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .animateContentSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                ) {
                     when (loginResource) {
                         is LoginResource.None -> {
                         }
@@ -309,6 +311,9 @@ fun StatusPage(
                     }
                 }
             }
+            item {
+                Spacer(modifier = Modifier.navigationBarsPadding())
+            }
         }
 
 //        val scrollState = rememberScrollState()
@@ -354,7 +359,7 @@ fun StatusPage(
 //                        Button(onClick = {
 //                            onEvent(
 //                                StatusPageEvent.OnLoginResourceConfirm(
-//                                    "asdf",
+//                                    "",
 //                                    loginResource.timestamp
 //                                )
 //                            )

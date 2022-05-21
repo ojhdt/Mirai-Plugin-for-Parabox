@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.di
 
 import android.app.Application
+import android.content.Context
 import androidx.room.Room
 import com.ojhdtapp.miraipluginforparabox.data.local.entity.SecretDatabase
 import com.ojhdtapp.miraipluginforparabox.data.repository.MainRepositoryImpl
@@ -8,6 +9,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -27,5 +29,9 @@ class AppModule {
     @Singleton
     fun provideMainRepository(database: SecretDatabase) : MainRepository =
         MainRepositoryImpl(database.dao)
+
+//    @Provides
+//    @Singleton
+//    fun provideApplicationContext(@ApplicationContext context: Context): Context = context
 
 }

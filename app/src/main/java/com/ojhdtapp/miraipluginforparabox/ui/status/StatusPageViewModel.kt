@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
+import android.content.Context
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -9,6 +10,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,7 +18,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class StatusPageViewModel @Inject constructor(
-    private val repository: MainRepository
+    private val repository: MainRepository,
+    @ApplicationContext val context: Context,
 ) : ViewModel() {
 
     // emit to this when showing snackBar

@@ -8,9 +8,9 @@ interface MainRepository {
 
     suspend fun getSelectedAccount() : Secret?
 
-    suspend fun addNewAccount(secrets: Secret)
+    suspend fun addNewAccount(secret: Secret)
 
-    suspend fun deleteAccount(secrets: Secret)
+    suspend fun deleteAccount(secret: Secret)
 
     suspend fun addAllAccounts(secretList: List<Secret>)
 }
