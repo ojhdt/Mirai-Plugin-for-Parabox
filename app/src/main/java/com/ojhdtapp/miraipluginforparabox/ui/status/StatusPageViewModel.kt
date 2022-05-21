@@ -3,8 +3,11 @@ package com.ojhdtapp.miraipluginforparabox.ui.status
 import android.content.Context
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
+import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
@@ -39,9 +42,9 @@ class StatusPageViewModel @Inject constructor(
     }
 
     private val _picCaptchaValue = mutableStateOf<String>("")
-    val picCaptchaValue : State<String> = _picCaptchaValue
+    val picCaptchaValue: State<String> = _picCaptchaValue
 
-    fun setPicCaptchaValue(value : String){
+    fun setPicCaptchaValue(value: String) {
         _picCaptchaValue.value = value
     }
 
@@ -98,22 +101,37 @@ class StatusPageViewModel @Inject constructor(
         _mainSwitchState.value = value
     }
 
-    private val _autoLoginSwitchState = mutableStateOf<Boolean>(false)
-    val autoLoginSwitchState: State<Boolean> = _autoLoginSwitchState
-    fun setAutoLoginSwitchState(value: Boolean) {
-        _autoLoginSwitchState.value = value
+    val autoLoginSwitchFlow : Flow<Boolean> = context.dataStore.data.map { settings ->
+        settings[DataStoreKeys.AUTO_LOGIN] ?: false
+    }
+    fun setAutoLoginSwitch(value: Boolean) {
+        viewModelScope.launch {
+            context.dataStore.edit { settings ->
+                settings[DataStoreKeys.AUTO_LOGIN] = value
+            }
+        }
     }
 
-    private val _foregroundServiceSwitchState = mutableStateOf<Boolean>(false)
-    val foregroundServiceSwitchState: State<Boolean> = _foregroundServiceSwitchState
-    fun setForegroundServiceSwitchState(value: Boolean) {
-        _foregroundServiceSwitchState.value = value
+    val foregroundServiceSwitchFLow: Flow<Boolean> = context.dataStore.data.map { settings ->
+        settings[DataStoreKeys.FOREGROUND_SERVICE] ?: false
+    }
+    fun setForegroundServiceSwitch(value: Boolean) {
+        viewModelScope.launch {
+            context.dataStore.edit { settings ->
+                settings[DataStoreKeys.FOREGROUND_SERVICE] = value
+            }
+        }
     }
 
-    private val _contactCacheSwitchState = mutableStateOf<Boolean>(false)
-    val contactCacheSwitchState: State<Boolean> = _contactCacheSwitchState
-    fun setContactCacheSwitchState(value: Boolean) {
-        _contactCacheSwitchState.value = value
+    val contactCacheSwitchFlow: Flow<Boolean> = context.dataStore.data.map { settings ->
+        settings[DataStoreKeys.CONTACT_CACHE] ?: false
+    }
+    fun setContactCacheSwitch(value: Boolean) {
+        viewModelScope.launch {
+            context.dataStore.edit { settings ->
+                settings[DataStoreKeys.CONTACT_CACHE] = value
+            }
+        }
     }
 
     val appVersion = "1.0"

@@ -109,7 +109,7 @@ class ConnService : LifecycleService() {
     }
 
     override fun onDestroy() {
-        Log.d("parabox", "on destr oy")
+        Log.d("parabox", "on destroy")
         super.onDestroy()
     }
 

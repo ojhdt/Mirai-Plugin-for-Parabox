@@ -1,6 +1,5 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
-import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -272,20 +271,20 @@ fun StatusPage(
                     SwitchPreference(
                         title = "自动登录",
                         subtitle = "应用启动时同时以默认账户启动服务",
-                        checked = viewModel.autoLoginSwitchState.value,
-                        onCheckedChange = viewModel::setAutoLoginSwitchState
+                        checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
+                        onCheckedChange = viewModel::setAutoLoginSwitch
                     )
                     SwitchPreference(
                         title = "前台服务",
                         subtitle = "可提高后台留存能力",
-                        checked = viewModel.foregroundServiceSwitchState.value,
-                        onCheckedChange = viewModel::setForegroundServiceSwitchState
+                        checked = viewModel.foregroundServiceSwitchFLow.collectAsState(initial = false).value,
+                        onCheckedChange = viewModel::setForegroundServiceSwitch
                     )
                     SwitchPreference(
                         title = "列表缓存",
                         subtitle = "可大幅加速登陆进程，但可能引起列表不同步问题",
-                        checked = viewModel.contactCacheSwitchState.value,
-                        onCheckedChange = viewModel::setContactCacheSwitchState
+                        checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
+                        onCheckedChange = viewModel::setContactCacheSwitch
                     )
                     NormalPreference(title = "切换登陆协议", subtitle = "不明原因登录失败时可尝试切换协议\n通常情况下不需要更改") {
 

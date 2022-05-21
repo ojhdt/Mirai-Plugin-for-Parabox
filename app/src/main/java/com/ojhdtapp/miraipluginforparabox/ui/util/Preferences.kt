@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -42,7 +42,11 @@ fun SwitchPreference(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = MaterialTheme.fontSize.title)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontSize = MaterialTheme.fontSize.title
+            )
             subtitle?.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -73,7 +77,11 @@ fun NormalPreference(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(text = title, style = MaterialTheme.typography.titleLarge, fontSize = MaterialTheme.fontSize.title)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontSize = MaterialTheme.fontSize.title
+            )
             subtitle?.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -82,6 +90,42 @@ fun NormalPreference(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun SimpleMenuPreference(
+    modifier: Modifier = Modifier,
+    title: String,
+    selectedIndex: Int = 0,
+    selectionList: List<String>,
+    onSelect: (selectedIndex: Int) -> Unit
+) {
+    var expanded by remember {
+        mutableStateOf(false)
+    }
+    Row(
+        modifier = modifier
+            .clickable {  }
+            .padding(24.dp, 16.dp)
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontSize = MaterialTheme.fontSize.title
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = selectionList[selectedIndex],
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
         }
     }
 }
