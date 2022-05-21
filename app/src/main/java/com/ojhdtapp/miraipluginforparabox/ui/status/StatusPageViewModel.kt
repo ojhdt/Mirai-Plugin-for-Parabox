@@ -35,6 +35,13 @@ class StatusPageViewModel @Inject constructor(
         _loginResourceStateFlow.tryEmit(value)
     }
 
+    private val _picCaptchaValue = mutableStateOf<String>("")
+    val picCaptchaValue : State<String> = _picCaptchaValue
+
+    fun setPicCaptchaValue(value : String){
+        _picCaptchaValue.value = value
+    }
+
     // Service Status
     private val _serviceStatusStateFlow = MutableStateFlow<ServiceStatus>(ServiceStatus.Stop)
     val serviceStatusStateFlow = _serviceStatusStateFlow.asStateFlow()
