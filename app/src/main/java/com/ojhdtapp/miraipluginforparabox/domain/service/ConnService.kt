@@ -6,36 +6,30 @@ import android.os.*
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import com.ojhdtapp.miraipluginforparabox.MainActivity
-import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtil
-import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
+import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
+import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
-import com.ojhdtapp.miraipluginforparabox.domain.service.ConnKey
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
-import net.mamoe.mirai.event.GlobalEventChannel
+import net.mamoe.mirai.IMirai
+import net.mamoe.mirai.Mirai
 import net.mamoe.mirai.event.Listener
 import net.mamoe.mirai.event.events.FriendMessageEvent
-import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.LoginSolver
-import java.io.File
 import javax.inject.Inject
-import kotlin.coroutines.suspendCoroutine
-import kotlin.system.exitProcess
 
 @AndroidEntryPoint
 class ConnService : LifecycleService() {
     @Inject
     lateinit var repository: MainRepository
-    lateinit var notificationUtil: NotificationUtil
+    lateinit var notificationUtil: NotificationUtilForService
 
     private lateinit var bot: Bot
     private var listener: Listener<FriendMessageEvent>? = null
@@ -55,7 +49,7 @@ class ConnService : LifecycleService() {
         try {
             bot.login()
             isRunning = true
-            val version = Bot::class.java.`package`?.implementationVersion ?: "unknown"
+            val version = MIRAI_CORE_VERSION
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
@@ -101,7 +95,7 @@ class ConnService : LifecycleService() {
 
     override fun onCreate() {
         sMessenger = Messenger(ConnHandler())
-        notificationUtil = NotificationUtil(this)
+        notificationUtil = NotificationUtilForService(this)
         super.onCreate()
 //        mLoginSolver = AndroidLoginSolver()
     }

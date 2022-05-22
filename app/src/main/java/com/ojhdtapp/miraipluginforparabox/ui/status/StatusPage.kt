@@ -491,7 +491,7 @@ fun MainSwitch(
     val switchColor by animateColorAsState(targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer)
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(32.dp))
             .background(switchColor)
             .clickable {
                 if (enabled) onCheckedChange(!checked)

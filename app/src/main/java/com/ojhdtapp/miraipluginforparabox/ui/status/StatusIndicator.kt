@@ -46,7 +46,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
             }
         )
         Row(modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(32.dp))
             .background(backgroundColor)
             .clickable { }
             .padding(24.dp, 24.dp),

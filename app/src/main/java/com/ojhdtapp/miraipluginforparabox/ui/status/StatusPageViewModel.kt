@@ -156,5 +156,5 @@ class StatusPageViewModel @Inject constructor(
         }
     }
 
-    val appVersion = "1.0"
+    val appVersion = com.ojhdtapp.miraipluginforparabox.BuildConfig.VERSION_NAME
 }

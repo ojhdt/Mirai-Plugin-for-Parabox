@@ -3,23 +3,23 @@ package com.ojhdtapp.miraipluginforparabox.core.util
 import android.app.*
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.ojhdtapp.miraipluginforparabox.MainActivity
 import com.ojhdtapp.miraipluginforparabox.R
+import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtil.SERVICE_STATE_CHANNEL_ID
+import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtil.FOREGROUND_SERVICE_NOTIFICATION_ID
 
-class NotificationUtil(val context: Service) {
+object NotificationUtil{
+    const val SERVICE_STATE_CHANNEL_ID = "service_state"
+    const val FOREGROUND_SERVICE_NOTIFICATION_ID = 1
+}
+
+class NotificationUtilForService(val context: Service) {
     private val notificationManager: NotificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    companion object {
-        const val FOREGROUND_SERVICE_CHANNEL_ID = "foreground_service"
-        const val FOREGROUND_SERVICE_NOTIFICATION_ID = 1
-    }
-
-
-    fun createNotificationChannel(channelName: String, channelDescription: String) {
+    private fun createNotificationChannel(channelName: String, channelDescription: String) {
         val channel = NotificationChannel(
-            NotificationUtil.FOREGROUND_SERVICE_CHANNEL_ID,
+            SERVICE_STATE_CHANNEL_ID,
             channelName,
             NotificationManager.IMPORTANCE_LOW
         ).apply {
@@ -37,13 +37,13 @@ class NotificationUtil(val context: Service) {
         }
         createNotificationChannel("服务状态", "服务状态")
         val notification: Notification =
-            Notification.Builder(context, NotificationUtil.FOREGROUND_SERVICE_CHANNEL_ID)
+            Notification.Builder(context, SERVICE_STATE_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_background)
                 .setContentTitle("服务正在启动")
                 .setContentText("尝试以默认账户登录")
                 .setContentIntent(pendingIntent)
                 .build()
-        context.startForeground(NotificationUtil.FOREGROUND_SERVICE_NOTIFICATION_ID, notification)
+        context.startForeground(FOREGROUND_SERVICE_NOTIFICATION_ID, notification)
     }
 
     fun updateForegroundServiceNotification(title: String, text: String) {
@@ -54,7 +54,7 @@ class NotificationUtil(val context: Service) {
             )
         }
         val notification: Notification =
-            Notification.Builder(context, NotificationUtil.FOREGROUND_SERVICE_CHANNEL_ID)
+            Notification.Builder(context, SERVICE_STATE_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_background)
                 .setContentTitle(title)
                 .setContentText(text)
@@ -62,12 +62,45 @@ class NotificationUtil(val context: Service) {
                 .setOnlyAlertOnce(true)
                 .build()
         notificationManager.notify(
-            NotificationUtil.FOREGROUND_SERVICE_NOTIFICATION_ID,
+            FOREGROUND_SERVICE_NOTIFICATION_ID,
             notification
         )
     }
 
     fun cancelForegroundServiceNotification() {
-        notificationManager.cancel(NotificationUtil.FOREGROUND_SERVICE_NOTIFICATION_ID)
+        notificationManager.cancel(FOREGROUND_SERVICE_NOTIFICATION_ID)
+    }
+}
+
+class NotificationUtilForActivity(val context: Context){
+    private val notificationManager: NotificationManager =
+        context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    private fun createNotificationChannel(channelName: String, channelDescription: String) {
+        val channel = NotificationChannel(
+            SERVICE_STATE_CHANNEL_ID,
+            channelName,
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = channelDescription
+        }
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    fun sendNotification(){
+        createNotificationChannel("服务状态", "服务状态")
+        val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).let {
+            PendingIntent.getActivity(
+                context, 0, it,
+                PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+        val notification: Notification =
+            Notification.Builder(context, SERVICE_STATE_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setContentTitle("服务正在启动")
+                .setContentText("尝试以默认账户登录")
+                .setContentIntent(pendingIntent)
+                .build()
     }
 }
