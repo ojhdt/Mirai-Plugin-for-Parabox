@@ -55,14 +55,16 @@ class ConnService : LifecycleService() {
         try {
             bot.login()
             isRunning = true
+            val version = Bot::class.java.`package`?.implementationVersion ?: "unknown"
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
                     putInt("status", ConnKey.SUCCESS)
                     putLong("timestamp", mLoginSolver.timestamp)
-                    putParcelable("value", ServiceStatus.Running("Mirai Core - "))
+                    putParcelable("value", ServiceStatus.Running("Mirai Core - $version"))
                 })
             )
+            notificationUtil.updateForegroundServiceNotification("服务正常运行", "Mirai Core - $version")
             registerMessageReceiver()
             repository.getSelectedAccount()?.let {
                 repository.addNewAccount(it.apply {
@@ -106,7 +108,7 @@ class ConnService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("parabox", "service started")
-        notificationUtil.startForegroundService<MainActivity>()
+        notificationUtil.startForegroundService()
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -117,6 +119,7 @@ class ConnService : LifecycleService() {
 
     override fun onDestroy() {
         Log.d("parabox", "on destroy")
+        notificationUtil.cancelForegroundServiceNotification()
         super.onDestroy()
     }
 
