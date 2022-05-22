@@ -72,7 +72,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
             Column() {
                 Text(
                     text = when (status) {
-                        is ServiceStatus.Error -> "启动服务时发生问题"
+                        is ServiceStatus.Error -> "启动服务时发生错误"
                         is ServiceStatus.Loading -> "服务正在启动"
                         is ServiceStatus.Running -> "服务正常运行"
                         is ServiceStatus.Stop -> "服务已停止"

@@ -275,27 +275,36 @@ fun StatusPage(
                         checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
                         onCheckedChange = viewModel::setAutoLoginSwitch
                     )
-                    SwitchPreference(
-                        title = "前台服务",
-                        subtitle = "可提高后台留存能力",
-                        checked = viewModel.foregroundServiceSwitchFLow.collectAsState(initial = false).value,
-                        onCheckedChange = viewModel::setForegroundServiceSwitch
-                    )
-                    SwitchPreference(
-                        title = "列表缓存",
-                        subtitle = "可大幅加速登陆进程，但可能引起列表不同步问题",
-                        checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
-                        onCheckedChange = viewModel::setContactCacheSwitch
-                    )
-                    SimpleMenuPreference<Int>(
-                        title = "切换登陆协议",
-                        optionsMap = viewModel.protocolOptionsMap,
-                        selectedKey = viewModel.protocolSimpleMenuFLow.collectAsState(
-                            initial = null
-                        ).value,
-                        onSelect = viewModel::setProtocolSimpleMenu
-                    )
-
+                    AnimatedVisibility(
+                        visible = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            SwitchPreference(
+                                title = "前台服务",
+                                subtitle = "可提高后台留存能力",
+                                checked = viewModel.foregroundServiceSwitchFLow.collectAsState(
+                                    initial = false
+                                ).value,
+                                onCheckedChange = viewModel::setForegroundServiceSwitch
+                            )
+                            SwitchPreference(
+                                title = "列表缓存",
+                                subtitle = "可大幅加速登陆进程，但可能引起列表不同步问题",
+                                checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
+                                onCheckedChange = viewModel::setContactCacheSwitch
+                            )
+                            SimpleMenuPreference<Int>(
+                                title = "切换登陆协议",
+                                optionsMap = viewModel.protocolOptionsMap,
+                                selectedKey = viewModel.protocolSimpleMenuFLow.collectAsState(
+                                    initial = null
+                                ).value,
+                                onSelect = viewModel::setProtocolSimpleMenu
+                            )
+                        }
+                    }
                     NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
                         onEvent(StatusPageEvent.OnRequestIgnoreBatteryOptimizations)
                     }

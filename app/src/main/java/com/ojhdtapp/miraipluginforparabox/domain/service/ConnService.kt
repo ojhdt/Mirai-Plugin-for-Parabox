@@ -6,6 +6,8 @@ import android.os.*
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.miraipluginforparabox.MainActivity
+import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtil
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnKey
@@ -33,6 +35,7 @@ import kotlin.system.exitProcess
 class ConnService : LifecycleService() {
     @Inject
     lateinit var repository: MainRepository
+    lateinit var notificationUtil: NotificationUtil
 
     private lateinit var bot: Bot
     private var listener: Listener<FriendMessageEvent>? = null
@@ -96,12 +99,14 @@ class ConnService : LifecycleService() {
 
     override fun onCreate() {
         sMessenger = Messenger(ConnHandler())
+        notificationUtil = NotificationUtil(this)
         super.onCreate()
 //        mLoginSolver = AndroidLoginSolver()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("parabox", "service started")
+        notificationUtil.startForegroundService<MainActivity>()
         return super.onStartCommand(intent, flags, startId)
     }
 
