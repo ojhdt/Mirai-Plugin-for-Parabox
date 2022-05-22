@@ -23,6 +23,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
 import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.PreferencesCategory
+import com.ojhdtapp.miraipluginforparabox.ui.util.SimpleMenuPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.SwitchPreference
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -286,11 +287,17 @@ fun StatusPage(
                         checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
                         onCheckedChange = viewModel::setContactCacheSwitch
                     )
-                    NormalPreference(title = "切换登陆协议", subtitle = "不明原因登录失败时可尝试切换协议\n通常情况下不需要更改") {
+                    SimpleMenuPreference<Int>(
+                        title = "切换登陆协议",
+                        optionsMap = viewModel.protocolOptionsMap,
+                        selectedKey = viewModel.protocolSimpleMenuFLow.collectAsState(
+                            initial = null
+                        ).value,
+                        onSelect = viewModel::setProtocolSimpleMenu
+                    )
 
-                    }
                     NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
-
+                        onEvent(StatusPageEvent.OnRequestIgnoreBatteryOptimizations)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     PreferencesCategory(text = "故障排除")

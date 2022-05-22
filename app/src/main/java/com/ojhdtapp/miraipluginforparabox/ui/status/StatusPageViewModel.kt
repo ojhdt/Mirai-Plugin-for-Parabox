@@ -11,12 +11,14 @@ import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
+import com.ojhdtapp.miraipluginforparabox.domain.util.MiraiProtocol
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import net.mamoe.mirai.utils.BotConfiguration
 import javax.inject.Inject
 
 @HiltViewModel
@@ -101,9 +103,10 @@ class StatusPageViewModel @Inject constructor(
         _mainSwitchState.value = value
     }
 
-    val autoLoginSwitchFlow : Flow<Boolean> = context.dataStore.data.map { settings ->
+    val autoLoginSwitchFlow: Flow<Boolean> = context.dataStore.data.map { settings ->
         settings[DataStoreKeys.AUTO_LOGIN] ?: false
     }
+
     fun setAutoLoginSwitch(value: Boolean) {
         viewModelScope.launch {
             context.dataStore.edit { settings ->
@@ -115,6 +118,7 @@ class StatusPageViewModel @Inject constructor(
     val foregroundServiceSwitchFLow: Flow<Boolean> = context.dataStore.data.map { settings ->
         settings[DataStoreKeys.FOREGROUND_SERVICE] ?: false
     }
+
     fun setForegroundServiceSwitch(value: Boolean) {
         viewModelScope.launch {
             context.dataStore.edit { settings ->
@@ -126,10 +130,28 @@ class StatusPageViewModel @Inject constructor(
     val contactCacheSwitchFlow: Flow<Boolean> = context.dataStore.data.map { settings ->
         settings[DataStoreKeys.CONTACT_CACHE] ?: false
     }
+
     fun setContactCacheSwitch(value: Boolean) {
         viewModelScope.launch {
             context.dataStore.edit { settings ->
                 settings[DataStoreKeys.CONTACT_CACHE] = value
+            }
+        }
+    }
+
+    val protocolOptionsMap = mapOf<Int, String>(
+        MiraiProtocol.Phone to "Android 手机（默认）",
+        MiraiProtocol.Pad to "Android 平板",
+        MiraiProtocol.Watch to "Android 手表"
+    )
+    val protocolSimpleMenuFLow: Flow<Int> = context.dataStore.data.map { settings ->
+        settings[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone
+    }
+
+    fun setProtocolSimpleMenu(value: Int) {
+        viewModelScope.launch {
+            context.dataStore.edit { settings ->
+                settings[DataStoreKeys.PROTOCOL] = value
             }
         }
     }

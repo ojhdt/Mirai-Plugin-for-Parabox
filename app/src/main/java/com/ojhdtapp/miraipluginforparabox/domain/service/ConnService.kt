@@ -22,6 +22,7 @@ import net.mamoe.mirai.event.Listener
 import net.mamoe.mirai.event.events.FriendMessageEvent
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.network.LoginFailedException
+import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.LoginSolver
 import java.io.File
 import javax.inject.Inject
@@ -46,6 +47,7 @@ class ConnService : LifecycleService() {
         bot = BotFactory.newBot(accountNum, passwd) {
             loginSolver = mLoginSolver
             cacheDir = getExternalFilesDir("cache")!!.absoluteFile
+            protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
         }
         try {
             bot.login()

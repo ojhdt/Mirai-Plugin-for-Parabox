@@ -1,6 +1,5 @@
 package com.ojhdtapp.miraipluginforparabox
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -8,16 +7,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.ojhdtapp.miraipluginforparabox.core.util.BatteryUtil
 import com.ojhdtapp.miraipluginforparabox.core.util.BrowserUtil
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
@@ -37,6 +32,10 @@ class MainActivity : ComponentActivity() {
     var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
     private var listeningDeferred: CompletableDeferredWithTag<Long, String>? = null
+
+    private val batteryUtil: BatteryUtil by lazy {
+        BatteryUtil(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +68,9 @@ class MainActivity : ComponentActivity() {
             }
             is StatusPageEvent.OnServiceForceStop -> {
                 serviceForceStop()
+            }
+            is StatusPageEvent.OnRequestIgnoreBatteryOptimizations -> {
+                batteryUtil.ignoreBatteryOptimization()
             }
 
 //            is StatusPageEvent.OnLoginClick -> {

@@ -2,15 +2,13 @@ package com.ojhdtapp.miraipluginforparabox.ui.util
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.ojhdtapp.miraipluginforparabox.ui.theme.LocalFontSize
+import androidx.compose.ui.window.PopupProperties
 import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
 
 @Composable
@@ -95,25 +93,36 @@ fun NormalPreference(
 }
 
 @Composable
-fun SimpleMenuPreference(
+fun <T> SimpleMenuPreference(
     modifier: Modifier = Modifier,
     title: String,
-    selectedIndex: Int = 0,
-    selectionList: List<String>,
-    onSelect: (selectedIndex: Int) -> Unit
+    selectedKey: T? = null,
+    optionsMap: Map<T, String>,
+    onSelect: (selected: T) -> Unit
 ) {
     var expanded by remember {
         mutableStateOf(false)
     }
     Row(
         modifier = modifier
-            .clickable {  }
+            .clickable { expanded = true }
             .padding(24.dp, 16.dp)
             .fillMaxWidth(),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            for ((key, value) in optionsMap) {
+                DropdownMenuItem(text = { Text(text = value) }, onClick = {
+                    expanded = false
+                    onSelect(key)
+                })
+            }
+        }
+        Column() {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
@@ -121,7 +130,7 @@ fun SimpleMenuPreference(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = selectionList[selectedIndex],
+                text = selectedKey?.let { optionsMap[it] } ?: optionsMap.values.first(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
