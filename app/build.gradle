@@ -82,6 +82,7 @@ dependencies {
 
     // Compose Destinations
     implementation 'io.github.raamcosta.compose-destinations:core:1.5.6-beta'
+    implementation 'io.github.raamcosta.compose-destinations:animations-core:1.5.6-beta'
     ksp 'io.github.raamcosta.compose-destinations:ksp:1.5.6-beta'
 
     // DataStore
