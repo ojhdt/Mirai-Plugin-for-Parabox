@@ -30,7 +30,7 @@ import kotlinx.coroutines.*
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private lateinit var connector: ServiceConnector
-    private lateinit var notificationUtil : NotificationUtilForActivity
+    private lateinit var notificationUtil: NotificationUtilForActivity
     var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
     private var listeningDeferred: CompletableDeferredWithTag<Long, String>? = null
@@ -97,8 +97,9 @@ class MainActivity : ComponentActivity() {
 
     private fun errorOccurred(status: ServiceStatus? = null) {
         status?.let {
-            if(it is ServiceStatus.Error)
-            notificationUtil.sendNotification("启动服务时发生错误", it.message)
+            if (it is ServiceStatus.Error) {
+                notificationUtil.sendNotification("启动服务时发生错误", it.message)
+            }
         }
         listeningDeferred?.cancel()
         serviceStartJob?.cancel()
@@ -160,6 +161,7 @@ class MainActivity : ComponentActivity() {
             } catch (e: TimeoutCancellationException) {
                 val status = ServiceStatus.Error("操作超时")
                 viewModel.updateServiceStatusStateFlow(status)
+                connector.miraiStop()
                 errorOccurred(status)
                 return@launch
             }

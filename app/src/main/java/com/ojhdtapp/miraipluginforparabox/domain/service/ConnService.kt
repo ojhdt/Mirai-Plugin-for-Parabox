@@ -16,8 +16,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
-import net.mamoe.mirai.IMirai
-import net.mamoe.mirai.Mirai
 import net.mamoe.mirai.event.Listener
 import net.mamoe.mirai.event.events.FriendMessageEvent
 import net.mamoe.mirai.network.LoginFailedException
@@ -113,7 +111,7 @@ class ConnService : LifecycleService() {
 
     override fun onDestroy() {
         Log.d("parabox", "on destroy")
-        notificationUtil.cancelForegroundServiceNotification()
+        notificationUtil.stopForegroundService()
         super.onDestroy()
     }
 
@@ -251,7 +249,7 @@ class ConnService : LifecycleService() {
         lifecycleScope.cancel()
         // res
         isRunning = false
-        notificationUtil.cancelForegroundServiceNotification()
+        notificationUtil.stopForegroundService()
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)

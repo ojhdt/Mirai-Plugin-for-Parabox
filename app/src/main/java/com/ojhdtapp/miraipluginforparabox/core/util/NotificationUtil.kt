@@ -32,7 +32,10 @@ class NotificationUtilForService(val context: Service) {
     }
 
     fun startForegroundService() {
-        val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).let {
+        val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }.let {
             PendingIntent.getActivity(
                 context, 0, it,
                 PendingIntent.FLAG_IMMUTABLE
@@ -50,7 +53,10 @@ class NotificationUtilForService(val context: Service) {
     }
 
     fun updateForegroundServiceNotification(title: String, text: String) {
-        val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).let {
+        val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }.let {
             PendingIntent.getActivity(
                 context, 0, it,
                 PendingIntent.FLAG_IMMUTABLE
@@ -70,7 +76,7 @@ class NotificationUtilForService(val context: Service) {
         )
     }
 
-    fun cancelForegroundServiceNotification() {
+    fun stopForegroundService() {
         notificationManager.cancel(FOREGROUND_SERVICE_NOTIFICATION_ID)
         context.stopForeground(true)
     }
@@ -95,9 +101,12 @@ class NotificationUtilForActivity(val context: Context) {
         notificationManager.createNotificationChannel(channel)
     }
 
-    fun sendNotification(title: String, text:String) {
+    fun sendNotification(title: String, text: String) {
         createNotificationChannel("服务状态", "服务状态")
-        val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).let {
+        val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }.let {
             PendingIntent.getActivity(
                 context, 0, it,
                 PendingIntent.FLAG_IMMUTABLE
