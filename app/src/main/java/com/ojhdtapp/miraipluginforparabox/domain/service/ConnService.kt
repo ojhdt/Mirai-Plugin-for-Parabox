@@ -13,6 +13,7 @@ import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
+import com.ojhdtapp.miraipluginforparabox.domain.util.MiraiProtocol
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
@@ -43,10 +44,22 @@ class ConnService : LifecycleService() {
     private var isRunning = false
 
     private suspend fun miraiMain(accountNum: Long, passwd: String) {
+        val isContactCacheEnabled =
+            dataStore.data.first()[DataStoreKeys.CONTACT_CACHE] ?: false
+        val selectedProtocol =
+            when (dataStore.data.first()[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone) {
+                MiraiProtocol.Phone -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
+                MiraiProtocol.Pad -> BotConfiguration.MiraiProtocol.ANDROID_PAD
+                MiraiProtocol.Watch -> BotConfiguration.MiraiProtocol.ANDROID_WATCH
+                MiraiProtocol.IPad -> BotConfiguration.MiraiProtocol.IPAD
+                MiraiProtocol.MacOS -> BotConfiguration.MiraiProtocol.MACOS
+                else -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
+            }
         bot = BotFactory.newBot(accountNum, passwd) {
             loginSolver = mLoginSolver
             cacheDir = getExternalFilesDir("cache")!!.absoluteFile
-            protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+            protocol = selectedProtocol
+            if (isContactCacheEnabled) enableContactCache()
         }
         try {
             bot.login()
@@ -116,7 +129,6 @@ class ConnService : LifecycleService() {
         lifecycleScope.launch {
             val isForegroundServiceEnabled =
                 dataStore.data.first()[DataStoreKeys.FOREGROUND_SERVICE] ?: false
-//            Log.d("parabox", "isForegroundServiceEnabled:$isForegroundServiceEnabled")
             if (isForegroundServiceEnabled) {
                 notificationUtil.startForegroundService()
             }

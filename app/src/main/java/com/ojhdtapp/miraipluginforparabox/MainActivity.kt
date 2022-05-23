@@ -12,10 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.ojhdtapp.miraipluginforparabox.core.util.BatteryUtil
-import com.ojhdtapp.miraipluginforparabox.core.util.BrowserUtil
-import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
-import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForActivity
+import com.ojhdtapp.miraipluginforparabox.core.util.*
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
@@ -26,6 +23,7 @@ import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -121,8 +119,10 @@ class MainActivity : ComponentActivity() {
         viewModel.setMainSwitchEnabledState(false)
         notificationUtil.cancelAll()
         serviceStartJob = lifecycleScope.launch {
+            val isTimeOutDisabled =
+                dataStore.data.first()[DataStoreKeys.CANCEL_TIMEOUT] ?: false
             try {
-                withTimeout(1000) {
+                withTimeout(if (isTimeOutDisabled) 1800000 else 1000) {
                     connector.startAndBind()
                 }.also {
                     viewModel.updateServiceStatusStateFlow(it)
@@ -131,7 +131,7 @@ class MainActivity : ComponentActivity() {
                         return@launch
                     }
                 }
-                withTimeout(1000) {
+                withTimeout(if (isTimeOutDisabled) 1800000 else 1000) {
                     connector.miraiStart()
                 }.also {
                     viewModel.updateServiceStatusStateFlow(it)
@@ -140,7 +140,7 @@ class MainActivity : ComponentActivity() {
                         return@launch
                     }
                 }
-                withTimeout(30000) { connector.miraiLogin() }.also {
+                withTimeout(if (isTimeOutDisabled) 1800000 else 30000) { connector.miraiLogin() }.also {
                     viewModel.updateServiceStatusStateFlow(it)
                     if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
                         errorOccurred(it)
@@ -150,7 +150,11 @@ class MainActivity : ComponentActivity() {
                     while (temp is ServiceStatus.Pause) {
                         val newTimestamp = temp.timestamp
                         listeningDeferred = CompletableDeferredWithTag(newTimestamp)
-                        withTimeout(60000) { connector.submitVerificationResult(listeningDeferred!!.await()) }.also {
+                        withTimeout(if (isTimeOutDisabled) 1800000 else 60000) {
+                            connector.submitVerificationResult(
+                                listeningDeferred!!.await()
+                            )
+                        }.also {
                             viewModel.updateServiceStatusStateFlow(it)
                             if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
                                 errorOccurred(it)
@@ -182,13 +186,15 @@ class MainActivity : ComponentActivity() {
     private fun serviceStop() {
         viewModel.setMainSwitchEnabledState(false)
         lifecycleScope.launch {
+            val isTimeOutDisabled =
+                dataStore.data.first()[DataStoreKeys.CANCEL_TIMEOUT] ?: false
             try {
-                withTimeout(1000) { connector.miraiStop() }.also {
+                withTimeout(if (isTimeOutDisabled) 1800000 else 1000) { connector.miraiStop() }.also {
                     viewModel.updateServiceStatusStateFlow(it)
                 }
             } catch (e: TimeoutCancellationException) {
                 viewModel.updateServiceStatusStateFlow(ServiceStatus.Error("服务响应超时，请手动检查服务状态"))
-                notificationUtil.sendNotification("启动服务时发生错误", "服务响应超时，请手动检查服务状态")
+                notificationUtil.sendNotification("与服务通信时发生错误", "服务响应超时，请手动检查服务状态")
             } finally {
                 listeningDeferred?.cancel()
                 serviceStartJob?.cancel()
