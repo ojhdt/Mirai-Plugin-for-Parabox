@@ -20,16 +20,21 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
+import com.ojhdtapp.miraipluginforparabox.ui.destinations.LicensePageDestination
 import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
 import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.PreferencesCategory
 import com.ojhdtapp.miraipluginforparabox.ui.util.SimpleMenuPreference
 import com.ojhdtapp.miraipluginforparabox.ui.util.SwitchPreference
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Destination(start = true)
 @Composable
 fun StatusPage(
     modifier: Modifier = Modifier,
+    navigator: DestinationsNavigator,
     onEvent: (StatusPageEvent) -> Unit
 ) {
     // viewModel
@@ -291,7 +296,7 @@ fun StatusPage(
                             )
                             SwitchPreference(
                                 title = "列表缓存",
-                                subtitle = "可大幅加速登陆进程，但可能引起列表不同步问题",
+                                subtitle = "可大幅加速登陆进程，但可能引起好友列表不同步问题",
                                 checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
                                 onCheckedChange = viewModel::setContactCacheSwitch
                             )
@@ -328,7 +333,7 @@ fun StatusPage(
 
                     }
                     NormalPreference(title = "开放源代码许可") {
-
+                        navigator.navigate(LicensePageDestination())
                     }
                 }
             }

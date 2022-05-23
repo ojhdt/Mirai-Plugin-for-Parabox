@@ -17,10 +17,14 @@ import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
+import com.ojhdtapp.miraipluginforparabox.ui.NavGraphs
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPage
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.theme.AppTheme
+import com.ramcosta.composedestinations.DestinationsNavHost
+import com.ramcosta.composedestinations.annotation.NavGraph
+import com.ramcosta.composedestinations.navigation.dependency
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -54,7 +58,12 @@ class MainActivity : ComponentActivity() {
                 )
             }
             AppTheme() {
-                StatusPage(onEvent = { onEvent(it) })
+                DestinationsNavHost(navGraph = NavGraphs.root,
+                dependenciesContainerBuilder = {
+                    dependency { event: StatusPageEvent -> onEvent(event) }
+                }){
+
+                }
             }
         }
     }
