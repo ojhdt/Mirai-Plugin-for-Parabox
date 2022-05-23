@@ -119,6 +119,7 @@ class MainActivity : ComponentActivity() {
 
     private fun serviceStart() {
         viewModel.setMainSwitchEnabledState(false)
+        notificationUtil.cancelAll()
         serviceStartJob = lifecycleScope.launch {
             try {
                 withTimeout(1000) {

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
@@ -19,6 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import net.mamoe.mirai.utils.BotConfiguration
+import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -103,7 +105,15 @@ class StatusPageViewModel @Inject constructor(
         _mainSwitchState.value = value
     }
 
-    val autoLoginSwitchFlow: Flow<Boolean> = context.dataStore.data.map { settings ->
+    val autoLoginSwitchFlow: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { settings ->
         settings[DataStoreKeys.AUTO_LOGIN] ?: false
     }
 
@@ -115,7 +125,15 @@ class StatusPageViewModel @Inject constructor(
         }
     }
 
-    val foregroundServiceSwitchFLow: Flow<Boolean> = context.dataStore.data.map { settings ->
+    val foregroundServiceSwitchFLow: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { settings ->
         settings[DataStoreKeys.FOREGROUND_SERVICE] ?: false
     }
 
@@ -127,7 +145,15 @@ class StatusPageViewModel @Inject constructor(
         }
     }
 
-    val contactCacheSwitchFlow: Flow<Boolean> = context.dataStore.data.map { settings ->
+    val contactCacheSwitchFlow: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { settings ->
         settings[DataStoreKeys.CONTACT_CACHE] ?: false
     }
 
@@ -144,7 +170,15 @@ class StatusPageViewModel @Inject constructor(
         MiraiProtocol.Pad to "Android 平板",
         MiraiProtocol.Watch to "Android 手表"
     )
-    val protocolSimpleMenuFLow: Flow<Int> = context.dataStore.data.map { settings ->
+    val protocolSimpleMenuFLow: Flow<Int> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { settings ->
         settings[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone
     }
 
@@ -152,6 +186,26 @@ class StatusPageViewModel @Inject constructor(
         viewModelScope.launch {
             context.dataStore.edit { settings ->
                 settings[DataStoreKeys.PROTOCOL] = value
+            }
+        }
+    }
+
+    val cancelTimeoutSwitchFlow : Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { settings ->
+        settings[DataStoreKeys.CANCEL_TIMEOUT] ?: false
+    }
+
+    fun setCancelTimeoutSwitch(value: Boolean){
+        viewModelScope.launch {
+            context.dataStore.edit { settings ->
+                settings[DataStoreKeys.CANCEL_TIMEOUT] = value
             }
         }
     }

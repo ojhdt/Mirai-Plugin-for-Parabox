@@ -7,13 +7,17 @@ import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
+import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
+import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.last
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.event.Listener
@@ -72,7 +76,7 @@ class ConnService : LifecycleService() {
                     putParcelable("value", ServiceStatus.Error("登陆失败，密码与账户不匹配"))
                 })
             )
-        } catch (e : IllegalStateException){
+        } catch (e: IllegalStateException) {
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
@@ -109,7 +113,11 @@ class ConnService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("parabox", "service started")
-        notificationUtil.startForegroundService()
+//            val preferences = dataStore.data.last()
+//            Log.d("parabox", "aaa:${preferences[DataStoreKeys.FOREGROUND_SERVICE] as Boolean}")
+//            if (preferences[DataStoreKeys.FOREGROUND_SERVICE] as Boolean) {
+//                notificationUtil.startForegroundService()
+//            }
         return super.onStartCommand(intent, flags, startId)
     }
 

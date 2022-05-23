@@ -305,6 +305,12 @@ fun StatusPage(
                             )
                         }
                     }
+                    SwitchPreference(
+                        title = "取消超时",
+                        subtitle = "取消登录各流程的超时错误，但可能引起不可预见的问题",
+                        checked = viewModel.cancelTimeoutSwitchFlow.collectAsState(initial = false).value,
+                        onCheckedChange = viewModel::setCancelTimeoutSwitch
+                    )
                     NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
                         onEvent(StatusPageEvent.OnRequestIgnoreBatteryOptimizations)
                     }

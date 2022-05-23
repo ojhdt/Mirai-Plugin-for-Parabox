@@ -4,6 +4,7 @@ plugins {
     id 'kotlin-kapt'
     id 'org.jetbrains.kotlin.plugin.parcelize'
     id 'dagger.hilt.android.plugin'
+    id 'com.google.devtools.ksp' version '1.6.21-1.0.5'
 }
 
 android {
@@ -56,6 +57,13 @@ android {
             exclude("META-INF/*.kotlin_module")
         }
     }
+    applicationVariants.all { variant ->
+        kotlin.sourceSets {
+            getByName(variant.name) {
+                kotlin.srcDir("build/generated/ksp/${variant.name}/kotlin")
+            }
+        }
+    }
 }
 
 dependencies {
@@ -72,6 +80,10 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
 
+    // Compose Destinations
+    implementation 'io.github.raamcosta.compose-destinations:core:1.5.6-beta'
+    ksp 'io.github.raamcosta.compose-destinations:ksp:1.5.6-beta'
+
     // DataStore
     implementation "androidx.datastore:datastore-preferences:1.0.0"
 
@@ -83,8 +95,8 @@ dependencies {
     implementation "androidx.navigation:navigation-compose:$nav_version"
 
     // m3
-    implementation "androidx.compose.material3:material3:1.0.0-alpha11"
-    implementation "androidx.compose.material3:material3-window-size-class:1.0.0-alpha11"
+    implementation "androidx.compose.material3:material3:1.0.0-alpha12"
+    implementation "androidx.compose.material3:material3-window-size-class:1.0.0-alpha12"
 
     // log-4j
     annotationProcessor 'org.apache.logging.log4j:log4j-core:2.17.2'

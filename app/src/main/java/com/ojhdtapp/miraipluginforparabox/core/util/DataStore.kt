@@ -14,4 +14,5 @@ object DataStoreKeys{
     val FOREGROUND_SERVICE = booleanPreferencesKey("foreground_service")
     val CONTACT_CACHE = booleanPreferencesKey("contact_cache")
     val PROTOCOL = intPreferencesKey("protocol")
+    val CANCEL_TIMEOUT = booleanPreferencesKey("cancel_timeout")
 }
