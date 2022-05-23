@@ -106,6 +106,14 @@ class MainActivity : ComponentActivity() {
         viewModel.setMainSwitchEnabledState(true)
         viewModel.setMainSwitchState(false)
         viewModel.updateLoginResourceStateFlow(LoginResource.None)
+        try {
+            lifecycleScope.launch {
+                connector.miraiStop()
+            }
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
+        connector.initializeAllState()
         Log.d("parabox", "cancel")
     }
 
@@ -161,7 +169,6 @@ class MainActivity : ComponentActivity() {
             } catch (e: TimeoutCancellationException) {
                 val status = ServiceStatus.Error("操作超时")
                 viewModel.updateServiceStatusStateFlow(status)
-                connector.miraiStop()
                 errorOccurred(status)
                 return@launch
             }
