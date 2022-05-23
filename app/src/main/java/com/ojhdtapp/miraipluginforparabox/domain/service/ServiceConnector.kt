@@ -24,8 +24,8 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
     private var isConnected = false
 
     fun initializeAllState() {
-        vm.updateLoginResourceStateFlow(LoginResource.None)
-        vm.updateServiceStatusStateFlow(ServiceStatus.Stop)
+//        vm.updateLoginResourceStateFlow(LoginResource.None)
+//        vm.updateServiceStatusStateFlow(ServiceStatus.Stop)
         connectionDeferred = null
         listeningDeferred = null
         Log.d("parabox", "initialize all state")

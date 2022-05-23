@@ -69,7 +69,16 @@ class ConnService : LifecycleService() {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
                     putInt("status", ConnKey.FAILURE)
                     putLong("timestamp", mLoginSolver.timestamp)
-                    putParcelable("value", ServiceStatus.Error("登陆失败，请检查账户信息和网络连接"))
+                    putParcelable("value", ServiceStatus.Error("登陆失败，密码与账户不匹配"))
+                })
+            )
+        } catch (e : IllegalStateException){
+            interfaceMessenger?.send(
+                Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                    putInt("command", ConnKey.MSG_RESPONSE_LOGIN)
+                    putInt("status", ConnKey.FAILURE)
+                    putLong("timestamp", mLoginSolver.timestamp)
+                    putParcelable("value", ServiceStatus.Error("登陆失败，未知错误"))
                 })
             )
         }

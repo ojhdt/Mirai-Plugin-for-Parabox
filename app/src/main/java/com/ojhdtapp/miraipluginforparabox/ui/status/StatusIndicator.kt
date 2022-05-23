@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,9 +24,10 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 
 @Composable
 fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
-    AnimatedVisibility(visible = status !is ServiceStatus.Stop,
-    enter = expandVertically(),
-    exit = shrinkVertically()
+    AnimatedVisibility(
+        visible = status !is ServiceStatus.Stop,
+        enter = expandVertically(),
+        exit = shrinkVertically()
     ) {
         val backgroundColor by animateColorAsState(
             targetValue = when (status) {
@@ -51,24 +53,37 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
             .clickable { }
             .padding(24.dp, 24.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                modifier = Modifier.padding(PaddingValues(end = 24.dp)),
-                imageVector = when (status) {
-                    is ServiceStatus.Error -> Icons.Outlined.Warning
-                    is ServiceStatus.Loading -> Icons.Outlined.Refresh
-                    is ServiceStatus.Running -> Icons.Outlined.CheckCircle
-                    is ServiceStatus.Stop -> Icons.Outlined.CheckCircle
-                    is ServiceStatus.Pause -> Icons.Outlined.Warning
-                },
-                contentDescription = when (status) {
-                    is ServiceStatus.Error -> "error"
-                    is ServiceStatus.Loading -> "loading"
-                    is ServiceStatus.Running -> "running"
-                    is ServiceStatus.Stop -> "stop"
-                    is ServiceStatus.Pause -> "pause"
-                },
-                tint = textColor
-            )
+            when (status) {
+                is ServiceStatus.Error -> Icon(
+                    modifier = Modifier.padding(PaddingValues(end = 24.dp)),
+                    imageVector = Icons.Outlined.Warning,
+                    contentDescription = "error",
+                    tint = textColor
+                )
+                is ServiceStatus.Loading -> CircularProgressIndicator(
+                    modifier = Modifier.padding(PaddingValues(end = 24.dp)).size(24.dp),
+                    color = textColor,
+                    strokeWidth = 3.dp
+                )
+                is ServiceStatus.Running -> Icon(
+                    modifier = Modifier.padding(PaddingValues(end = 24.dp)),
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = "running",
+                    tint = textColor
+                )
+                is ServiceStatus.Stop -> Icon(
+                    modifier = Modifier.padding(PaddingValues(end = 24.dp)),
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = "stop",
+                    tint = textColor
+                )
+                is ServiceStatus.Pause -> Icon(
+                    modifier = Modifier.padding(PaddingValues(end = 24.dp)),
+                    imageVector = Icons.Outlined.Warning,
+                    contentDescription = "pause",
+                    tint = textColor
+                )
+            }
             Column() {
                 Text(
                     text = when (status) {
