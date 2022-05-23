@@ -233,7 +233,12 @@ class ConnService : LifecycleService() {
                 putLong("timestamp", timestamp)
                 putParcelable(
                     "value",
-                    if (isRunning) ServiceStatus.Error("服务正在运行，请勿重复启动") else ServiceStatus.Loading("尝试以默认账户登录")
+                    if (isRunning) {
+                        ServiceStatus.Error("服务正在运行，请勿重复启动")
+                    } else {
+                        notificationUtil.updateForegroundServiceNotification("服务正在启动", "尝试以默认账户登录")
+                        ServiceStatus.Loading("尝试以默认账户登录")
+                    }
                 )
             })
         )
@@ -246,6 +251,7 @@ class ConnService : LifecycleService() {
         lifecycleScope.cancel()
         // res
         isRunning = false
+        notificationUtil.cancelForegroundServiceNotification()
         interfaceMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                 putInt("command", ConnKey.MSG_RESPONSE_STOP_SERVICE)
@@ -283,6 +289,7 @@ class ConnService : LifecycleService() {
         Log.d("parabox", "timestamp need to replace original response: $timestamp")
         Log.d("parabox", "newTimestamp use to check resource and deffered: $timestamp")
         if (resource !is LoginResource.None) {
+            notificationUtil.updateForegroundServiceNotification("等待事务处理", "请遵照提示完成身份验证")
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_LOGIN)

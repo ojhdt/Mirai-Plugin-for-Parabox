@@ -15,6 +15,7 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.ojhdtapp.miraipluginforparabox.core.util.BatteryUtil
 import com.ojhdtapp.miraipluginforparabox.core.util.BrowserUtil
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
+import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForActivity
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
@@ -29,6 +30,7 @@ import kotlinx.coroutines.*
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private lateinit var connector: ServiceConnector
+    private lateinit var notificationUtil : NotificationUtilForActivity
     var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
     private var listeningDeferred: CompletableDeferredWithTag<Long, String>? = null
@@ -40,6 +42,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         connector = ServiceConnector(this, viewModel)
+        notificationUtil = NotificationUtilForActivity(this)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
@@ -92,7 +95,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun errorOccurred() {
+    private fun errorOccurred(status: ServiceStatus? = null) {
+        status?.let {
+            if(it is ServiceStatus.Error)
+            notificationUtil.sendNotification("启动服务时发生错误", it.message)
+        }
         listeningDeferred?.cancel()
         serviceStartJob?.cancel()
         viewModel.setMainSwitchEnabledState(true)
@@ -110,7 +117,7 @@ class MainActivity : ComponentActivity() {
                 }.also {
                     viewModel.updateServiceStatusStateFlow(it)
                     if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                        errorOccurred()
+                        errorOccurred(it)
                         return@launch
                     }
                 }
@@ -119,14 +126,14 @@ class MainActivity : ComponentActivity() {
                 }.also {
                     viewModel.updateServiceStatusStateFlow(it)
                     if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                        errorOccurred()
+                        errorOccurred(it)
                         return@launch
                     }
                 }
                 withTimeout(30000) { connector.miraiLogin() }.also {
                     viewModel.updateServiceStatusStateFlow(it)
                     if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                        errorOccurred()
+                        errorOccurred(it)
                         return@launch
                     }
                     var temp = it
@@ -136,7 +143,7 @@ class MainActivity : ComponentActivity() {
                         withTimeout(60000) { connector.submitVerificationResult(listeningDeferred!!.await()) }.also {
                             viewModel.updateServiceStatusStateFlow(it)
                             if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                                errorOccurred()
+                                errorOccurred(it)
                                 return@launch
                             } else if (it is ServiceStatus.Pause) temp = it
                         }
@@ -151,8 +158,9 @@ class MainActivity : ComponentActivity() {
 //                }
                 }
             } catch (e: TimeoutCancellationException) {
-                viewModel.updateServiceStatusStateFlow(ServiceStatus.Error("操作超时"))
-                errorOccurred()
+                val status = ServiceStatus.Error("操作超时")
+                viewModel.updateServiceStatusStateFlow(status)
+                errorOccurred(status)
                 return@launch
             }
             Log.d("parabox", "end")
@@ -170,6 +178,7 @@ class MainActivity : ComponentActivity() {
                 }
             } catch (e: TimeoutCancellationException) {
                 viewModel.updateServiceStatusStateFlow(ServiceStatus.Error("服务响应超时，请手动检查服务状态"))
+                notificationUtil.sendNotification("启动服务时发生错误", "服务响应超时，请手动检查服务状态")
             } finally {
                 listeningDeferred?.cancel()
                 serviceStartJob?.cancel()
