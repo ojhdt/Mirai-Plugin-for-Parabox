@@ -113,11 +113,14 @@ class ConnService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("parabox", "service started")
-//            val preferences = dataStore.data.last()
-//            Log.d("parabox", "aaa:${preferences[DataStoreKeys.FOREGROUND_SERVICE] as Boolean}")
-//            if (preferences[DataStoreKeys.FOREGROUND_SERVICE] as Boolean) {
-//                notificationUtil.startForegroundService()
-//            }
+        lifecycleScope.launch {
+            val isForegroundServiceEnabled =
+                dataStore.data.first()[DataStoreKeys.FOREGROUND_SERVICE] ?: false
+//            Log.d("parabox", "isForegroundServiceEnabled:$isForegroundServiceEnabled")
+            if (isForegroundServiceEnabled) {
+                notificationUtil.startForegroundService()
+            }
+        }
         return super.onStartCommand(intent, flags, startId)
     }
 
