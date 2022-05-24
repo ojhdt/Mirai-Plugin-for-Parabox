@@ -93,19 +93,15 @@ class MainActivity : ComponentActivity() {
             is StatusPageEvent.OnRequestIgnoreBatteryOptimizations -> {
                 batteryUtil.ignoreBatteryOptimization()
             }
-
-//            is StatusPageEvent.OnLoginClick -> {
-//
-//            }
-//            is StatusPageEvent.OnKillClick -> {
-//
-//            }
             is StatusPageEvent.OnLoginResourceConfirm -> {
                 Log.d(
                     "parabox",
                     "deferred:${listeningDeferred?.getCurrentTag()} now:${event.timestamp}"
                 )
                 listeningDeferred?.complete(event.timestamp, event.res)
+            }
+            is StatusPageEvent.OnLaunchBrowser -> {
+                BrowserUtil.launchURL(this, event.url)
             }
             is StatusPageEvent.OnShowToast -> {
                 Toast.makeText(this, event.message, Toast.LENGTH_SHORT).show()

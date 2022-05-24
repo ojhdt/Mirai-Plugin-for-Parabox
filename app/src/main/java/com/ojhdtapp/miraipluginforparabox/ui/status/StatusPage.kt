@@ -319,7 +319,7 @@ fun AnimatedVisibilityScope.StatusPage(
                     Spacer(modifier = Modifier.height(16.dp))
                     PreferencesCategory(text = "故障排除")
                     NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
-
+                        onEvent(StatusPageEvent.OnLaunchBrowser("https://www.baidu.com/"))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     PreferencesCategory(text = "关于")
@@ -327,7 +327,7 @@ fun AnimatedVisibilityScope.StatusPage(
 
                     }
                     NormalPreference(title = "项目地址") {
-
+                        onEvent(StatusPageEvent.OnLaunchBrowser("https://www.baidu.com/"))
                     }
                     NormalPreference(title = "开放源代码许可") {
                         navigator.navigate(LicensePageDestination())
