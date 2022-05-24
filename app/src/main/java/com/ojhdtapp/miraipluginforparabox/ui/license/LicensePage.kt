@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.license
 
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,14 +14,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
+import com.ojhdtapp.miraipluginforparabox.ui.util.SharedAxisZTransition
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.spec.DestinationStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Destination
+@Destination(style = SharedAxisZTransition::class)
 @Composable
-fun LicensePage(
+fun AnimatedVisibilityScope.LicensePage(
     modifier: Modifier = Modifier,
     navigator: DestinationsNavigator,
     onEvent: (StatusPageEvent) -> Unit

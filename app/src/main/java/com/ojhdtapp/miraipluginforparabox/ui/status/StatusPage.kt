@@ -22,17 +22,14 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.destinations.LicensePageDestination
 import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
-import com.ojhdtapp.miraipluginforparabox.ui.util.NormalPreference
-import com.ojhdtapp.miraipluginforparabox.ui.util.PreferencesCategory
-import com.ojhdtapp.miraipluginforparabox.ui.util.SimpleMenuPreference
-import com.ojhdtapp.miraipluginforparabox.ui.util.SwitchPreference
+import com.ojhdtapp.miraipluginforparabox.ui.util.*
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Destination(start = true)
+@Destination(start = true, style = SharedAxisZTransition::class)
 @Composable
-fun StatusPage(
+fun AnimatedVisibilityScope.StatusPage(
     modifier: Modifier = Modifier,
     navigator: DestinationsNavigator,
     onEvent: (StatusPageEvent) -> Unit

@@ -6,11 +6,14 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.ojhdtapp.miraipluginforparabox.core.util.*
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
@@ -23,6 +26,8 @@ import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
 import com.ojhdtapp.miraipluginforparabox.ui.theme.AppTheme
 import com.ramcosta.composedestinations.DestinationsNavHost
+import com.ramcosta.composedestinations.animations.defaults.RootNavGraphDefaultAnimations
+import com.ramcosta.composedestinations.animations.rememberAnimatedNavHostEngine
 import com.ramcosta.composedestinations.annotation.NavGraph
 import com.ramcosta.composedestinations.navigation.dependency
 import dagger.hilt.android.AndroidEntryPoint
@@ -41,6 +46,7 @@ class MainActivity : ComponentActivity() {
         BatteryUtil(this)
     }
 
+    @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterialNavigationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         connector = ServiceConnector(this, viewModel)
@@ -57,11 +63,16 @@ class MainActivity : ComponentActivity() {
                     darkIcons = useDarkIcons
                 )
             }
-            AppTheme() {
+            AppTheme {
+                val navHostEngine = rememberAnimatedNavHostEngine(
+                    navHostContentAlignment = Alignment.TopCenter,
+                    rootDefaultAnimations = RootNavGraphDefaultAnimations.ACCOMPANIST_FADING,
+                )
                 DestinationsNavHost(navGraph = NavGraphs.root,
-                dependenciesContainerBuilder = {
-                    dependency { event: StatusPageEvent -> onEvent(event) }
-                }){
+                    engine = navHostEngine,
+                    dependenciesContainerBuilder = {
+                        dependency { event: StatusPageEvent -> onEvent(event) }
+                    }) {
 
                 }
             }
