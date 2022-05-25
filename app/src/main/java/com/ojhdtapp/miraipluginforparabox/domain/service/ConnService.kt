@@ -34,7 +34,7 @@ class ConnService : LifecycleService() {
     lateinit var repository: MainRepository
     lateinit var notificationUtil: NotificationUtilForService
 
-    private lateinit var bot: Bot
+    private var bot: Bot? = null
     private var listener: Listener<FriendMessageEvent>? = null
     private lateinit var mLoginSolver: AndroidLoginSolver
     private lateinit var sMessenger: Messenger
@@ -62,7 +62,7 @@ class ConnService : LifecycleService() {
             if (isContactCacheEnabled) enableContactCache()
         }
         try {
-            bot.login()
+            bot?.login()
             isRunning = true
             val version = MIRAI_CORE_VERSION
             interfaceMessenger?.send(
@@ -77,7 +77,7 @@ class ConnService : LifecycleService() {
             registerMessageReceiver()
             repository.getSelectedAccount()?.let {
                 repository.addNewAccount(it.apply {
-                    avatarUrl = bot.avatarUrl
+                    avatarUrl = bot?.avatarUrl
                 })
             }
         } catch (e: LoginFailedException) {
@@ -104,7 +104,7 @@ class ConnService : LifecycleService() {
 
     private fun registerMessageReceiver() {
         listener =
-            bot.eventChannel.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
+            bot?.eventChannel!!.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
                 Log.d("aaa", "${event.senderName}:${event.message}")
                 event.subject.sendMessage("Hello from mirai!")
             }
@@ -277,7 +277,8 @@ class ConnService : LifecycleService() {
     fun miraiStop(timestamp: Long) {
         // movement
         unRegisterMessageReceiver()
-        bot.close()
+        bot?.close()
+        bot = null
         lifecycleScope.cancel()
         // res
         isRunning = false

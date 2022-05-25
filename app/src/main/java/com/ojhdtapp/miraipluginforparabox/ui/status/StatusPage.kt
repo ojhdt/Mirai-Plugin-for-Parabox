@@ -32,10 +32,9 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 fun AnimatedVisibilityScope.StatusPage(
     modifier: Modifier = Modifier,
     navigator: DestinationsNavigator,
+    viewModel: StatusPageViewModel,
     onEvent: (StatusPageEvent) -> Unit
 ) {
-    // viewModel
-    val viewModel: StatusPageViewModel = hiltViewModel()
     val snackBarHostState = remember { SnackbarHostState() }
     // snackBar & navigation
     LaunchedEffect(true) {

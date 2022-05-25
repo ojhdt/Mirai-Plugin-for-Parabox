@@ -12,6 +12,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -21,6 +22,7 @@ import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.NavGraphs
+import com.ojhdtapp.miraipluginforparabox.ui.destinations.StatusPageDestination
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPage
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageViewModel
@@ -72,6 +74,11 @@ class MainActivity : ComponentActivity() {
                     engine = navHostEngine,
                     dependenciesContainerBuilder = {
                         dependency { event: StatusPageEvent -> onEvent(event) }
+                        when(destination){
+                            is StatusPageDestination -> {
+                                dependency(viewModel)
+                            }
+                        }
                     }) {
 
                 }
