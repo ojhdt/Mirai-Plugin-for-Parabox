@@ -8,7 +8,7 @@ import android.provider.Settings
 import androidx.core.content.getSystemService
 import com.ojhdtapp.miraipluginforparabox.MainActivity
 
-class BatteryUtil(val context: Context) {
+class BatteryUtil(private val context: Context) {
     private fun isBatteryOptimizationIgnored(): Boolean =
         context.getSystemService<PowerManager>()
             ?.isIgnoringBatteryOptimizations(context.packageName) ?: false
