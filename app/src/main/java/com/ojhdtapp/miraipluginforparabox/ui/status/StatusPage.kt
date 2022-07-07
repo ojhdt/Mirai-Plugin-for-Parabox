@@ -48,8 +48,9 @@ fun AnimatedVisibilityScope.StatusPage(
     }
     // topBar
     val decayAnimationSpec = rememberSplineBasedDecay<Float>()
+    val scrollState = rememberTopAppBarScrollState()
     val scrollBehavior = remember(decayAnimationSpec) {
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(decayAnimationSpec)
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(decayAnimationSpec, scrollState)
     }
     // accountDialog
     var openAccountDialog by remember {
