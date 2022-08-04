@@ -177,6 +177,7 @@ fun AccountItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAccountDialog(
     modifier: Modifier = Modifier,

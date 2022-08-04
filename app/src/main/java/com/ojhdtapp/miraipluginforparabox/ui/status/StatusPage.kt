@@ -48,7 +48,7 @@ fun AnimatedVisibilityScope.StatusPage(
     }
     // topBar
     val decayAnimationSpec = rememberSplineBasedDecay<Float>()
-    val scrollState = rememberTopAppBarScrollState()
+    val scrollState = rememberTopAppBarState()
     val scrollBehavior = remember(decayAnimationSpec) {
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(decayAnimationSpec, scrollState)
     }
@@ -88,7 +88,7 @@ fun AnimatedVisibilityScope.StatusPage(
                         TopAppBarDefaults
                             .largeTopAppBarColors()
                             .containerColor(
-                                scrollFraction = scrollBehavior.scrollFraction
+                                colorTransitionFraction = scrollBehavior.state.collapsedFraction
                             ).value
                     )
                     .statusBarsPadding(),

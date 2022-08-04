@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -27,20 +28,14 @@ fun AnimatedVisibilityScope.LicensePage(
     navigator: DestinationsNavigator,
     onEvent: (StatusPageEvent) -> Unit
 ) {
-    val scrollState = rememberTopAppBarScrollState()
-    val scrollBehavior = remember { TopAppBarDefaults.pinnedScrollBehavior(
-        scrollState) }
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    val scrollFraction = scrollBehavior.state.overlappedFraction
+    val topAppBarColor by TopAppBarDefaults.smallTopAppBarColors().containerColor(scrollFraction)
     Scaffold(modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             SmallTopAppBar(
                 modifier = Modifier
-                    .background(
-                        TopAppBarDefaults
-                            .smallTopAppBarColors()
-                            .containerColor(
-                                scrollFraction = scrollBehavior.scrollFraction
-                            ).value
-                    )
+                    .background(topAppBarColor)
                     .statusBarsPadding(),
                 title = { Text(text = "开放源代码许可") },
                 navigationIcon = {
