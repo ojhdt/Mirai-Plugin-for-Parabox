@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.util
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -29,11 +30,17 @@ fun SwitchPreference(
     title: String,
     subtitle: String? = null,
     checked: Boolean,
+    enabled: Boolean,
     onCheckedChange: (value: Boolean) -> Unit
 ) {
+    val textColor by animateColorAsState(targetValue = if(enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline)
     Row(
         modifier = modifier
-            .clickable { onCheckedChange(!checked) }
+            .clickable {
+                if (enabled) {
+                    onCheckedChange(!checked)
+                }
+            }
             .padding(24.dp, 16.dp)
             .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -43,19 +50,20 @@ fun SwitchPreference(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                fontSize = MaterialTheme.fontSize.title
+                fontSize = MaterialTheme.fontSize.title,
+                color = textColor
             )
             subtitle?.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = textColor,
                 )
             }
         }
         Spacer(modifier = Modifier.width(48.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 
@@ -98,41 +106,46 @@ fun <T> SimpleMenuPreference(
     title: String,
     selectedKey: T? = null,
     optionsMap: Map<T, String>,
+    enabled: Boolean,
     onSelect: (selected: T) -> Unit
 ) {
     var expanded by remember {
         mutableStateOf(false)
     }
+    val textColor by animateColorAsState(targetValue = if(enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline)
     Row(
         modifier = modifier
-            .clickable { expanded = true }
+            .clickable { if(enabled){
+                expanded = true}
+            }
             .padding(24.dp, 16.dp)
             .fillMaxWidth(),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
         DropdownMenu(
-            expanded = expanded,
+            expanded = enabled && expanded,
             onDismissRequest = { expanded = false }
         ) {
             for ((key, value) in optionsMap) {
                 DropdownMenuItem(text = { Text(text = value) }, onClick = {
                     expanded = false
                     onSelect(key)
-                })
+                }, enabled = enabled)
             }
         }
         Column() {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                fontSize = MaterialTheme.fontSize.title
+                fontSize = MaterialTheme.fontSize.title,
+                color = textColor,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = selectedKey?.let { optionsMap[it] } ?: optionsMap.values.first(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = textColor,
             )
 
         }

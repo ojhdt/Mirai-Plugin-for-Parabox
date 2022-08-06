@@ -275,42 +275,39 @@ fun AnimatedVisibilityScope.StatusPage(
                         title = "自动登录",
                         subtitle = "应用启动时同时以默认账户启动服务",
                         checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
+                        enabled = true,
                         onCheckedChange = viewModel::setAutoLoginSwitch
                     )
-                    AnimatedVisibility(
-                        visible = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            SwitchPreference(
-                                title = "前台服务",
-                                subtitle = "可提高后台留存能力",
-                                checked = viewModel.foregroundServiceSwitchFLow.collectAsState(
-                                    initial = false
-                                ).value,
-                                onCheckedChange = viewModel::setForegroundServiceSwitch
-                            )
-                            SwitchPreference(
-                                title = "列表缓存",
-                                subtitle = "可大幅加速登陆进程，但可能引起好友列表不同步问题",
-                                checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
-                                onCheckedChange = viewModel::setContactCacheSwitch
-                            )
-                            SimpleMenuPreference<Int>(
-                                title = "切换登陆协议",
-                                optionsMap = viewModel.protocolOptionsMap,
-                                selectedKey = viewModel.protocolSimpleMenuFLow.collectAsState(
-                                    initial = null
-                                ).value,
-                                onSelect = viewModel::setProtocolSimpleMenu
-                            )
-                        }
-                    }
+                    SwitchPreference(
+                        title = "前台服务",
+                        subtitle = "可提高后台留存能力",
+                        checked = viewModel.foregroundServiceSwitchFLow.collectAsState(
+                            initial = false
+                        ).value,
+                        enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
+                        onCheckedChange = viewModel::setForegroundServiceSwitch
+                    )
+                    SwitchPreference(
+                        title = "列表缓存",
+                        subtitle = "可大幅加速登陆进程，但可能引起好友列表不同步问题",
+                        checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
+                        enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
+                        onCheckedChange = viewModel::setContactCacheSwitch
+                    )
+                    SimpleMenuPreference<Int>(
+                        title = "切换登陆协议",
+                        optionsMap = viewModel.protocolOptionsMap,
+                        selectedKey = viewModel.protocolSimpleMenuFLow.collectAsState(
+                            initial = null
+                        ).value,
+                        enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
+                        onSelect = viewModel::setProtocolSimpleMenu
+                    )
                     SwitchPreference(
                         title = "取消超时",
                         subtitle = "取消登录各流程的超时错误，但可能导致不可预见的问题",
                         checked = viewModel.cancelTimeoutSwitchFlow.collectAsState(initial = false).value,
+                        enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
                         onCheckedChange = viewModel::setCancelTimeoutSwitch
                     )
                     NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
@@ -496,25 +493,30 @@ fun MainSwitch(
     onCheckedChange: (value: Boolean) -> Unit,
     enabled: Boolean
 ) {
-    val switchColor by animateColorAsState(targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer)
-    Row(
+    val switchColor by animateColorAsState(targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+    Surface(
         modifier = modifier
             .clip(RoundedCornerShape(32.dp))
-            .background(switchColor)
             .clickable {
                 if (enabled) onCheckedChange(!checked)
                 else onEvent(StatusPageEvent.OnShowToast("操作进行中，请勿重复点击"))
-            }
-            .padding(24.dp, 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            },
+        color = switchColor,
+        tonalElevation = 3.dp
     ) {
-        Text(
-            text = "启用插件",
-            style = MaterialTheme.typography.titleLarge,
-            fontSize = MaterialTheme.fontSize.title,
-            color = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
-        )
-        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+        Row(
+            modifier = Modifier
+                .padding(24.dp, 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "启用插件",
+                style = MaterialTheme.typography.titleLarge,
+                fontSize = MaterialTheme.fontSize.title,
+                color = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+            )
+            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+        }
     }
 }

@@ -134,7 +134,7 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-        settings[DataStoreKeys.FOREGROUND_SERVICE] ?: false
+        settings[DataStoreKeys.FOREGROUND_SERVICE] ?: true
     }
 
     fun setForegroundServiceSwitch(value: Boolean) {
@@ -154,7 +154,7 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-        settings[DataStoreKeys.CONTACT_CACHE] ?: false
+        settings[DataStoreKeys.CONTACT_CACHE] ?: true
     }
 
     fun setContactCacheSwitch(value: Boolean) {
