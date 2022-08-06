@@ -108,7 +108,7 @@ dependencies {
     implementation "androidx.browser:browser:1.4.0"
 
     // Mirai
-    implementation 'net.mamoe:mirai-core:2.11.0'
+    implementation 'net.mamoe:mirai-core:2.12.1'
 
     // ViewModel
     def lifecycle_version = "2.6.0-alpha01"

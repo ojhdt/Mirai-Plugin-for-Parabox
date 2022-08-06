@@ -208,15 +208,15 @@ class MainActivity : ComponentActivity() {
 //                    }
 //                }
                 }
+                Log.d("parabox", "end")
+                viewModel.setMainSwitchState(true)
+                viewModel.setMainSwitchEnabledState(true)
             } catch (e: TimeoutCancellationException) {
                 val status = ServiceStatus.Error("操作超时")
                 viewModel.updateServiceStatusStateFlow(status)
                 errorOccurred(status)
                 return@launch
             }
-            Log.d("parabox", "end")
-            viewModel.setMainSwitchState(true)
-            viewModel.setMainSwitchEnabledState(true)
         }
     }
 
