@@ -24,10 +24,12 @@ import com.ojhdtapp.miraipluginforparabox.ui.destinations.LicensePageDestination
 import com.ojhdtapp.miraipluginforparabox.ui.theme.fontSize
 import com.ojhdtapp.miraipluginforparabox.ui.util.*
 import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootNavGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Destination(start = true, style = SharedAxisZTransition::class)
+@RootNavGraph(start = true)
+@Destination
 @Composable
 fun AnimatedVisibilityScope.StatusPage(
     modifier: Modifier = Modifier,
@@ -323,8 +325,11 @@ fun AnimatedVisibilityScope.StatusPage(
                     NormalPreference(title = "版本", subtitle = viewModel.appVersion) {
 
                     }
+                    NormalPreference(title = "Mirai Core 版本", subtitle = viewModel.miraiCoreVersion) {
+
+                    }
                     NormalPreference(title = "项目地址") {
-                        onEvent(StatusPageEvent.OnLaunchBrowser("https://www.baidu.com/"))
+                        onEvent(StatusPageEvent.OnLaunchBrowser("https://github.com/ojhdt/Mirai-Plugin-for-Parabox"))
                     }
                     NormalPreference(title = "开放源代码许可") {
                         navigator.navigate(LicensePageDestination())

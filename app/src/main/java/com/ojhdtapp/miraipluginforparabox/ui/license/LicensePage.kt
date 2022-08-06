@@ -21,7 +21,7 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.spec.DestinationStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Destination(style = SharedAxisZTransition::class)
+@Destination
 @Composable
 fun AnimatedVisibilityScope.LicensePage(
     modifier: Modifier = Modifier,

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
@@ -211,4 +212,5 @@ class StatusPageViewModel @Inject constructor(
     }
 
     val appVersion = com.ojhdtapp.miraipluginforparabox.BuildConfig.VERSION_NAME
+    val miraiCoreVersion = MIRAI_CORE_VERSION
 }

@@ -6,10 +6,14 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,7 +62,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val systemUiController = rememberSystemUiController()
             val useDarkIcons = !isSystemInDarkTheme()
-            Log.d("parabox", useDarkIcons.toString())
             SideEffect {
                 systemUiController.setSystemBarsColor(
                     color = Color.Transparent,
@@ -68,9 +71,20 @@ class MainActivity : ComponentActivity() {
             AppTheme {
                 val navHostEngine = rememberAnimatedNavHostEngine(
                     navHostContentAlignment = Alignment.TopCenter,
-                    rootDefaultAnimations = RootNavGraphDefaultAnimations.ACCOMPANIST_FADING,
+                    rootDefaultAnimations = RootNavGraphDefaultAnimations(
+//                    enterTransition = { slideInHorizontally { it }},
+//                    exitTransition = { slideOutHorizontally { -it }},
+//                    popEnterTransition = { slideInHorizontally { -it }},
+//                    popExitTransition = { slideOutHorizontally { it }},
+                        enterTransition = { fadeIn(tween(300)) + scaleIn(tween(300), 0.9f) },
+                        exitTransition = { fadeOut(tween(300)) + scaleOut(tween(300), 1.1f) },
+                        popEnterTransition = { fadeIn(tween(450)) + scaleIn(tween(450), 1.1f) },
+                        popExitTransition = { fadeOut(tween(450)) + scaleOut(tween(450), 0.9f) }
+                    ),
                 )
-                DestinationsNavHost(navGraph = NavGraphs.root,
+                DestinationsNavHost(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+                    navGraph = NavGraphs.root,
                     engine = navHostEngine,
                     dependenciesContainerBuilder = {
                         dependency { event: StatusPageEvent -> onEvent(event) }
