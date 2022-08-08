@@ -24,6 +24,9 @@
             android:name=".domain.service.ConnService"
             android:enabled="true"
             android:exported="true" >
+            <intent-filter>
+                <action android:name="com.ojhdtapp.parabox.PLUGIN"/>
+            </intent-filter>
         </service>
 
         <activity
@@ -33,7 +36,6 @@
             android:theme="@style/Theme.MiraiPluginForParabox" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
