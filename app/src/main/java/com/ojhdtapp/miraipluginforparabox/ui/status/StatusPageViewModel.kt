@@ -17,9 +17,11 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.MiraiProtocol
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.mamoe.mirai.utils.BotConfiguration
 import java.io.IOException
 import javax.inject.Inject
@@ -51,6 +53,19 @@ class StatusPageViewModel @Inject constructor(
 
     fun setPicCaptchaValue(value: String) {
         _picCaptchaValue.value = value
+    }
+
+    // MainApp Installation
+    private val _isMainAppInstalled = mutableStateOf<Boolean>(false)
+    val isMainAppInstalled: State<Boolean> = _isMainAppInstalled
+    fun setIsMainAppInstalled(value: Boolean) {
+        _isMainAppInstalled.value = value
+    }
+
+    private val _isMainAppOnStack = mutableStateOf<Boolean>(false)
+    val isMainAppOnStack: State<Boolean> = _isMainAppOnStack
+    fun setIsMainAppOnStack(value: Boolean) {
+        _isMainAppOnStack.value = value
     }
 
     // Service Status
@@ -115,13 +130,23 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-        settings[DataStoreKeys.AUTO_LOGIN] ?: false
-    }
+            settings[DataStoreKeys.AUTO_LOGIN] ?: false
+        }
 
     fun setAutoLoginSwitch(value: Boolean) {
         viewModelScope.launch {
-            context.dataStore.edit { settings ->
-                settings[DataStoreKeys.AUTO_LOGIN] = value
+            val secret = withContext(Dispatchers.IO) {
+                repository.getSelectedAccount()
+            }
+            if (secret == null) {
+                context.dataStore.edit { settings ->
+                    settings[DataStoreKeys.AUTO_LOGIN] = false
+                }
+                _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("未选中默认账户，自动登录不可用"))
+            } else {
+                context.dataStore.edit { settings ->
+                    settings[DataStoreKeys.AUTO_LOGIN] = value
+                }
             }
         }
     }
@@ -135,8 +160,8 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-        settings[DataStoreKeys.FOREGROUND_SERVICE] ?: true
-    }
+            settings[DataStoreKeys.FOREGROUND_SERVICE] ?: true
+        }
 
     fun setForegroundServiceSwitch(value: Boolean) {
         viewModelScope.launch {
@@ -155,8 +180,8 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-        settings[DataStoreKeys.CONTACT_CACHE] ?: true
-    }
+            settings[DataStoreKeys.CONTACT_CACHE] ?: true
+        }
 
     fun setContactCacheSwitch(value: Boolean) {
         viewModelScope.launch {
@@ -180,8 +205,8 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-        settings[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone
-    }
+            settings[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone
+        }
 
     fun setProtocolSimpleMenu(value: Int) {
         viewModelScope.launch {
@@ -191,7 +216,7 @@ class StatusPageViewModel @Inject constructor(
         }
     }
 
-    val cancelTimeoutSwitchFlow : Flow<Boolean> = context.dataStore.data
+    val cancelTimeoutSwitchFlow: Flow<Boolean> = context.dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -200,10 +225,10 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-        settings[DataStoreKeys.CANCEL_TIMEOUT] ?: false
-    }
+            settings[DataStoreKeys.CANCEL_TIMEOUT] ?: false
+        }
 
-    fun setCancelTimeoutSwitch(value: Boolean){
+    fun setCancelTimeoutSwitch(value: Boolean) {
         viewModelScope.launch {
             context.dataStore.edit { settings ->
                 settings[DataStoreKeys.CANCEL_TIMEOUT] = value

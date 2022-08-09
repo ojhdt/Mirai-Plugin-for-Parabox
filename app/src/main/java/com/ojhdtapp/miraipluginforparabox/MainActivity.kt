@@ -1,5 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox
 
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -58,6 +60,9 @@ class MainActivity : ComponentActivity() {
         connector = ServiceConnector(this, viewModel)
         notificationUtil = NotificationUtilForActivity(this)
 
+        checkMainAppInstallation()
+//        checkMainAppOnBackStack()
+
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val systemUiController = rememberSystemUiController()
@@ -88,7 +93,7 @@ class MainActivity : ComponentActivity() {
                     engine = navHostEngine,
                     dependenciesContainerBuilder = {
                         dependency { event: StatusPageEvent -> onEvent(event) }
-                        when(destination){
+                        when (destination) {
                             is StatusPageDestination -> {
                                 dependency(viewModel)
                             }
@@ -98,6 +103,32 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        checkMainAppInstallation()
+//        checkMainAppOnBackStack()
+    }
+
+    private fun checkMainAppInstallation() {
+        val pkg = "com.ojhdtapp.parabox"
+        var res = false
+        try {
+            packageManager.getPackageInfo(pkg, PackageManager.GET_META_DATA)
+            res = true
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+        }
+        viewModel.setIsMainAppInstalled(res)
+    }
+
+    private fun checkMainAppOnBackStack() {
+        val pkg = "com.ojhdtapp.parabox"
+        val res = packageManager.getLaunchIntentForPackage(pkg)
+            ?.resolveActivityInfo(packageManager, PackageManager.GET_META_DATA) != null
+        viewModel.setIsMainAppOnStack(!isTaskRoot)
     }
 
     private fun onEvent(event: StatusPageEvent) {
@@ -126,6 +157,14 @@ class MainActivity : ComponentActivity() {
             }
             is StatusPageEvent.OnShowToast -> {
                 Toast.makeText(this, event.message, Toast.LENGTH_SHORT).show()
+            }
+            is StatusPageEvent.LaunchMainApp -> {
+                val pkg = "com.ojhdtapp.parabox"
+                packageManager.getLaunchIntentForPackage(pkg)?.let {
+                    startActivity(it.apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
             }
         }
     }

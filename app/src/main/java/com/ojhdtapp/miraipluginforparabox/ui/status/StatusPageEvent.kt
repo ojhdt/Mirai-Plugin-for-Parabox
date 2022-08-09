@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
+import android.content.Intent
 import android.graphics.Bitmap
 
 sealed class StatusPageEvent {
@@ -10,6 +11,7 @@ sealed class StatusPageEvent {
     object OnRequestIgnoreBatteryOptimizations : StatusPageEvent()
     data class OnShowToast(val message: String) : StatusPageEvent()
     data class OnLaunchBrowser(val url: String) : StatusPageEvent()
+    object LaunchMainApp : StatusPageEvent()
 }
 
 sealed class StatusPageUiEvent {

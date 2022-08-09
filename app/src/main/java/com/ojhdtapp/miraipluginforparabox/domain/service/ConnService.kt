@@ -174,6 +174,9 @@ class ConnService : LifecycleService() {
                         ConnKey.MSG_MESSAGE_CHECK_RUNNING_STATUS -> {
                             checkRunningStatus()
                         }
+                        ConnKey.MSG_MESSAGE_TRY_AUTO_LOGIN -> {
+                            tryAutoLogin()
+                        }
                     }
                 }
                 ConnKey.MSG_COMMAND -> {
@@ -364,5 +367,12 @@ class ConnService : LifecycleService() {
                 putBoolean("value", isRunning)
             })
         )
+    }
+    fun tryAutoLogin() {
+        lifecycleScope.launch {
+            val isAutoLoginEnabled =
+                dataStore.data.first()[DataStoreKeys.AUTO_LOGIN] ?: false
+            TODO("Auto Login")
+        }
     }
 }

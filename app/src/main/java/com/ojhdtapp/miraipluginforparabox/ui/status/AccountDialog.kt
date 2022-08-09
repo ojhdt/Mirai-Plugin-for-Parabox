@@ -2,14 +2,13 @@ package com.ojhdtapp.miraipluginforparabox.ui.status
 
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -113,7 +112,7 @@ fun AccountDialog(
         })
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AccountItem(
     modifier: Modifier = Modifier,
@@ -134,9 +133,18 @@ fun AccountItem(
                 selected = selected,
                 onClick = {
                     onOptionSelected(index)
-                    if (selected) menuExpanded = true
+//                    if (selected) menuExpanded = true
                 },
                 role = Role.RadioButton
+            )
+            .combinedClickable(
+                interactionSource = remember {
+                    MutableInteractionSource()
+                },
+                indication = LocalIndication.current,
+                enabled = true,
+                onLongClick = { menuExpanded = true },
+                onClick = {}
             )
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically

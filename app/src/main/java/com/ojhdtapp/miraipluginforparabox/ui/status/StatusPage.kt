@@ -131,8 +131,13 @@ fun AnimatedVisibilityScope.StatusPage(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /*TODO*/ }) {
-                        Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = "back")
+                    if (viewModel.isMainAppInstalled.value) {
+                        IconButton(onClick = { onEvent(StatusPageEvent.LaunchMainApp) }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Home,
+                                contentDescription = "back"
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior
@@ -275,7 +280,7 @@ fun AnimatedVisibilityScope.StatusPage(
                     PreferencesCategory(text = "行为")
                     SwitchPreference(
                         title = "自动登录",
-                        subtitle = "应用启动时同时以默认账户启动服务",
+                        subtitle = "主应用启动时同时以默认账户启动服务",
                         checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
                         enabled = true,
                         onCheckedChange = viewModel::setAutoLoginSwitch
@@ -325,7 +330,10 @@ fun AnimatedVisibilityScope.StatusPage(
                     NormalPreference(title = "版本", subtitle = viewModel.appVersion) {
 
                     }
-                    NormalPreference(title = "Mirai Core 版本", subtitle = viewModel.miraiCoreVersion) {
+                    NormalPreference(
+                        title = "Mirai Core 版本",
+                        subtitle = viewModel.miraiCoreVersion
+                    ) {
 
                     }
                     NormalPreference(title = "项目地址") {
