@@ -170,6 +170,11 @@ class ConnService : LifecycleService() {
                     cMessenger = msg.replyTo
                     val str = (msg.obj as Bundle).getString("str") ?: "error"
                     Log.d("parabox", "message from cliect: $str")
+                    when ((msg.obj as Bundle).getInt("command", -1)) {
+                        ConnKey.MSG_MESSAGE_CHECK_RUNNING_STATUS -> {
+                            checkRunningStatus()
+                        }
+                    }
                 }
                 ConnKey.MSG_COMMAND -> {
                     interfaceMessenger = msg.replyTo
@@ -349,5 +354,15 @@ class ConnService : LifecycleService() {
 
     fun submitVerificationResult(result: String, timestamp: Long) {
         mLoginSolver.submitVerificationResult(result, timestamp)
+    }
+
+    fun checkRunningStatus() {
+        cMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
+                putInt("command", ConnKey.MSG_RESPONSE_CHECK_RUNNING_STATUS)
+                putInt("status", ConnKey.SUCCESS)
+                putBoolean("value", isRunning)
+            })
+        )
     }
 }

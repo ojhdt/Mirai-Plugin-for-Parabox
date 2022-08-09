@@ -141,7 +141,7 @@ class ServiceConnector(private val context: Context, private val vm: StatusPageV
 //            Log.d("parabox", "message back from client: $receivedMsg")
             when (msg.what) {
                 ConnKey.MSG_COMMAND -> {
-                    when ((msg.obj as Bundle).getInt("command", 10)) {
+                    when ((msg.obj as Bundle).getInt("command", -1)) {
                         ConnKey.MSG_COMMAND_ON_LOGIN_STATE_CHANGED -> {
                             val value: LoginResource =
                                 when ((msg.obj as Bundle).getInt("type", LoginResourceType.None)) {
