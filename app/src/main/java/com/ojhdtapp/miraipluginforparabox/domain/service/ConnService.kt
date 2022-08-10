@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.domain.service
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.*
 import android.util.Log
@@ -10,7 +11,7 @@ import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
-import com.ojhdtapp.miraipluginforparabox.data.remote.dto.MessageDto
+import com.ojhdtapp.parabox.dto.MessageDto
 import com.ojhdtapp.miraipluginforparabox.domain.model.PluginConnection
 import com.ojhdtapp.miraipluginforparabox.domain.model.Profile
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
@@ -33,8 +34,10 @@ import net.mamoe.mirai.message.data.PlainText
 import net.mamoe.mirai.message.data.SingleMessage
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
+import net.mamoe.mirai.utils.DeviceInfo
 import net.mamoe.mirai.utils.LoginSolver
 import javax.inject.Inject
+import kotlin.properties.Delegates
 
 @AndroidEntryPoint
 class ConnService : LifecycleService() {
@@ -51,6 +54,8 @@ class ConnService : LifecycleService() {
     private var interfaceMessenger: Messenger? = null
 
     private var isRunning = false
+
+    private var miraiConnectionType by Delegates.notNull<Int>()
 
     private suspend fun miraiMain(accountNum: Long, passwd: String) {
         val isContactCacheEnabled =
@@ -69,6 +74,7 @@ class ConnService : LifecycleService() {
             cacheDir = getExternalFilesDir("cache")!!.absoluteFile
             protocol = selectedProtocol
             if (isContactCacheEnabled) enableContactCache()
+            deviceInfo = {bot -> DeviceInfo.random() }
         }
         try {
             bot?.login()
@@ -117,7 +123,6 @@ class ConnService : LifecycleService() {
                 .subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
                     Log.d("aaa", "${event.senderName}:${event.message}")
                     event.subject.sendMessage("Hello from mirai!")
-                    val miraiConnectionType = this@ConnService.applicationInfo.metaData.getInt("connection_type")
                     val messageContents = event.message.map {
                         when (it) {
                             is PlainText -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
@@ -151,7 +156,6 @@ class ConnService : LifecycleService() {
                 }
         groupMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope).subscribeAlways { event ->
-                val miraiConnectionType = this@ConnService.applicationInfo.metaData.getInt("connection_type")
                 val messageContents = event.message.map {
                     when (it) {
                         is PlainText -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
@@ -213,6 +217,10 @@ class ConnService : LifecycleService() {
     override fun onCreate() {
         sMessenger = Messenger(ConnHandler())
         notificationUtil = NotificationUtilForService(this)
+        miraiConnectionType = packageManager.getApplicationInfo(
+            this@ConnService.packageName,
+            PackageManager.GET_META_DATA
+        ).metaData.getInt("connection_type")
         super.onCreate()
 //        mLoginSolver = AndroidLoginSolver()
     }
@@ -261,8 +269,6 @@ class ConnService : LifecycleService() {
             when (msg.what) {
                 ConnKey.MSG_MESSAGE -> {
                     cMessenger = msg.replyTo
-                    val str = (msg.obj as Bundle).getString("str") ?: "error"
-                    Log.d("parabox", "message from cliect: $str")
                     when ((msg.obj as Bundle).getInt("command", -1)) {
                         ConnKey.MSG_MESSAGE_CHECK_RUNNING_STATUS -> {
                             checkRunningStatus()

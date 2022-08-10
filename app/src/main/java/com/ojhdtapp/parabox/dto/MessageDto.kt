@@ -1,8 +1,8 @@
-package com.ojhdtapp.miraipluginforparabox.data.remote.dto
+package com.ojhdtapp.parabox.dto
 
 import android.os.Parcelable
-import com.ojhdtapp.miraipluginforparabox.domain.model.Profile
 import com.ojhdtapp.miraipluginforparabox.domain.model.PluginConnection
+import com.ojhdtapp.miraipluginforparabox.domain.model.Profile
 import com.ojhdtapp.miraipluginforparabox.domain.model.message_content.MessageContent
 import kotlinx.parcelize.Parcelize
 
