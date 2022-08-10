@@ -1,14 +1,18 @@
 package com.ojhdtapp.miraipluginforparabox.data.repository
 
+import com.ojhdtapp.miraipluginforparabox.data.local.DeviceInfoDao
 import com.ojhdtapp.miraipluginforparabox.data.local.SecretDao
+import com.ojhdtapp.miraipluginforparabox.data.local.entity.toDeviceInfoEntity
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import net.mamoe.mirai.utils.DeviceInfo
 import javax.inject.Inject
 
 class MainRepositoryImpl @Inject constructor(
-    private val dao: SecretDao
+    private val secretDao: SecretDao,
+    private val deviceInfoDao: DeviceInfoDao
 ) : MainRepository {
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getAccountListFlow(): Flow<List<Secret>> {
@@ -26,7 +30,7 @@ class MainRepositoryImpl @Inject constructor(
 //            .map { list ->
 //                list.map { it.toSecrets() }
 //            }
-        return dao.getAllSecretsFlow().flatMapLatest {
+        return secretDao.getAllSecretsFlow().flatMapLatest {
             flow {
                 emit(it.map { it.toSecret() })
                 emit(it.map { it.toAvatarDownloadedSecret() })
@@ -35,19 +39,27 @@ class MainRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getSelectedAccount(): Secret? {
-        return dao.getSelectedSecret()?.toSecret()
+        return secretDao.getSelectedSecret()?.toSecret()
     }
 
     override suspend fun addNewAccount(secret: Secret) {
-        dao.insertSecret(secret.toSecretsEntity())
+        secretDao.insertSecret(secret.toSecretsEntity())
     }
 
     override suspend fun deleteAccount(secret: Secret) {
-        dao.deleteSecret(secret.toSecretsEntity())
+        secretDao.deleteSecret(secret.toSecretsEntity())
     }
 
     override suspend fun addAllAccounts(secretList: List<Secret>) {
-        dao.insertAllSecrets(secretList.map { it.toSecretsEntity() })
+        secretDao.insertAllSecrets(secretList.map { it.toSecretsEntity() })
+    }
+
+    override fun insertDeviceInfo(value: DeviceInfo) {
+        return deviceInfoDao.insertDeviceInfo(value.toDeviceInfoEntity())
+    }
+
+    override suspend fun getDeviceInfo(): DeviceInfo? {
+        return deviceInfoDao.getDeviceInfo()?.toMiraiDeviceInfo()
     }
 
 }

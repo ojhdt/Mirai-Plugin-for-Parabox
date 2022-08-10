@@ -2,7 +2,7 @@ package com.ojhdtapp.miraipluginforparabox.di
 
 import android.app.Application
 import androidx.room.Room
-import com.ojhdtapp.miraipluginforparabox.data.local.SecretDatabase
+import com.ojhdtapp.miraipluginforparabox.data.local.AppDatabase
 import com.ojhdtapp.miraipluginforparabox.data.repository.MainRepositoryImpl
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import dagger.Module
@@ -17,16 +17,16 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun provideSecretsDatabase(app: Application): SecretDatabase =
+    fun provideAppDatabase(app: Application): AppDatabase =
         Room.databaseBuilder(
-            app, SecretDatabase::class.java,
-            "secret_db"
+            app, AppDatabase::class.java,
+            "main_db"
         ).build()
 
     @Provides
     @Singleton
-    fun provideMainRepository(database: SecretDatabase) : MainRepository =
-        MainRepositoryImpl(database.dao)
+    fun provideMainRepository(database: AppDatabase) : MainRepository =
+        MainRepositoryImpl(database.secretDao, database.deviceInfoDao)
 
 //    @Provides
 //    @Singleton

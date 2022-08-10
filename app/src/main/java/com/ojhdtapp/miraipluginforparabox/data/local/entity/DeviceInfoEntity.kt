@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.PrimaryKey
 import net.mamoe.mirai.utils.DeviceInfo
 
 @Entity
@@ -16,7 +17,6 @@ class DeviceInfoEntity(
     val bootId: ByteArray,
     val procVersion: ByteArray,
     val baseBand: ByteArray,
-    val version: DeviceInfo.Version,
     val simInfo: ByteArray,
     val osType: ByteArray,
     val macAddress: ByteArray,
@@ -24,7 +24,8 @@ class DeviceInfoEntity(
     val wifiSSID: ByteArray,
     val imsiMd5: ByteArray,
     val imei: String,
-    val apn: ByteArray
+    val apn: ByteArray,
+    @PrimaryKey var id: Long = 0
 ) {
     fun toMiraiDeviceInfo(): DeviceInfo = DeviceInfo(
         display,
@@ -38,7 +39,7 @@ class DeviceInfoEntity(
         bootId,
         procVersion,
         baseBand,
-        version,
+        DeviceInfo.Version(),
         simInfo,
         osType,
         macAddress,
@@ -49,3 +50,25 @@ class DeviceInfoEntity(
         apn
     )
 }
+
+fun DeviceInfo.toDeviceInfoEntity() = DeviceInfoEntity(
+    display,
+    product,
+    device,
+    board,
+    brand,
+    model,
+    bootloader,
+    fingerprint,
+    bootId,
+    procVersion,
+    baseBand,
+    simInfo,
+    osType,
+    macAddress,
+    wifiBSSID,
+    wifiSSID,
+    imsiMd5,
+    imei,
+    apn
+)

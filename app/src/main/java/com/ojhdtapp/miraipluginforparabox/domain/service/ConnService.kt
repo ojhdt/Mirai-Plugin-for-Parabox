@@ -57,7 +57,7 @@ class ConnService : LifecycleService() {
 
     private var miraiConnectionType by Delegates.notNull<Int>()
 
-    private suspend fun miraiMain(accountNum: Long, passwd: String) {
+    private suspend fun miraiMain(accountNum: Long, passwd: String, miraiDeviceInfo: DeviceInfo) {
         val isContactCacheEnabled =
             dataStore.data.first()[DataStoreKeys.CONTACT_CACHE] ?: false
         val selectedProtocol =
@@ -74,7 +74,7 @@ class ConnService : LifecycleService() {
             cacheDir = getExternalFilesDir("cache")!!.absoluteFile
             protocol = selectedProtocol
             if (isContactCacheEnabled) enableContactCache()
-            deviceInfo = {bot -> DeviceInfo.random() }
+            deviceInfo = {bot -> miraiDeviceInfo}
         }
         try {
             bot?.login()
@@ -95,6 +95,7 @@ class ConnService : LifecycleService() {
                     avatarUrl = bot?.avatarUrl
                 })
             }
+            repository.insertDeviceInfo(miraiDeviceInfo)
         } catch (e: LoginFailedException) {
             interfaceMessenger?.send(
                 Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
@@ -407,6 +408,9 @@ class ConnService : LifecycleService() {
             val secret = withContext(Dispatchers.IO) {
                 repository.getSelectedAccount()
             }
+            val deviceInfo = withContext(Dispatchers.IO){
+                repository.getDeviceInfo()
+            }?: DeviceInfo.random()
             if (secret == null) {
                 interfaceMessenger?.send(
                     Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {
@@ -418,7 +422,7 @@ class ConnService : LifecycleService() {
                 )
             } else {
                 mLoginSolver = AndroidLoginSolver(timestamp)
-                miraiMain(secret.account, secret.password)
+                miraiMain(secret.account, secret.password, deviceInfo)
             }
         }
     }
