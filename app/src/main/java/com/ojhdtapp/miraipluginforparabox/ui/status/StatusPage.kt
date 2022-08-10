@@ -282,7 +282,7 @@ fun AnimatedVisibilityScope.StatusPage(
                         title = "自动登录",
                         subtitle = "主应用启动时同时以默认账户启动服务",
                         checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
-                        enabled = true,
+                        enabled = false,
                         onCheckedChange = viewModel::setAutoLoginSwitch
                     )
                     SwitchPreference(
