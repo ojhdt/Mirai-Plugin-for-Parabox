@@ -10,6 +10,9 @@ import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
+import com.ojhdtapp.miraipluginforparabox.data.remote.dto.MessageDto
+import com.ojhdtapp.miraipluginforparabox.domain.model.PluginConnection
+import com.ojhdtapp.miraipluginforparabox.domain.model.Profile
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
@@ -18,11 +21,16 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.last
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.event.Listener
 import net.mamoe.mirai.event.events.FriendMessageEvent
+import net.mamoe.mirai.event.events.GroupMessageEvent
+import net.mamoe.mirai.event.subscribeAlways
+import net.mamoe.mirai.message.data.Image
+import net.mamoe.mirai.message.data.Image.Key.queryUrl
+import net.mamoe.mirai.message.data.PlainText
+import net.mamoe.mirai.message.data.SingleMessage
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.LoginSolver
@@ -35,7 +43,8 @@ class ConnService : LifecycleService() {
     lateinit var notificationUtil: NotificationUtilForService
 
     private var bot: Bot? = null
-    private var listener: Listener<FriendMessageEvent>? = null
+    private var friendMessageEventListener: Listener<FriendMessageEvent>? = null
+    private var groupMessageEventListener: Listener<GroupMessageEvent>? = null
     private lateinit var mLoginSolver: AndroidLoginSolver
     private lateinit var sMessenger: Messenger
     private var cMessenger: Messenger? = null
@@ -103,18 +112,102 @@ class ConnService : LifecycleService() {
     }
 
     private fun registerMessageReceiver() {
-        listener =
-            bot?.eventChannel!!.subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
-                Log.d("aaa", "${event.senderName}:${event.message}")
-                event.subject.sendMessage("Hello from mirai!")
+        friendMessageEventListener =
+            bot?.eventChannel!!.parentScope(lifecycleScope)
+                .subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
+                    Log.d("aaa", "${event.senderName}:${event.message}")
+                    event.subject.sendMessage("Hello from mirai!")
+                    val miraiConnectionType = this@ConnService.applicationInfo.metaData.getInt("connection_type")
+                    val messageContents = event.message.map {
+                        when (it) {
+                            is PlainText -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
+                                it.content
+                            )
+                            is Image -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.Image(
+                                it.queryUrl()
+                            )
+                            else -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
+                                "不支持的内容"
+                            )
+                        }
+                    }
+                    val profile = Profile(
+                        name = event.senderName,
+                        avatar = event.sender.avatarUrl
+                    )
+                    val pluginConnection = PluginConnection(
+                        connectionType = miraiConnectionType,
+                        objectId = "${miraiConnectionType}${event.subject.id}".toLong(),
+                        id = event.subject.id
+                    )
+                    val dto = MessageDto(
+                        contents = messageContents,
+                        profile = profile,
+                        subjectProfile = profile,
+                        timestamp = (event.time * 1000).toLong(),
+                        pluginConnection = pluginConnection
+                    )
+                    sendMessageToMainApp(dto)
+                }
+        groupMessageEventListener =
+            bot?.eventChannel!!.parentScope(lifecycleScope).subscribeAlways { event ->
+                val miraiConnectionType = this@ConnService.applicationInfo.metaData.getInt("connection_type")
+                val messageContents = event.message.map {
+                    when (it) {
+                        is PlainText -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
+                            it.content
+                        )
+                        is Image -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.Image(
+                            it.queryUrl()
+                        )
+                        else -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
+                            "不支持的内容"
+                        )
+                    }
+                }
+                val senderProfile = Profile(
+                    name = event.senderName,
+                    avatar = event.sender.avatarUrl
+                )
+                val groupProfile = Profile(
+                    name = event.group.name,
+                    avatar = event.group.avatarUrl
+                )
+                val pluginConnection = PluginConnection(
+                    connectionType = miraiConnectionType,
+                    objectId = "${miraiConnectionType}${event.subject.id}".toLong(),
+                    id = event.subject.id
+                )
+                val dto = MessageDto(
+                    contents = messageContents,
+                    profile = senderProfile,
+                    subjectProfile = groupProfile,
+                    timestamp = (event.time * 1000).toLong(),
+                    pluginConnection = pluginConnection
+                )
+                sendMessageToMainApp(dto)
             }
     }
 
     private fun unRegisterMessageReceiver() {
-        if (listener?.isActive == true) {
-            listener!!.complete()
-            listener = null
+        if (friendMessageEventListener?.isActive == true) {
+            friendMessageEventListener!!.complete()
+            friendMessageEventListener = null
         }
+        if (groupMessageEventListener?.isActive == true) {
+            groupMessageEventListener!!.complete()
+            groupMessageEventListener = null
+        }
+    }
+
+    private fun sendMessageToMainApp(dto: MessageDto) {
+        cMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_MESSAGE, Bundle().apply {
+                putInt("command", ConnKey.MSG_MESSAGE_RECEIVE)
+                putInt("status", ConnKey.SUCCESS)
+                putParcelable("value", dto)
+            })
+        )
     }
 
     override fun onCreate() {
@@ -368,6 +461,7 @@ class ConnService : LifecycleService() {
             })
         )
     }
+
     fun tryAutoLogin() {
         lifecycleScope.launch {
             val isAutoLoginEnabled =

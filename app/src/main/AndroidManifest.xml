@@ -24,6 +24,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MiraiPluginForParabox"
         android:usesCleartextTraffic="true">
+
+        <meta-data android:name="connection_type" android:value="0810"/>
+
         <service
             android:name=".domain.service.ConnService"
             android:enabled="true"
