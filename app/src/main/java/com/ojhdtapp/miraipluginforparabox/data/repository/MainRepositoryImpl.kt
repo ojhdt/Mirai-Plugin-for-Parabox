@@ -1,5 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.data.repository
 
+import android.util.Log
 import com.ojhdtapp.miraipluginforparabox.data.local.DeviceInfoDao
 import com.ojhdtapp.miraipluginforparabox.data.local.SecretDao
 import com.ojhdtapp.miraipluginforparabox.data.local.entity.toDeviceInfoEntity
@@ -55,7 +56,8 @@ class MainRepositoryImpl @Inject constructor(
     }
 
     override fun insertDeviceInfo(value: DeviceInfo) {
-        return deviceInfoDao.insertDeviceInfo(value.toDeviceInfoEntity())
+        Log.d("parabox", "updating deviceInfo")
+        deviceInfoDao.insertDeviceInfo(value.toDeviceInfoEntity())
     }
 
     override suspend fun getDeviceInfo(): DeviceInfo? {

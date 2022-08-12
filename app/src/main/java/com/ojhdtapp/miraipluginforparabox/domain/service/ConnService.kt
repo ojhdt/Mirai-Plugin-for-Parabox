@@ -4,16 +4,17 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.*
+import android.os.Message
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.messagedto.MessageDto
+import com.ojhdtapp.messagedto.PluginConnection
+import com.ojhdtapp.messagedto.Profile
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
-import com.ojhdtapp.parabox.dto.MessageDto
-import com.ojhdtapp.miraipluginforparabox.domain.model.PluginConnection
-import com.ojhdtapp.miraipluginforparabox.domain.model.Profile
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
@@ -28,10 +29,8 @@ import net.mamoe.mirai.event.Listener
 import net.mamoe.mirai.event.events.FriendMessageEvent
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.event.subscribeAlways
-import net.mamoe.mirai.message.data.Image
+import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
-import net.mamoe.mirai.message.data.PlainText
-import net.mamoe.mirai.message.data.SingleMessage
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.DeviceInfo
@@ -122,18 +121,40 @@ class ConnService : LifecycleService() {
         friendMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope)
                 .subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
-                    Log.d("aaa", "${event.senderName}:${event.message}")
-                    event.subject.sendMessage("Hello from mirai!")
-                    val messageContents = event.message.map {
+//                    Log.d("aaa", "${event.senderName}:${event.message}")
+//                    event.subject.sendMessage("Hello from mirai!")
+                    val messageContents = event.message.filter {
+                        it is MessageContent
+                                && it.contentToString().isNotEmpty()
+                    }.map {
                         when (it) {
-                            is PlainText -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
+                            is PlainText -> com.ojhdtapp.messagedto.message_content.PlainText(
                                 it.content
                             )
-                            is Image -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.Image(
-                                it.queryUrl()
+                            is Image -> com.ojhdtapp.messagedto.message_content.Image(
+                                it.queryUrl(),
+                                it.width,
+                                it.height
                             )
-                            else -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
-                                "不支持的内容"
+                            is FlashImage -> com.ojhdtapp.messagedto.message_content.Image(
+                                it.image.queryUrl(),
+                                it.image.width,
+                                it.image.height
+                            )
+                            is At -> com.ojhdtapp.messagedto.message_content.At(
+                                it.target, it.content
+                            )
+                            is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
+                                it.content
+                            )
+                            is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
+                                (it as OnlineAudio).urlForDownload,
+                                (it as OnlineAudio).length,
+                                (it as OnlineAudio).filename,
+                                (it as OnlineAudio).fileSize,
+                            )
+                            else -> com.ojhdtapp.messagedto.message_content.PlainText(
+                                it.content
                             )
                         }
                     }
@@ -150,23 +171,45 @@ class ConnService : LifecycleService() {
                         contents = messageContents,
                         profile = profile,
                         subjectProfile = profile,
-                        timestamp = (event.time * 1000).toLong(),
+                        timestamp = "${event.time}000".toLong(),
                         pluginConnection = pluginConnection
                     )
                     sendMessageToMainApp(dto)
                 }
         groupMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope).subscribeAlways { event ->
-                val messageContents = event.message.map {
+                val messageContents = event.message.filter {
+                    it is MessageContent
+                            && it.contentToString().isNotEmpty()
+                }.map {
                     when (it) {
-                        is PlainText -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
+                        is PlainText -> com.ojhdtapp.messagedto.message_content.PlainText(
                             it.content
                         )
-                        is Image -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.Image(
-                            it.queryUrl()
+                        is Image -> com.ojhdtapp.messagedto.message_content.Image(
+                            it.queryUrl(),
+                            it.width,
+                            it.height
                         )
-                        else -> com.ojhdtapp.miraipluginforparabox.domain.model.message_content.PlainText(
-                            "不支持的内容"
+                        is FlashImage -> com.ojhdtapp.messagedto.message_content.Image(
+                            it.image.queryUrl(),
+                            it.image.width,
+                            it.image.height
+                        )
+                        is At -> com.ojhdtapp.messagedto.message_content.At(
+                            it.target, it.getDisplay(event.group)
+                        )
+                        is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
+                            it.content
+                        )
+                        is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
+                            (it as OnlineAudio).urlForDownload,
+                            (it as OnlineAudio).length,
+                            (it as OnlineAudio).filename,
+                            (it as OnlineAudio).fileSize,
+                        )
+                        else -> com.ojhdtapp.messagedto.message_content.PlainText(
+                            it.content
                         )
                     }
                 }
@@ -187,7 +230,7 @@ class ConnService : LifecycleService() {
                     contents = messageContents,
                     profile = senderProfile,
                     subjectProfile = groupProfile,
-                    timestamp = (event.time * 1000).toLong(),
+                    timestamp = "${event.time}000".toLong(),
                     pluginConnection = pluginConnection
                 )
                 sendMessageToMainApp(dto)
@@ -207,11 +250,20 @@ class ConnService : LifecycleService() {
 
     private fun sendMessageToMainApp(dto: MessageDto) {
         cMessenger?.send(
-            Message.obtain(null, ConnKey.MSG_MESSAGE, Bundle().apply {
-                putInt("command", ConnKey.MSG_MESSAGE_RECEIVE)
-                putInt("status", ConnKey.SUCCESS)
-                putParcelable("value", dto)
-            })
+            Message.obtain(null, ConnKey.MSG_MESSAGE).apply {
+                data = Bundle().apply {
+                    putParcelable("value", dto)
+                }
+                obj = Bundle().apply {
+                    putInt("command", ConnKey.MSG_MESSAGE_RECEIVE)
+                    putInt("status", ConnKey.SUCCESS)
+                }
+            }
+//            Message.obtain(null, ConnKey.MSG_MESSAGE, Bundle().apply {
+//                putInt("command", ConnKey.MSG_MESSAGE_RECEIVE)
+//                putInt("status", ConnKey.SUCCESS)
+//                putParcelable("value", dto)
+//            })
         )
     }
 

@@ -25,7 +25,7 @@ class DeviceInfoEntity(
     val imsiMd5: ByteArray,
     val imei: String,
     val apn: ByteArray,
-    @PrimaryKey var id: Long = 0
+    @PrimaryKey val id: Long
 ) {
     fun toMiraiDeviceInfo(): DeviceInfo = DeviceInfo(
         display,
@@ -47,7 +47,7 @@ class DeviceInfoEntity(
         wifiSSID,
         imsiMd5,
         imei,
-        apn
+        apn,
     )
 }
 
@@ -70,5 +70,6 @@ fun DeviceInfo.toDeviceInfoEntity() = DeviceInfoEntity(
     wifiSSID,
     imsiMd5,
     imei,
-    apn
+    apn,
+    0
 )

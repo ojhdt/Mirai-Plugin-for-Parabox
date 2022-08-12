@@ -80,6 +80,9 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
 
+    // Custom Dto
+    implementation 'com.github.ojhdt:ParaboxDto:1.4'
+
     // Compose Destinations
     implementation 'io.github.raamcosta.compose-destinations:animations-core:1.7.15-beta'
     ksp 'io.github.raamcosta.compose-destinations:ksp:1.7.15-beta'

@@ -17,6 +17,5 @@ interface MainRepository {
     suspend fun addAllAccounts(secretList: List<Secret>)
 
     fun insertDeviceInfo(value: DeviceInfo)
-
     suspend fun getDeviceInfo() : DeviceInfo?
 }
