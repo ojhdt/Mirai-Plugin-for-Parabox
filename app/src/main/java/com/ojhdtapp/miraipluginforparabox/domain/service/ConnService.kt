@@ -8,33 +8,40 @@ import android.os.Message
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import com.ojhdtapp.messagedto.MessageDto
+import com.ojhdtapp.messagedto.ReceiveMessageDto
 import com.ojhdtapp.messagedto.PluginConnection
 import com.ojhdtapp.messagedto.Profile
+import com.ojhdtapp.messagedto.SendMessageDto
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
+import com.ojhdtapp.miraipluginforparabox.core.util.FaceMap
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
-import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
-import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType
-import com.ojhdtapp.miraipluginforparabox.domain.util.MiraiProtocol
-import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
+import com.ojhdtapp.miraipluginforparabox.domain.util.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
+import net.mamoe.mirai.contact.BotIsBeingMutedException
+import net.mamoe.mirai.contact.Contact
+import net.mamoe.mirai.contact.Contact.Companion.uploadImage
+import net.mamoe.mirai.contact.MessageTooLargeException
 import net.mamoe.mirai.event.Listener
+import net.mamoe.mirai.event.events.EventCancelledException
 import net.mamoe.mirai.event.events.FriendMessageEvent
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.event.subscribeAlways
+import net.mamoe.mirai.message.MessageReceipt
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.DeviceInfo
+import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import net.mamoe.mirai.utils.LoginSolver
+import java.io.File
 import javax.inject.Inject
 import kotlin.properties.Delegates
 
@@ -55,6 +62,7 @@ class ConnService : LifecycleService() {
     private var isRunning = false
 
     private var miraiConnectionType by Delegates.notNull<Int>()
+    private var receiptMap = mutableMapOf<Long, MessageReceipt<Contact>>()
 
     private suspend fun miraiMain(accountNum: Long, passwd: String, miraiDeviceInfo: DeviceInfo) {
         val isContactCacheEnabled =
@@ -73,7 +81,7 @@ class ConnService : LifecycleService() {
             cacheDir = getExternalFilesDir("cache")!!.absoluteFile
             protocol = selectedProtocol
             if (isContactCacheEnabled) enableContactCache()
-            deviceInfo = {bot -> miraiDeviceInfo}
+            deviceInfo = { bot -> miraiDeviceInfo }
         }
         try {
             bot?.login()
@@ -120,7 +128,7 @@ class ConnService : LifecycleService() {
     private fun registerMessageReceiver() {
         friendMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope)
-                .subscribeAlways<net.mamoe.mirai.event.events.FriendMessageEvent> { event ->
+                .subscribeAlways<FriendMessageEvent> { event ->
 //                    Log.d("aaa", "${event.senderName}:${event.message}")
 //                    event.subject.sendMessage("Hello from mirai!")
                     val messageContents = event.message.filter {
@@ -164,10 +172,10 @@ class ConnService : LifecycleService() {
                     )
                     val pluginConnection = PluginConnection(
                         connectionType = miraiConnectionType,
-                        objectId = "${miraiConnectionType}${event.subject.id}".toLong(),
+                        objectId = "${miraiConnectionType}${SendTargetType.USER}${event.subject.id}".toLong(),
                         id = event.subject.id
                     )
-                    val dto = MessageDto(
+                    val dto = ReceiveMessageDto(
                         contents = messageContents,
                         profile = profile,
                         subjectProfile = profile,
@@ -200,7 +208,7 @@ class ConnService : LifecycleService() {
                             it.target, it.getDisplay(event.group)
                         )
                         is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
-                            it.content
+                            FaceMap.query(it.id) ?: it.content
                         )
                         is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
                             (it as OnlineAudio).urlForDownload,
@@ -223,10 +231,10 @@ class ConnService : LifecycleService() {
                 )
                 val pluginConnection = PluginConnection(
                     connectionType = miraiConnectionType,
-                    objectId = "${miraiConnectionType}${event.subject.id}".toLong(),
+                    objectId = "${miraiConnectionType}${SendTargetType.GROUP}${event.subject.id}".toLong(),
                     id = event.subject.id
                 )
-                val dto = MessageDto(
+                val dto = ReceiveMessageDto(
                     contents = messageContents,
                     profile = senderProfile,
                     subjectProfile = groupProfile,
@@ -248,7 +256,7 @@ class ConnService : LifecycleService() {
         }
     }
 
-    private fun sendMessageToMainApp(dto: MessageDto) {
+    private fun sendMessageToMainApp(dto: ReceiveMessageDto) {
         cMessenger?.send(
             Message.obtain(null, ConnKey.MSG_MESSAGE).apply {
                 data = Bundle().apply {
@@ -265,6 +273,78 @@ class ConnService : LifecycleService() {
 //                putParcelable("value", dto)
 //            })
         )
+    }
+
+    private fun sendMessageSendStateToMainApp(stateSuccess: Boolean){
+        cMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_RESPONSE).apply {
+                obj = Bundle().apply {
+                    putInt("command", ConnKey.MSG_RESPONSE_MESSAGE_SEND)
+                    putInt("status", ConnKey.SUCCESS)
+                    putBoolean("value", stateSuccess)
+                }
+            }
+        )
+    }
+
+    private fun sendMessage(dto: SendMessageDto) {
+        lifecycleScope.launch {
+            try {
+                val timestamp = dto.timestamp
+                val targetId = dto.pluginConnection.id
+                val targetType = dto.pluginConnection.objectId.toString().substring(3, 4).toInt()
+                val targetContact = when (targetType) {
+                    SendTargetType.USER -> bot?.getFriendOrFail(targetId)
+                    SendTargetType.GROUP -> bot?.getGroupOrFail(targetId)
+                    else -> {
+                        throw NoSuchElementException("wrong id")
+                    }
+                }
+                targetContact?.let { contact ->
+                    val contents = listOf<com.ojhdtapp.messagedto.message_content.MessageContent>()
+                    val messageChain = buildMessageChain {
+                        contents.map {
+                            when (it) {
+                                is com.ojhdtapp.messagedto.message_content.PlainText -> add(
+                                    PlainText(it.text)
+                                )
+                                is com.ojhdtapp.messagedto.message_content.ImageSend -> {
+                                    val imageFile = it.file
+                                    imageFile.toExternalResource().use { resource ->
+                                        contact.uploadImage(resource).also {
+                                            add(it)
+                                        }
+                                    }
+                                }
+                                is com.ojhdtapp.messagedto.message_content.At -> add(At(it.target))
+                                is com.ojhdtapp.messagedto.message_content.AudioSend -> {
+                                    val videoFile = it.file
+                                    videoFile.toExternalResource().use { resource ->
+                                        contact.uploadAudio(resource).also {
+                                            add(it)
+                                        }
+                                    }
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                    val receipt = contact.sendMessage(messageChain)
+                    receiptMap.put(timestamp, receipt)
+                    sendMessageSendStateToMainApp(true)
+                }
+            } catch (e: NoSuchElementException) {
+                sendMessageSendStateToMainApp(false)
+            } catch (e: EventCancelledException) {
+                sendMessageSendStateToMainApp(false)
+            } catch (e: BotIsBeingMutedException) {
+                sendMessageSendStateToMainApp(false)
+            } catch (e: MessageTooLargeException) {
+                sendMessageSendStateToMainApp(false)
+            } catch (e: IllegalArgumentException) {
+                sendMessageSendStateToMainApp(false)
+            }
+        }
     }
 
     override fun onCreate() {
@@ -328,6 +408,13 @@ class ConnService : LifecycleService() {
                         }
                         ConnKey.MSG_MESSAGE_TRY_AUTO_LOGIN -> {
                             tryAutoLogin()
+                        }
+                        ConnKey.MSG_MESSAGE_SEND -> {
+                            msg.data.classLoader = SendMessageDto::class.java.classLoader
+                            msg.data.getParcelable<SendMessageDto>("value")?.let {
+                                Log.d("parabox", "transfer success! value: $it")
+                                sendMessage(it)
+                            }
                         }
                     }
                 }
@@ -460,9 +547,9 @@ class ConnService : LifecycleService() {
             val secret = withContext(Dispatchers.IO) {
                 repository.getSelectedAccount()
             }
-            val deviceInfo = withContext(Dispatchers.IO){
+            val deviceInfo = withContext(Dispatchers.IO) {
                 repository.getDeviceInfo()
-            }?: DeviceInfo.random()
+            } ?: DeviceInfo.random()
             if (secret == null) {
                 interfaceMessenger?.send(
                     Message.obtain(null, ConnKey.MSG_RESPONSE, Bundle().apply {

@@ -81,7 +81,7 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
 
     // Custom Dto
-    implementation 'com.github.ojhdt:ParaboxDto:1.4'
+    implementation 'com.github.ojhdt:ParaboxDto:1.6'
 
     // Compose Destinations
     implementation 'io.github.raamcosta.compose-destinations:animations-core:1.7.15-beta'
