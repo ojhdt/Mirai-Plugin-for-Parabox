@@ -301,7 +301,7 @@ class ConnService : LifecycleService() {
                     }
                 }
                 targetContact?.let { contact ->
-                    val contents = listOf<com.ojhdtapp.messagedto.message_content.MessageContent>()
+                    val contents = dto.content
                     val messageChain = buildMessageChain {
                         contents.map {
                             when (it) {
