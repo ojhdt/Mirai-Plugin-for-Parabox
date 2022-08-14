@@ -153,7 +153,7 @@ class ConnService : LifecycleService() {
                                 it.target, it.content
                             )
                             is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
-                                it.content
+                                FaceMap.query(it.id) ?: it.content
                             )
                             is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
                                 (it as OnlineAudio).urlForDownload,
