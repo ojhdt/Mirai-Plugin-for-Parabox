@@ -275,19 +275,20 @@ class ConnService : LifecycleService() {
         )
     }
 
-    private fun sendMessageSendStateToMainApp(stateSuccess: Boolean){
+    private fun sendMessageSendStateToMainApp(messageId: Long, stateSuccess: Boolean) {
         cMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE).apply {
                 obj = Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_MESSAGE_SEND)
                     putInt("status", ConnKey.SUCCESS)
+                    putLong("message_id", messageId)
                     putBoolean("value", stateSuccess)
                 }
             }
         )
     }
 
-    private fun sendMessage(dto: SendMessageDto) {
+    private fun sendMessage(messageId: Long, dto: SendMessageDto) {
         lifecycleScope.launch {
             try {
                 val timestamp = dto.timestamp
@@ -331,18 +332,18 @@ class ConnService : LifecycleService() {
                     }
                     val receipt = contact.sendMessage(messageChain)
                     receiptMap.put(timestamp, receipt)
-                    sendMessageSendStateToMainApp(true)
+                    sendMessageSendStateToMainApp(messageId, true)
                 }
             } catch (e: NoSuchElementException) {
-                sendMessageSendStateToMainApp(false)
+                sendMessageSendStateToMainApp(messageId, false)
             } catch (e: EventCancelledException) {
-                sendMessageSendStateToMainApp(false)
+                sendMessageSendStateToMainApp(messageId, false)
             } catch (e: BotIsBeingMutedException) {
-                sendMessageSendStateToMainApp(false)
+                sendMessageSendStateToMainApp(messageId, false)
             } catch (e: MessageTooLargeException) {
-                sendMessageSendStateToMainApp(false)
+                sendMessageSendStateToMainApp(messageId, false)
             } catch (e: IllegalArgumentException) {
-                sendMessageSendStateToMainApp(false)
+                sendMessageSendStateToMainApp(messageId, false)
             }
         }
     }
@@ -410,10 +411,11 @@ class ConnService : LifecycleService() {
                             tryAutoLogin()
                         }
                         ConnKey.MSG_MESSAGE_SEND -> {
+                            val messageId = (msg.obj as Bundle).getLong("message_id")
                             msg.data.classLoader = SendMessageDto::class.java.classLoader
                             msg.data.getParcelable<SendMessageDto>("value")?.let {
                                 Log.d("parabox", "transfer success! value: $it")
-                                sendMessage(it)
+                                sendMessage(messageId, it)
                             }
                         }
                     }
