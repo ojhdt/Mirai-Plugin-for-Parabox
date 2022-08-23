@@ -26,6 +26,7 @@
         android:usesCleartextTraffic="true">
 
         <meta-data android:name="connection_type" android:value="810"/>
+        <meta-data android:name="connection_name" android:value="Mirai"/>
 
         <service
             android:name=".domain.service.ConnService"

@@ -20,6 +20,7 @@ import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.*
 import dagger.hilt.android.AndroidEntryPoint
+import io.ktor.util.Identity.decode
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import net.mamoe.mirai.Bot
@@ -42,6 +43,8 @@ import net.mamoe.mirai.utils.DeviceInfo
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import net.mamoe.mirai.utils.LoginSolver
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
 import javax.inject.Inject
 import kotlin.properties.Delegates
 
@@ -302,28 +305,58 @@ class ConnService : LifecycleService() {
                     }
                 }
                 targetContact?.let { contact ->
-                    val contents = dto.content
+                    val contents = dto.contents
                     val messageChain = buildMessageChain {
                         contents.map {
                             when (it) {
                                 is com.ojhdtapp.messagedto.message_content.PlainText -> add(
                                     PlainText(it.text)
                                 )
-                                is com.ojhdtapp.messagedto.message_content.ImageSend -> {
-                                    val imageFile = it.file
-                                    imageFile.toExternalResource().use { resource ->
-                                        contact.uploadImage(resource).also {
-                                            add(it)
+                                is com.ojhdtapp.messagedto.message_content.Image -> {
+//                                    it.sendIntent?.data?.also { uri ->
+//                                        val inputPFD: ParcelFileDescriptor? =
+//                                            contentResolver.openFileDescriptor(uri, "r")
+//                                        val fd = inputPFD!!.fileDescriptor
+//                                        val inputStream = FileInputStream(fd)
+//                                        inputStream.use { stream ->
+//                                            stream.toExternalResource().use { resource ->
+//                                                contact.uploadImage(resource).also {
+//                                                    add(it)
+//                                                }
+//                                            }
+//                                        }
+//                                        inputPFD.close()
+//                                    }
+                                    it.uri?.let { uri ->
+                                        val inputPFD: ParcelFileDescriptor? =
+                                            contentResolver.openFileDescriptor(uri, "r")
+                                        val fd = inputPFD!!.fileDescriptor
+                                        val inputStream = FileInputStream(fd)
+                                        inputStream.use { stream ->
+                                            stream.toExternalResource().use { resource ->
+                                                contact.uploadImage(resource).also {
+                                                    add(it)
+                                                }
+                                            }
                                         }
+                                        inputPFD.close()
                                     }
                                 }
                                 is com.ojhdtapp.messagedto.message_content.At -> add(At(it.target))
-                                is com.ojhdtapp.messagedto.message_content.AudioSend -> {
-                                    val videoFile = it.file
-                                    videoFile.toExternalResource().use { resource ->
-                                        contact.uploadAudio(resource).also {
-                                            add(it)
+                                is com.ojhdtapp.messagedto.message_content.Audio -> {
+                                    it.uri?.let { uri ->
+                                        val inputPFD: ParcelFileDescriptor? =
+                                            contentResolver.openFileDescriptor(uri, "r")
+                                        val fd = inputPFD!!.fileDescriptor
+                                        val inputStream = FileInputStream(fd)
+                                        inputStream.use { stream ->
+                                            stream.toExternalResource().use { resource ->
+                                                contact.uploadImage(resource).also {
+                                                    add(it)
+                                                }
+                                            }
                                         }
+                                        inputPFD.close()
                                     }
                                 }
                                 else -> {}
@@ -343,6 +376,8 @@ class ConnService : LifecycleService() {
             } catch (e: MessageTooLargeException) {
                 sendMessageSendStateToMainApp(messageId, false)
             } catch (e: IllegalArgumentException) {
+                sendMessageSendStateToMainApp(messageId, false)
+            } catch (e: FileNotFoundException) {
                 sendMessageSendStateToMainApp(messageId, false)
             }
         }
