@@ -17,6 +17,7 @@ import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.FaceMap
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
+import com.ojhdtapp.miraipluginforparabox.data.local.entity.MiraiMessageEntity
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.*
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,8 +36,11 @@ import net.mamoe.mirai.event.events.FriendMessageEvent
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.message.MessageReceipt
+import net.mamoe.mirai.message.code.MiraiCode
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
+import net.mamoe.mirai.message.data.MessageSource.Key.quote
+import net.mamoe.mirai.message.data.MessageSource.Key.recall
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.DeviceInfo
@@ -50,6 +54,10 @@ import kotlin.properties.Delegates
 
 @AndroidEntryPoint
 class ConnService : LifecycleService() {
+    companion object {
+        var connectionType = 0
+    }
+
     @Inject
     lateinit var repository: MainRepository
     lateinit var notificationUtil: NotificationUtilForService
@@ -63,8 +71,6 @@ class ConnService : LifecycleService() {
     private var interfaceMessenger: Messenger? = null
 
     private var isRunning = false
-
-    private var miraiConnectionType by Delegates.notNull<Int>()
     private var receiptMap = mutableMapOf<Long, MessageReceipt<Contact>>()
 
     private suspend fun miraiMain(accountNum: Long, passwd: String, miraiDeviceInfo: DeviceInfo) {
@@ -134,48 +140,25 @@ class ConnService : LifecycleService() {
                 .subscribeAlways<FriendMessageEvent> { event ->
 //                    Log.d("aaa", "${event.senderName}:${event.message}")
 //                    event.subject.sendMessage("Hello from mirai!")
-                    val messageContents = event.message.filter {
-                        it is MessageContent
-                                && it.contentToString().isNotEmpty()
-                    }.map {
-                        when (it) {
-                            is PlainText -> com.ojhdtapp.messagedto.message_content.PlainText(
-                                it.content
+                    val messageContents = event.message.toMessageContentList()
+                    val messageSource = event.message.source
+                    val messageId = getMessageId(messageSource.ids)
+                    messageId?.let {
+                        repository.insertMiraiMessage(
+                            MiraiMessageEntity(
+                                it,
+                                event.message.serializeToMiraiCode()
                             )
-                            is Image -> com.ojhdtapp.messagedto.message_content.Image(
-                                it.queryUrl(),
-                                it.width,
-                                it.height
-                            )
-                            is FlashImage -> com.ojhdtapp.messagedto.message_content.Image(
-                                it.image.queryUrl(),
-                                it.image.width,
-                                it.image.height
-                            )
-                            is At -> com.ojhdtapp.messagedto.message_content.At(
-                                it.target, it.content
-                            )
-                            is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
-                                FaceMap.query(it.id) ?: it.content
-                            )
-                            is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
-                                (it as OnlineAudio).urlForDownload,
-                                (it as OnlineAudio).length,
-                                (it as OnlineAudio).filename,
-                                (it as OnlineAudio).fileSize,
-                            )
-                            else -> com.ojhdtapp.messagedto.message_content.PlainText(
-                                it.content
-                            )
-                        }
+                        )
                     }
+
                     val profile = Profile(
                         name = event.senderName,
                         avatar = event.sender.avatarUrl
                     )
                     val pluginConnection = PluginConnection(
-                        connectionType = miraiConnectionType,
-                        objectId = "${miraiConnectionType}${SendTargetType.USER}${event.subject.id}".toLong(),
+                        connectionType = connectionType,
+                        objectId = "${connectionType}${SendTargetType.USER}${event.subject.id}".toLong(),
                         id = event.subject.id
                     )
                     val dto = ReceiveMessageDto(
@@ -183,47 +166,26 @@ class ConnService : LifecycleService() {
                         profile = profile,
                         subjectProfile = profile,
                         timestamp = "${event.time}000".toLong(),
+                        messageId = messageId,
                         pluginConnection = pluginConnection
                     )
                     sendMessageToMainApp(dto)
                 }
         groupMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope).subscribeAlways { event ->
-                val messageContents = event.message.filter {
-                    it is MessageContent
-                            && it.contentToString().isNotEmpty()
-                }.map {
-                    when (it) {
-                        is PlainText -> com.ojhdtapp.messagedto.message_content.PlainText(
-                            it.content
+                val messageContents = event.message.toMessageContentList(group = event.group)
+                val messageSource = event.message.source
+                val messageId = getMessageId(messageSource.ids)
+
+                messageId?.let {
+                    repository.insertMiraiMessage(
+                        MiraiMessageEntity(
+                            it,
+                            event.message.serializeToMiraiCode()
                         )
-                        is Image -> com.ojhdtapp.messagedto.message_content.Image(
-                            it.queryUrl(),
-                            it.width,
-                            it.height
-                        )
-                        is FlashImage -> com.ojhdtapp.messagedto.message_content.Image(
-                            it.image.queryUrl(),
-                            it.image.width,
-                            it.image.height
-                        )
-                        is At -> com.ojhdtapp.messagedto.message_content.At(
-                            it.target, it.getDisplay(event.group)
-                        )
-                        is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
-                            FaceMap.query(it.id) ?: it.content
-                        )
-                        is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
-                            (it as OnlineAudio).urlForDownload,
-                            (it as OnlineAudio).length,
-                            (it as OnlineAudio).filename,
-                            (it as OnlineAudio).fileSize,
-                        )
-                        else -> com.ojhdtapp.messagedto.message_content.PlainText(
-                            it.content
-                        )
-                    }
+                    )
                 }
+
                 val senderProfile = Profile(
                     name = event.senderName,
                     avatar = event.sender.avatarUrl
@@ -233,8 +195,8 @@ class ConnService : LifecycleService() {
                     avatar = event.group.avatarUrl
                 )
                 val pluginConnection = PluginConnection(
-                    connectionType = miraiConnectionType,
-                    objectId = "${miraiConnectionType}${SendTargetType.GROUP}${event.subject.id}".toLong(),
+                    connectionType = connectionType,
+                    objectId = "${connectionType}${SendTargetType.GROUP}${event.subject.id}".toLong(),
                     id = event.subject.id
                 )
                 val dto = ReceiveMessageDto(
@@ -242,6 +204,7 @@ class ConnService : LifecycleService() {
                     profile = senderProfile,
                     subjectProfile = groupProfile,
                     timestamp = "${event.time}000".toLong(),
+                    messageId = messageId,
                     pluginConnection = pluginConnection
                 )
                 sendMessageToMainApp(dto)
@@ -291,7 +254,21 @@ class ConnService : LifecycleService() {
         )
     }
 
-    private fun sendMessage(messageId: Long, dto: SendMessageDto) {
+    private fun sendMessageRecallStateToMainApp(stateSuccess: Boolean, message: String){
+        cMessenger?.send(
+            Message.obtain(null, ConnKey.MSG_RESPONSE).apply {
+                obj = Bundle().apply {
+                    putInt("command", ConnKey.MSG_RESPONSE_MESSAGE_RECALL)
+                    putInt("status", ConnKey.SUCCESS)
+                    putBoolean("state", stateSuccess)
+                    putString("message", message)
+                }
+            }
+        )
+    }
+
+    private fun sendMessage(dto: SendMessageDto) {
+        val messageId = dto.messageId
         lifecycleScope.launch {
             try {
                 val timestamp = dto.timestamp
@@ -343,6 +320,7 @@ class ConnService : LifecycleService() {
                                     }
                                 }
                                 is com.ojhdtapp.messagedto.message_content.At -> add(At(it.target))
+                                is com.ojhdtapp.messagedto.message_content.AtAll -> add(AtAll)
                                 is com.ojhdtapp.messagedto.message_content.Audio -> {
                                     it.uri?.let { uri ->
                                         val inputPFD: ParcelFileDescriptor? =
@@ -359,34 +337,77 @@ class ConnService : LifecycleService() {
                                         inputPFD.close()
                                     }
                                 }
+                                is com.ojhdtapp.messagedto.message_content.QuoteReply -> {
+                                    it.quoteMessageId?.also {
+                                        repository.getMiraiMessageById(it)?.let {
+                                            add(
+                                                MiraiCode.deserializeMiraiCode(it.miraiCode).quote()
+                                            )
+                                        }
+                                    }
+                                }
                                 else -> {}
                             }
                         }
                     }
                     val receipt = contact.sendMessage(messageChain)
-                    receiptMap.put(timestamp, receipt)
-                    sendMessageSendStateToMainApp(messageId, true)
+                    if (messageId != null) {
+                        receiptMap.put(messageId, receipt)
+                        sendMessageSendStateToMainApp(messageId, true)
+                    }
                 }
             } catch (e: NoSuchElementException) {
-                sendMessageSendStateToMainApp(messageId, false)
+                if (messageId != null) {
+                    sendMessageSendStateToMainApp(messageId, false)
+                }
             } catch (e: EventCancelledException) {
-                sendMessageSendStateToMainApp(messageId, false)
+                if (messageId != null) {
+                    sendMessageSendStateToMainApp(messageId, false)
+                }
             } catch (e: BotIsBeingMutedException) {
-                sendMessageSendStateToMainApp(messageId, false)
+                if (messageId != null) {
+                    sendMessageSendStateToMainApp(messageId, false)
+                }
             } catch (e: MessageTooLargeException) {
-                sendMessageSendStateToMainApp(messageId, false)
+                if (messageId != null) {
+                    sendMessageSendStateToMainApp(messageId, false)
+                }
             } catch (e: IllegalArgumentException) {
-                sendMessageSendStateToMainApp(messageId, false)
+                if (messageId != null) {
+                    sendMessageSendStateToMainApp(messageId, false)
+                }
             } catch (e: FileNotFoundException) {
-                sendMessageSendStateToMainApp(messageId, false)
+                if (messageId != null) {
+                    sendMessageSendStateToMainApp(messageId, false)
+                }
             }
+        }
+    }
+
+    fun recallMessage(messageId: Long) {
+        try {
+            lifecycleScope.launch() {
+                withTimeout(1000) {
+                    val receipt = receiptMap[messageId]
+                    if (receipt == null) {
+                        throw (NoSuchElementException("no receipt"))
+                    } else {
+                        receipt.recall()
+                        sendMessageRecallStateToMainApp(true, "消息已撤回")
+                    }
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            sendMessageRecallStateToMainApp(false, "操作超时")
+        } catch (e: NoSuchElementException) {
+            sendMessageRecallStateToMainApp(false, "无法定位消息")
         }
     }
 
     override fun onCreate() {
         sMessenger = Messenger(ConnHandler())
         notificationUtil = NotificationUtilForService(this)
-        miraiConnectionType = packageManager.getApplicationInfo(
+        connectionType = packageManager.getApplicationInfo(
             this@ConnService.packageName,
             PackageManager.GET_META_DATA
         ).metaData.getInt("connection_type")
@@ -446,11 +467,16 @@ class ConnService : LifecycleService() {
                             tryAutoLogin()
                         }
                         ConnKey.MSG_MESSAGE_SEND -> {
-                            val messageId = (msg.obj as Bundle).getLong("message_id")
+//                            val messageId = (msg.obj as Bundle).getLong("message_id")
                             msg.data.classLoader = SendMessageDto::class.java.classLoader
                             msg.data.getParcelable<SendMessageDto>("value")?.let {
                                 Log.d("parabox", "transfer success! value: $it")
-                                sendMessage(messageId, it)
+                                sendMessage(it)
+                            }
+                        }
+                        ConnKey.MSG_MESSAGE_RECALL -> {
+                            (msg.obj as Bundle).getLong("message_id").also {
+                                recallMessage(it)
                             }
                         }
                     }

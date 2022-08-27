@@ -26,7 +26,7 @@ class AppModule {
     @Provides
     @Singleton
     fun provideMainRepository(database: AppDatabase) : MainRepository =
-        MainRepositoryImpl(database.secretDao, database.deviceInfoDao)
+        MainRepositoryImpl(database.secretDao, database.deviceInfoDao, database.miraiMessageDao)
 
 //    @Provides
 //    @Singleton

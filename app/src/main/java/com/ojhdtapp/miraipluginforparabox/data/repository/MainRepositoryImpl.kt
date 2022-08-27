@@ -2,7 +2,9 @@ package com.ojhdtapp.miraipluginforparabox.data.repository
 
 import android.util.Log
 import com.ojhdtapp.miraipluginforparabox.data.local.DeviceInfoDao
+import com.ojhdtapp.miraipluginforparabox.data.local.MiraiMessageDao
 import com.ojhdtapp.miraipluginforparabox.data.local.SecretDao
+import com.ojhdtapp.miraipluginforparabox.data.local.entity.MiraiMessageEntity
 import com.ojhdtapp.miraipluginforparabox.data.local.entity.toDeviceInfoEntity
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
@@ -13,7 +15,9 @@ import javax.inject.Inject
 
 class MainRepositoryImpl @Inject constructor(
     private val secretDao: SecretDao,
-    private val deviceInfoDao: DeviceInfoDao
+    private val deviceInfoDao: DeviceInfoDao,
+    private val miraiMessageDao: MiraiMessageDao,
+
 ) : MainRepository {
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getAccountListFlow(): Flow<List<Secret>> {
@@ -62,6 +66,14 @@ class MainRepositoryImpl @Inject constructor(
 
     override suspend fun getDeviceInfo(): DeviceInfo? {
         return deviceInfoDao.getDeviceInfo()?.toMiraiDeviceInfo()
+    }
+
+    override fun insertMiraiMessage(message: MiraiMessageEntity) {
+        miraiMessageDao.insertMessage(message)
+    }
+
+    override suspend fun getMiraiMessageById(messageId: Long): MiraiMessageEntity? {
+        return miraiMessageDao.getMessageById(messageId)
     }
 
 }

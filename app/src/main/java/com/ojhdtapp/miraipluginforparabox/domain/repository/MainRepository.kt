@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.domain.repository
 
 import com.ojhdtapp.miraipluginforparabox.data.local.entity.DeviceInfoEntity
+import com.ojhdtapp.miraipluginforparabox.data.local.entity.MiraiMessageEntity
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import kotlinx.coroutines.flow.Flow
 import net.mamoe.mirai.utils.DeviceInfo
@@ -18,4 +19,8 @@ interface MainRepository {
 
     fun insertDeviceInfo(value: DeviceInfo)
     suspend fun getDeviceInfo() : DeviceInfo?
+
+    fun insertMiraiMessage(message: MiraiMessageEntity)
+
+    suspend fun getMiraiMessageById(messageId: Long) : MiraiMessageEntity?
 }
