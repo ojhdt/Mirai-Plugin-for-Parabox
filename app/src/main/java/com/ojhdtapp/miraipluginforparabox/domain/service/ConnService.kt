@@ -256,14 +256,14 @@ class ConnService : LifecycleService() {
         )
     }
 
-    private fun sendMessageRecallStateToMainApp(stateSuccess: Boolean, message: String) {
+    private fun sendMessageRecallStateToMainApp(stateSuccess: Boolean, messageId: Long) {
         cMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE).apply {
                 obj = Bundle().apply {
                     putInt("command", ConnKey.MSG_RESPONSE_MESSAGE_RECALL)
                     putInt("status", ConnKey.SUCCESS)
-                    putBoolean("state", stateSuccess)
-                    putString("message", message)
+                    putBoolean("value", stateSuccess)
+                    putLong("message_id", messageId)
                 }
             }
         )
@@ -395,14 +395,16 @@ class ConnService : LifecycleService() {
                         throw (NoSuchElementException("no receipt"))
                     } else {
                         receipt.recall()
-                        sendMessageRecallStateToMainApp(true, "消息已撤回")
+                        sendMessageRecallStateToMainApp(true, messageId)
                     }
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            sendMessageRecallStateToMainApp(false, "操作超时")
+            sendMessageRecallStateToMainApp(false, messageId)
         } catch (e: NoSuchElementException) {
-            sendMessageRecallStateToMainApp(false, "无法定位消息")
+            sendMessageRecallStateToMainApp(false, messageId)
+        } catch (e : IllegalStateException){
+            sendMessageRecallStateToMainApp(false, messageId)
         }
     }
 
