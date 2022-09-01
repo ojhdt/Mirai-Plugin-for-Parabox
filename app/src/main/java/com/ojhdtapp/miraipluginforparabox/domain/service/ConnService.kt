@@ -140,16 +140,18 @@ class ConnService : LifecycleService() {
                 .subscribeAlways<FriendMessageEvent> { event ->
 //                    Log.d("aaa", "${event.senderName}:${event.message}")
 //                    event.subject.sendMessage("Hello from mirai!")
-                    val messageContents = event.message.toMessageContentList()
-                    val messageSource = event.message.source
-                    val messageId = getMessageId(messageSource.ids)
+                    val messageContents = event.message.toMessageContentList(bot = bot ,repository = repository)
+                    val messageId = getMessageId(event.message.ids)
                     messageId?.let {
-                        repository.insertMiraiMessage(
-                            MiraiMessageEntity(
-                                it,
-                                event.message.serializeToMiraiCode()
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            repository.insertMiraiMessage(
+                                MiraiMessageEntity(
+                                    it,
+                                    event.message.serializeToMiraiCode()
+                                )
                             )
-                        )
+
+                        }
                     }
 
                     val profile = Profile(
@@ -173,17 +175,17 @@ class ConnService : LifecycleService() {
                 }
         groupMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope).subscribeAlways { event ->
-                val messageContents = event.message.toMessageContentList(group = event.group)
-                val messageSource = event.message.source
-                val messageId = getMessageId(messageSource.ids)
-
+                val messageContents = event.message.toMessageContentList(group = event.group, bot = bot, repository = repository)
+                val messageId = getMessageId(event.message.ids)
                 messageId?.let {
-                    repository.insertMiraiMessage(
-                        MiraiMessageEntity(
-                            it,
-                            event.message.serializeToMiraiCode()
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.insertMiraiMessage(
+                            MiraiMessageEntity(
+                                it,
+                                event.message.serializeToMiraiCode()
+                            )
                         )
-                    )
+                    }
                 }
 
                 val senderProfile = Profile(
@@ -254,7 +256,7 @@ class ConnService : LifecycleService() {
         )
     }
 
-    private fun sendMessageRecallStateToMainApp(stateSuccess: Boolean, message: String){
+    private fun sendMessageRecallStateToMainApp(stateSuccess: Boolean, message: String) {
         cMessenger?.send(
             Message.obtain(null, ConnKey.MSG_RESPONSE).apply {
                 obj = Bundle().apply {
