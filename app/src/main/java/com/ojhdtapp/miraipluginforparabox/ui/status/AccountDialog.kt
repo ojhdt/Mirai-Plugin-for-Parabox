@@ -213,7 +213,7 @@ fun AddAccountDialog(
                 Column(modifier = modifier.verticalScroll(rememberScrollState())) {
                     val focusManager = LocalFocusManager.current
                     OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
+//                        modifier = Modifier.fillMaxWidth(),
                         value = accountNum,
                         onValueChange = {
                             if (accountNumError) accountNumError = false
@@ -236,7 +236,7 @@ fun AddAccountDialog(
                     )
                     Spacer(modifier = modifier.height(8.dp))
                     OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
+//                        modifier = Modifier.fillMaxWidth(),
                         value = passwd,
                         onValueChange = {
                             if (passwdError) passwdError = false
@@ -278,7 +278,7 @@ fun AddAccountDialog(
                     )
                     Spacer(modifier = modifier.height(16.dp))
                     Text(
-                        text = "你的账号和密码将被保存并在服务启动时完成登录。一切信息仅将被保存于本地。",
+                        text = "你的账号和密码将被保存并在服务启动时完成登录。\n一切信息仅将被保存于本地。",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

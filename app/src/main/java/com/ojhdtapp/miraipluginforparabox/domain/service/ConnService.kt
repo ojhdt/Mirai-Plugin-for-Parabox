@@ -39,6 +39,7 @@ import net.mamoe.mirai.message.MessageReceipt
 import net.mamoe.mirai.message.code.MiraiCode
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
+import net.mamoe.mirai.message.data.MessageChain.Companion.serializeToJsonString
 import net.mamoe.mirai.message.data.MessageSource.Key.quote
 import net.mamoe.mirai.message.data.MessageSource.Key.recall
 import net.mamoe.mirai.network.LoginFailedException
@@ -140,14 +141,16 @@ class ConnService : LifecycleService() {
                 .subscribeAlways<FriendMessageEvent> { event ->
 //                    Log.d("aaa", "${event.senderName}:${event.message}")
 //                    event.subject.sendMessage("Hello from mirai!")
-                    val messageContents = event.message.toMessageContentList(bot = bot ,repository = repository)
+                    val messageContents =
+                        event.message.toMessageContentList(bot = bot, repository = repository)
                     val messageId = getMessageId(event.message.ids)
                     messageId?.let {
                         lifecycleScope.launch(Dispatchers.IO) {
                             repository.insertMiraiMessage(
                                 MiraiMessageEntity(
                                     it,
-                                    event.message.serializeToMiraiCode()
+                                    event.message.serializeToMiraiCode(),
+                                    event.message.serializeToJsonString()
                                 )
                             )
 
@@ -175,14 +178,19 @@ class ConnService : LifecycleService() {
                 }
         groupMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope).subscribeAlways { event ->
-                val messageContents = event.message.toMessageContentList(group = event.group, bot = bot, repository = repository)
+                val messageContents = event.message.toMessageContentList(
+                    group = event.group,
+                    bot = bot,
+                    repository = repository
+                )
                 val messageId = getMessageId(event.message.ids)
                 messageId?.let {
                     lifecycleScope.launch(Dispatchers.IO) {
                         repository.insertMiraiMessage(
                             MiraiMessageEntity(
                                 it,
-                                event.message.serializeToMiraiCode()
+                                event.message.serializeToMiraiCode(),
+                                event.message.serializeToJsonString()
                             )
                         )
                     }
@@ -343,7 +351,8 @@ class ConnService : LifecycleService() {
                                     it.quoteMessageId?.also {
                                         repository.getMiraiMessageById(it)?.let {
                                             add(
-                                                MiraiCode.deserializeMiraiCode(it.miraiCode).quote()
+//                                                MiraiCode.deserializeMiraiCode(it.miraiCode).quote()
+                                                MessageChain.deserializeFromJsonString(it.json).quote()
                                             )
                                         }
                                     }
@@ -359,29 +368,37 @@ class ConnService : LifecycleService() {
                     }
                 }
             } catch (e: NoSuchElementException) {
+                e.printStackTrace()
                 if (messageId != null) {
                     sendMessageSendStateToMainApp(messageId, false)
                 }
             } catch (e: EventCancelledException) {
+                e.printStackTrace()
                 if (messageId != null) {
                     sendMessageSendStateToMainApp(messageId, false)
                 }
             } catch (e: BotIsBeingMutedException) {
+                e.printStackTrace()
                 if (messageId != null) {
                     sendMessageSendStateToMainApp(messageId, false)
                 }
             } catch (e: MessageTooLargeException) {
+                e.printStackTrace()
                 if (messageId != null) {
                     sendMessageSendStateToMainApp(messageId, false)
                 }
             } catch (e: IllegalArgumentException) {
+                e.printStackTrace()
                 if (messageId != null) {
                     sendMessageSendStateToMainApp(messageId, false)
                 }
             } catch (e: FileNotFoundException) {
+                e.printStackTrace()
                 if (messageId != null) {
                     sendMessageSendStateToMainApp(messageId, false)
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -403,7 +420,7 @@ class ConnService : LifecycleService() {
             sendMessageRecallStateToMainApp(false, messageId)
         } catch (e: NoSuchElementException) {
             sendMessageRecallStateToMainApp(false, messageId)
-        } catch (e : IllegalStateException){
+        } catch (e: IllegalStateException) {
             sendMessageRecallStateToMainApp(false, messageId)
         }
     }

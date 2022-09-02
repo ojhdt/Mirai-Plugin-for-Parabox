@@ -7,4 +7,5 @@ import androidx.room.PrimaryKey
 class MiraiMessageEntity(
     @PrimaryKey val messageId: Long,
     val miraiCode: String,
+    val json: String,
 )
