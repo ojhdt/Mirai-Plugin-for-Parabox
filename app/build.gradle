@@ -113,6 +113,14 @@ dependencies {
     // Mirai
     implementation 'net.mamoe:mirai-core:2.12.1'
 
+    // Silk
+    implementation 'io.github.kasukusakura:silk-codec:0.0.5'
+//    api 'net.mamoe:mirai-silk-converter:0.0.5'
+
+    // Ffmpeg
+//    implementation 'com.arthenica:ffmpeg-kit-full:4.5.1-1'
+//    implementation 'com.github.microshow:RxFFmpeg:4.9.0-lite'
+
     // ViewModel
     def lifecycle_version = "2.6.0-alpha01"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"

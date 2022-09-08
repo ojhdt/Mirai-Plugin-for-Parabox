@@ -89,9 +89,9 @@ suspend fun MessageChain.toMessageContentList(
                 )
                 is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
                     (it as OnlineAudio).urlForDownload,
-                    (it as OnlineAudio).length,
-                    (it as OnlineAudio).filename,
-                    (it as OnlineAudio).fileSize,
+                    it.length,
+                    it.filename,
+                    it.fileSize,
                 )
                 is FileMessage -> {
                     group?.let { group ->
