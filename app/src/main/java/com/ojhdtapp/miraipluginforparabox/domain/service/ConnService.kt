@@ -48,7 +48,12 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class ConnService : LifecycleService() {
+    external fun stringFromJNI(): String
     companion object {
+        // Used to load the 'native-lib' library on application startup.
+        init {
+            System.loadLibrary("native-lib")
+        }
         var connectionType = 0
     }
 
@@ -331,10 +336,6 @@ class ConnService : LifecycleService() {
                                         val fd = inputPFD!!.fileDescriptor
                                         val inputStream = FileInputStream(fd)
 
-//                                        val inputPath = FFmpegKitConfig.getSafParameterForRead(this@ConnService, uri)
-//                                        val outputPath =FFmpegKitConfig.getSafParameterForWrite(this@ConnService)
-//                                        FFmpegKit.execute()
-
 //                                        val silkCoder = AudioToSilkCoder(Executors.newCachedThreadPool())
 //                                        val silkPath = File(this@ConnService.externalCacheDir, "out.silk")
 //                                        BufferedOutputStream(FileOutputStream(silkPath)).use { fso ->
@@ -354,6 +355,7 @@ class ConnService : LifecycleService() {
 //                                                }
 //                                            }
 //                                        }
+
 
                                         inputStream.use { stream ->
                                             stream.toExternalResource().use { resource ->
