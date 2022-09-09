@@ -23,6 +23,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.github.kasukusakura.silkcodec.AudioToSilkCoder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import moe.ore.silk.AudioUtils
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.contact.BotIsBeingMutedException
@@ -50,6 +51,10 @@ import javax.inject.Inject
 class ConnService : LifecycleService() {
     companion object {
         var connectionType = 0
+
+        init {
+            System.loadLibrary("silkcodec")
+        }
     }
 
     @Inject
@@ -354,15 +359,25 @@ class ConnService : LifecycleService() {
 //                                                }
 //                                            }
 //                                        }
-
-                                        inputStream.use { stream ->
-                                            stream.toExternalResource().use { resource ->
-                                                contact.uploadAudio(resource).also {
-                                                    add(it)
+                                        AudioUtils.init(this@ConnService.externalCacheDir!!.absolutePath)
+//                                        AudioUtils.mp3ToSilk(mp3Path).inputStream().use { silk ->
+//                                            silk.toExternalResource().use { resource ->
+//                                                contact.uploadAudio(resource).also {
+//                                                    add(it)
+//                                                    inputPFD.close()
+//                                                }
+//                                            }
+//                                        }
+                                        AudioUtils.mp3ToSilk(inputStream).inputStream()
+                                            .use { silk ->
+                                                silk.toExternalResource().use { resource ->
+                                                    contact.uploadAudio(resource).also {
+                                                        add(it)
+                                                        inputPFD.close()
+                                                    }
                                                 }
                                             }
-                                        }
-                                        inputPFD.close()
+
                                     }
                                 }
                                 is com.ojhdtapp.messagedto.message_content.QuoteReply -> {

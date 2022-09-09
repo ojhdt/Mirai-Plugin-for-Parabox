@@ -21,6 +21,11 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+        externalNativeBuild {
+            cmake {
+                cppFlags ''
+            }
+        }
     }
 
     buildTypes {
@@ -55,6 +60,13 @@ android {
             exclude 'META-INF/NOTICE.txt'
             exclude 'META-INF/notice.txt'
             exclude("META-INF/*.kotlin_module")
+        }
+        pickFirst "**/libsilkcodec.so"
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/SilkCodecJNI/CMakeLists.txt')
+            version '3.22.1'
         }
     }
     applicationVariants.all { variant ->
