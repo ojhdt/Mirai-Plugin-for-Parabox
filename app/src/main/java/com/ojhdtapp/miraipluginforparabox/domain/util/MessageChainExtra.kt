@@ -143,7 +143,7 @@ suspend fun MessageChain.toMessageContentList(
                     com.ojhdtapp.messagedto.message_content.Audio(
                         url,
                         it.length,
-                        it.filename,
+                        uri?.let { it.path?.substringAfterLast("/") } ?: it.filename,
                         it.fileSize,
                         uri,
                     )
