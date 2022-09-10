@@ -1,21 +1,62 @@
 package com.ojhdtapp.miraipluginforparabox.core.util
 
 import android.content.ContentResolver
-import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.ojhdtapp.miraipluginforparabox.BuildConfig
+import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.ResponseBody
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.net.URL
 import java.text.DecimalFormat
 import java.util.*
+import javax.inject.Inject
 
-object FileUtil {
+object FileUtil{
+//    suspend fun downloadFileToPath(url: String, path: File) {
+//        URL(url).openStream().use { input ->
+//            FileOutputStream(path).use { output ->
+//                input.copyTo(output, DEFAULT_BUFFER_SIZE)
+//            }
+//        }
+//    }
+
+//    suspend fun downloadFileToPath(url: String, path: File){
+//        downloadService.download(url).body().also {
+//            saveFile(it, path)
+//        }
+//    }
+
+    fun saveFile(body: ResponseBody?, path: File) {
+        if (body == null)
+            return
+        var input: InputStream? = null
+        try {
+            input = body.byteStream()
+            //val file = File(getCacheDir(), "cacheFileAppeal.srl")
+            val fos = path.outputStream()
+            fos.use { output ->
+                input.use { input ->
+                    input.copyTo(output, DEFAULT_BUFFER_SIZE)
+                }
+//                val buffer = ByteArray(4 * 1024) // or other buffer size
+//                var read: Int
+//                while (input.read(buffer).also { read = it } != -1) {
+//                    output.write(buffer, 0, read)
+//                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            input?.close()
+        }
+    }
 
     fun getUriOfFile(context: Context, file: File): Uri? {
         return try {

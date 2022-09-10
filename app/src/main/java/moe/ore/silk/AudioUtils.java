@@ -41,7 +41,7 @@ public class AudioUtils {
         FFmpegSession session = FFmpegKit.execute("-y -i " +
                 mp3File.getAbsolutePath() +
                 " -acodec pcm_s16le -f s16le -ac 1 -ar " +
-                "16000" +
+                "24000" +
                 " " +
                 pcmFile.getAbsolutePath());
         if (ReturnCode.isSuccess(session.getReturnCode())) {
@@ -75,15 +75,14 @@ public class AudioUtils {
         File pcmFile = getTempFile("pcm");
         File mp3File = getTempFile("mp3");
         SilkCodec.nativeDecodeSilk(silkFile.getAbsolutePath(), pcmFile.getAbsolutePath(), SilkCodec.DEFAULT_RATE);
-        LameCoder.encode(pcmFile.getAbsolutePath(), mp3File.getAbsolutePath(), bitrate);
+//        LameCoder.encode(pcmFile.getAbsolutePath(), mp3File.getAbsolutePath(), bitrate);
         FFmpegSession session = FFmpegKit.execute("-y -f s16be -ac 1 -ar " + bitrate + " -acodec pcm_s16le -i " + pcmFile.getAbsolutePath() + " " + mp3File.getAbsolutePath());
         if (ReturnCode.isSuccess(session.getReturnCode())) {
-
+            return mp3File;
         } else {
             throw new IOException("ffmpeg error");
         }
 //        pcmFile.delete();
-        return mp3File;
     }
 
     public static File silkToMp3(File silkFile) throws IOException {

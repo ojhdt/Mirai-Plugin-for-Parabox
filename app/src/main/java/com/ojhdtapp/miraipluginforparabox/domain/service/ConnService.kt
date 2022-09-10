@@ -17,10 +17,10 @@ import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
 import com.ojhdtapp.miraipluginforparabox.data.local.entity.MiraiMessageEntity
+import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.*
 import dagger.hilt.android.AndroidEntryPoint
-import io.github.kasukusakura.silkcodec.AudioToSilkCoder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import moe.ore.silk.AudioUtils
@@ -59,6 +59,8 @@ class ConnService : LifecycleService() {
 
     @Inject
     lateinit var repository: MainRepository
+    @Inject
+    lateinit var downloadService: FileDownloadService
     lateinit var notificationUtil: NotificationUtilForService
 
     private var bot: Bot? = null
@@ -140,7 +142,12 @@ class ConnService : LifecycleService() {
 //                    Log.d("aaa", "${event.senderName}:${event.message}")
 //                    event.subject.sendMessage("Hello from mirai!")
                     val messageContents =
-                        event.message.toMessageContentList(bot = bot, repository = repository)
+                        event.message.toMessageContentList(
+                            context = this@ConnService,
+                            downloadService = downloadService,
+                            bot = bot,
+                            repository = repository
+                        )
                     val messageId = getMessageId(event.message.ids)
                     messageId?.let {
                         lifecycleScope.launch(Dispatchers.IO) {
@@ -177,6 +184,8 @@ class ConnService : LifecycleService() {
         groupMessageEventListener =
             bot?.eventChannel!!.parentScope(lifecycleScope).subscribeAlways { event ->
                 val messageContents = event.message.toMessageContentList(
+                    context = this@ConnService,
+                    downloadService = downloadService,
                     group = event.group,
                     bot = bot,
                     repository = repository

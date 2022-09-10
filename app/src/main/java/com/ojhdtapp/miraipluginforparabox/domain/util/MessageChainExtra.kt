@@ -1,13 +1,20 @@
 package com.ojhdtapp.miraipluginforparabox.domain.util
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.ojhdtapp.messagedto.message_content.MessageContent
 import com.ojhdtapp.miraipluginforparabox.core.util.FaceMap
+import com.ojhdtapp.miraipluginforparabox.core.util.FileUtil
 import com.ojhdtapp.miraipluginforparabox.data.local.MiraiMessageDao
+import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import moe.ore.silk.AudioUtils
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.contact.FileSupported
 import net.mamoe.mirai.contact.Group
@@ -18,8 +25,12 @@ import net.mamoe.mirai.contact.nameCardOrNick
 import net.mamoe.mirai.message.code.MiraiCode
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
+import java.io.File
+import java.io.IOException
 
 suspend fun MessageChain.toMessageContentList(
+    context: Context,
+    downloadService: FileDownloadService,
     group: Group? = null,
     bot: Bot,
     exceptQuote: Boolean = false,
@@ -61,6 +72,8 @@ suspend fun MessageChain.toMessageContentList(
                         "${it.source.time}000".toLong(),
                         quoteMessageId,
                         quoteMessage.toMessageContentList(
+                            context = context,
+                            downloadService = downloadService,
                             bot = bot,
                             exceptQuote = true,
                             repository = repository
@@ -87,12 +100,54 @@ suspend fun MessageChain.toMessageContentList(
                 is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
                     FaceMap.query(it.id) ?: it.content
                 )
-                is Audio -> com.ojhdtapp.messagedto.message_content.Audio(
-                    (it as OnlineAudio).urlForDownload,
-                    it.length,
-                    it.filename,
-                    it.fileSize,
-                )
+                is Audio -> {
+                    val url = (it as OnlineAudio).urlForDownload
+                    Log.d("parabox", url)
+                    val tempPath =
+                        File(context.externalCacheDir, it.filename.replace(".amr", ".silk"))
+                    val uri = try {
+                        coroutineScope {
+                            withContext(Dispatchers.IO) {
+                                downloadService.download(url).let {
+                                    if (it.isSuccessful) {
+                                        it.body().let {
+                                            FileUtil.saveFile(body = it, path = tempPath)
+                                            AudioUtils.init(context.externalCacheDir!!.absolutePath)
+                                            AudioUtils.silkToMp3(tempPath).let {
+                                                FileUtil.getUriOfFile(context, it).apply {
+                                                    context.grantUriPermission(
+                                                        "com.ojhdtapp.parabox",
+                                                        this,
+                                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                    )
+                                                }
+                                            }
+//                                            AudioUtils.silkToMp3(tempPath).let {
+//                                                FileUtil.getUriOfFile(context, it).apply {
+//                                                    context.grantUriPermission(
+//                                                        "com.ojhdtapp.parabox",
+//                                                        this,
+//                                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+//                                                    )
+//                                                }
+//                                            }
+                                        }
+                                    } else null
+                                }
+                            }
+                        }
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                        null
+                    }
+                    com.ojhdtapp.messagedto.message_content.Audio(
+                        url,
+                        it.length,
+                        it.filename,
+                        it.fileSize,
+                        uri,
+                    )
+                }
                 is FileMessage -> {
                     group?.let { group ->
                         it.toAbsoluteFile(group)?.let { file ->
