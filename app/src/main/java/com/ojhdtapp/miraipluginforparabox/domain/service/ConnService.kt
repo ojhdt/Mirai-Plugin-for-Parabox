@@ -50,6 +50,10 @@ import javax.inject.Inject
 class ConnService : LifecycleService() {
     companion object {
         var connectionType = 0
+
+        init{
+            System.loadLibrary("SilkCodec")
+        }
     }
 
     @Inject
