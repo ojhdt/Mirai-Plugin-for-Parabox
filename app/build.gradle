@@ -64,6 +64,12 @@ android {
             }
         }
     }
+    externalNativeBuild {
+        cmake {
+            path "src/main/libSilkCodec/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
 }
 
 dependencies {
