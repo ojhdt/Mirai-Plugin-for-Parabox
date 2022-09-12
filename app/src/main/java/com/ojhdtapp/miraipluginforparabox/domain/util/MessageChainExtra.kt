@@ -156,8 +156,8 @@ suspend fun MessageChain.toMessageContentList(
                                 name = file.name,
                                 extension = file.extension,
                                 size = file.size,
-                                lastModifiedTime = file.lastModifiedTime,
-                                expiryTime = file.lastModifiedTime,
+                                lastModifiedTime = "${file.lastModifiedTime}000".toLong(),
+                                expiryTime = "${file.expiryTime}000".toLong(),
                             )
                         }
                     }
