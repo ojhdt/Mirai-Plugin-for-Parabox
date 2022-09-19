@@ -8,10 +8,7 @@ import android.os.Message
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import com.ojhdtapp.messagedto.PluginConnection
-import com.ojhdtapp.messagedto.Profile
-import com.ojhdtapp.messagedto.ReceiveMessageDto
-import com.ojhdtapp.messagedto.SendMessageDto
+import com.ojhdtapp.messagedto.*
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
@@ -168,7 +165,7 @@ class ConnService : LifecycleService() {
                     )
                     val pluginConnection = PluginConnection(
                         connectionType = connectionType,
-                        objectId = "${connectionType}${SendTargetType.USER}${event.subject.id}".toLong(),
+                        sendTargetType = SendTargetType.USER,
                         id = event.subject.id
                     )
                     val dto = ReceiveMessageDto(
@@ -213,7 +210,7 @@ class ConnService : LifecycleService() {
                 )
                 val pluginConnection = PluginConnection(
                     connectionType = connectionType,
-                    objectId = "${connectionType}${SendTargetType.GROUP}${event.subject.id}".toLong(),
+                    sendTargetType = SendTargetType.GROUP,
                     id = event.subject.id
                 )
                 val dto = ReceiveMessageDto(
@@ -290,8 +287,7 @@ class ConnService : LifecycleService() {
             try {
                 val timestamp = dto.timestamp
                 val targetId = dto.pluginConnection.id
-                val targetType = dto.pluginConnection.objectId.toString().substring(3, 4).toInt()
-                val targetContact = when (targetType) {
+                val targetContact = when (dto.pluginConnection.sendTargetType) {
                     SendTargetType.USER -> bot?.getFriendOrFail(targetId)
                     SendTargetType.GROUP -> bot?.getGroupOrFail(targetId)
                     else -> {
