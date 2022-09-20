@@ -6,17 +6,12 @@ import android.net.Uri
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import com.ojhdtapp.miraipluginforparabox.BuildConfig
-import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.net.URL
 import java.text.DecimalFormat
 import java.util.*
-import javax.inject.Inject
 
 object FileUtil{
 //    suspend fun downloadFileToPath(url: String, path: File) {

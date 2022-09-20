@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.*
 import android.util.Log
-import androidx.lifecycle.ViewModel
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResourceType

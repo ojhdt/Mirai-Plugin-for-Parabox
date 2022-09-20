@@ -9,7 +9,9 @@ import com.ojhdtapp.miraipluginforparabox.data.local.entity.toDeviceInfoEntity
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import net.mamoe.mirai.utils.DeviceInfo
 import javax.inject.Inject
 
