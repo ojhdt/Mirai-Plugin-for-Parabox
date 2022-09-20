@@ -43,6 +43,9 @@ suspend fun MessageChain.toMessageContentList(
         .filter {
             it is QuoteReply || (it is net.mamoe.mirai.message.data.MessageContent)
         }
+        .filter {
+            !(it is PlainText && it.content.isBlank())
+        }
         .map {
             when (it) {
                 is QuoteReply -> {
@@ -94,7 +97,7 @@ suspend fun MessageChain.toMessageContentList(
                     it.image.height
                 )
                 is At -> com.ojhdtapp.messagedto.message_content.At(
-                    it.target, it.getDisplay(group)
+                    it.target, it.getDisplay(group).replace("@","")
                 )
                 is AtAll -> com.ojhdtapp.messagedto.message_content.AtAll
                 is Face -> com.ojhdtapp.messagedto.message_content.PlainText(

@@ -161,7 +161,8 @@ class ConnService : LifecycleService() {
 
                     val profile = Profile(
                         name = event.senderName,
-                        avatar = event.sender.avatarUrl
+                        avatar = event.sender.avatarUrl,
+                        id = event.subject.id
                     )
                     val pluginConnection = PluginConnection(
                         connectionType = connectionType,
@@ -202,11 +203,13 @@ class ConnService : LifecycleService() {
 
                 val senderProfile = Profile(
                     name = event.senderName,
-                    avatar = event.sender.avatarUrl
+                    avatar = event.sender.avatarUrl,
+                    id = event.sender.id
                 )
                 val groupProfile = Profile(
                     name = event.group.name,
-                    avatar = event.group.avatarUrl
+                    avatar = event.group.avatarUrl,
+                    id = event.subject.id
                 )
                 val pluginConnection = PluginConnection(
                     connectionType = connectionType,
