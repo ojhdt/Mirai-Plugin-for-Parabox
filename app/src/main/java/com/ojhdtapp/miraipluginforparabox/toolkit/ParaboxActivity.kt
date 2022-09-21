@@ -17,7 +17,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
     abstract fun onParaboxServiceDisconnected()
 
     var paraboxService: Messenger? = null
-    val client = Messenger(ParaboxServiceHandler())
+    private lateinit var client : Messenger 
     private lateinit var paraboxServiceConnection: ServiceConnection
 
     var deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxCommandResult>>()
@@ -91,6 +91,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
 
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
+        client = Messenger(ParaboxServiceHandler())
         paraboxServiceConnection = object : ServiceConnection {
             override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
                 paraboxService = Messenger(p1)
@@ -109,7 +110,12 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         override fun handleMessage(msg: Message) {
             val obj = msg.obj as Bundle
             val sendTimestamp = obj.getLong("timestamp")
-            val result = obj.getParcelable<ParaboxCommandResult>("result")
+            val isSuccess = obj.getBoolean("isSuccess")
+            val result = if(isSuccess){
+                obj.getParcelable<ParaboxCommandResult.Success>("result")
+            } else {
+                obj.getParcelable<ParaboxCommandResult.Fail>("result")
+            }
             result?.let{
                 deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
             }

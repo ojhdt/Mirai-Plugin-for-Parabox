@@ -21,12 +21,27 @@ abstract class ParaboxService : LifecycleService() {
     }
     abstract fun onSendMessage()
 
+    private fun coreResponseCommand(isSuccess : Boolean ,timestamp: Long, command: Int, extra: Bundle = Bundle()){
+        
+    }
+
     override fun onCreate() {
         super.onCreate()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onBind(intent: Intent?): IBinder {
+        super.onBind(intent)
+        return 
+    }
+
+    inner class CommandHandler : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            super.handleMessage(msg)
+        }
     }
 }
 
