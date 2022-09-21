@@ -89,7 +89,11 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
             )
         } else {
             val msg = Message.obtain(null, command, ParaboxKey.TYPE_CLIENT, 0, extra.apply {
-                putLong("timestamp", timestamp)
+                putParcelable("metadata", ParaboxMetadata(
+                    command = command,
+                    timestamp = timestamp,
+                    type = ParaboxKey.TYPE_CLIENT
+                ))
             }).apply {
                 replyTo = client
             }
@@ -117,7 +121,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
     inner class ParaboxServiceHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             val obj = msg.obj as Bundle
-            val sendTimestamp = obj.getLong("timestamp")
+            val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
             val isSuccess = obj.getBoolean("isSuccess")
             val result = if (isSuccess) {
                 obj.getParcelable<ParaboxCommandResult.Success>("result")

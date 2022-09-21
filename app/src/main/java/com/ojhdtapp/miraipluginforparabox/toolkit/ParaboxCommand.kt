@@ -9,9 +9,11 @@ object ParaboxKey {
 
     const val COMMAND_START_SERVICE = 10
     const val COMMAND_STOP_SERVICE = 11
+    const val COMMAND_FORCE_STOP_SERVICE = 12
 
     const val ERROR_TIMEOUT = 20
     const val ERROR_DISCONNECTED = 21
+    const val ERROR_REPEATED_CALL = 22
 
     const val STATE_STOP = 30
     const val STATE_PAUSE = 31
@@ -33,6 +35,6 @@ sealed class ParaboxCommandResult(
     data class Fail(
         override val command: Int,
         override val timestamp: Long,
-        val responseKey: Int,
+        val errorCode: Int,
     ) : ParaboxCommandResult(command = command, timestamp = timestamp)
 }
