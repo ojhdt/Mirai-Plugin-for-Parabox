@@ -8,6 +8,9 @@ import androidx.lifecycle.LifecycleService
 
 abstract class ParaboxService : LifecycleService() {
     var isRunning = false
+    lateinit var paraboxMessenger : Messenger
+    private var interfaceMessenger : Messenger? = null
+
     abstract fun onStartParabox()
     abstract fun onStopParabox()
     fun startParabox(){
@@ -26,6 +29,7 @@ abstract class ParaboxService : LifecycleService() {
     }
 
     override fun onCreate() {
+        paraboxMessenger = Messenger(CommandHandler())
         super.onCreate()
     }
 
@@ -35,12 +39,15 @@ abstract class ParaboxService : LifecycleService() {
 
     override fun onBind(intent: Intent?): IBinder {
         super.onBind(intent)
-        return 
+        return paraboxMessenger.binder
     }
 
     inner class CommandHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
-            super.handleMessage(msg)
+            when(msg.what){
+                ParaboxCommand.COMMAND_START_SERVICE -> {}
+                ParaboxCommand.COMMAND_STOP_SERVICE -> {}
+            }
         }
     }
 }
