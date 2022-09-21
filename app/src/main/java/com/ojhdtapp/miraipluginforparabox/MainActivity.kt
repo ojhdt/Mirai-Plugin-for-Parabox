@@ -22,7 +22,6 @@ import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.ojhdtapp.miraipluginforparabox.core.util.*
-import com.ojhdtapp.miraipluginforparabox.domain.service.ServiceConnector
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.NavGraphs
@@ -43,7 +42,6 @@ import kotlinx.coroutines.withTimeout
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private lateinit var connector: ServiceConnector
     private lateinit var notificationUtil: NotificationUtilForActivity
     var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
@@ -56,7 +54,6 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterialNavigationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        connector = ServiceConnector(this, viewModel)
         notificationUtil = NotificationUtilForActivity(this)
 
         checkMainAppInstallation()
@@ -246,7 +243,6 @@ class MainActivity : ComponentActivity() {
 //                    }
 //                }
                 }
-                Log.d("parabox", "end")
                 viewModel.setMainSwitchState(true)
                 viewModel.setMainSwitchEnabledState(true)
             } catch (e: TimeoutCancellationException) {

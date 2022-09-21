@@ -62,7 +62,6 @@ class MainRepositoryImpl @Inject constructor(
     }
 
     override fun insertDeviceInfo(value: DeviceInfo) {
-        Log.d("parabox", "updating deviceInfo")
         deviceInfoDao.insertDeviceInfo(value.toDeviceInfoEntity())
     }
 
