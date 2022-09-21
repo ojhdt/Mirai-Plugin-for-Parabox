@@ -1,10 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.toolkit
 
-import android.app.Service
 import android.content.Intent
 import android.os.*
-import androidx.activity.ComponentActivity
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LifecycleService
 
 abstract class ParaboxService : LifecycleService() {
@@ -50,14 +47,29 @@ abstract class ParaboxService : LifecycleService() {
         }
     }
 
-    private fun updateServiceState(state: Int) {
+    private fun updateServiceState(state: Int, message: String? = null) {
         serviceState = state
         onStateUpdate()
-        noticeStateUpdate()
+        sendNotification(ParaboxKey.NOTIFICATION_STATE_UPDATE, Bundle().apply {
+            putInt("state", state)
+            message?.let { putString("message", it) }
+        })
     }
 
-    fun noticeStateUpdate() {
-
+    fun sendNotification(notification: Int ,extra: Bundle = Bundle()) {
+        val timestamp = System.currentTimeMillis()
+        val msg = Message.obtain(
+            null,
+            notification,
+            0,
+            ParaboxKey.TYPE_NOTIFICATION,
+            extra.apply {
+                putLong("timestamp", timestamp)
+            }).apply {
+            replyTo = paraboxMessenger
+        }
+        clientMessenger?.send(msg)
+        mainAppMessenger?.send(msg)
     }
 
     fun receiveMessage() {
@@ -93,14 +105,19 @@ abstract class ParaboxService : LifecycleService() {
         result: ParaboxCommandResult,
         extra: Bundle = Bundle()
     ) {
-        when (metadata.type) {
-            ParaboxKey.TYPE_MAIN_APP -> {}
-            ParaboxKey.TYPE_CLIENT -> {
-                val msg = Message.obtain(null, metadata.command, ParaboxKey.TYPE_CLIENT, 0, extra.apply {
-                    putBoolean("isSuccess", isSuccess)
-                    putParcelable("metadata", metadata)
-                    putParcelable("result", result)
-                }).apply {
+        when (metadata.client) {
+            ParaboxKey.CLIENT_MAIN_APP -> {}
+            ParaboxKey.CLIENT_CONTROLLER -> {
+                val msg = Message.obtain(
+                    null,
+                    metadata.command,
+                    ParaboxKey.CLIENT_CONTROLLER,
+                    ParaboxKey.TYPE_COMMAND,
+                    extra.apply {
+                        putBoolean("isSuccess", isSuccess)
+                        putParcelable("metadata", metadata)
+                        putParcelable("result", result)
+                    }).apply {
                     replyTo = paraboxMessenger
                 }
                 clientMessenger?.send(msg)
@@ -131,25 +148,27 @@ abstract class ParaboxService : LifecycleService() {
             } else {
                 obj.getParcelable<ParaboxMetadata>("metadata")
             }
+            // 客户端类型判断
             when (msg.arg1) {
-                ParaboxKey.TYPE_CLIENT -> {
+                ParaboxKey.CLIENT_CONTROLLER -> {
                     clientMessenger = msg.replyTo
-                    when (msg.what) {
-                        ParaboxKey.COMMAND_START_SERVICE -> {
-                            startParabox(metadata!!)
-                        }
-                        ParaboxKey.COMMAND_STOP_SERVICE -> {
-                            stopParabox(metadata!!)
-                        }
-                        ParaboxKey.COMMAND_FORCE_STOP_SERVICE -> {
-                            forceStopParabox(metadata!!)
-                        }
-                        else -> customHandleMessage(msg, metadata!!)
-                    }
                 }
-                ParaboxKey.TYPE_MAIN_APP -> {
+                ParaboxKey.CLIENT_MAIN_APP -> {
                     mainAppMessenger = msg.replyTo
                 }
+            }
+            // 指令种类判断
+            when (msg.what) {
+                ParaboxKey.COMMAND_START_SERVICE -> {
+                    startParabox(metadata!!)
+                }
+                ParaboxKey.COMMAND_STOP_SERVICE -> {
+                    stopParabox(metadata!!)
+                }
+                ParaboxKey.COMMAND_FORCE_STOP_SERVICE -> {
+                    forceStopParabox(metadata!!)
+                }
+                else -> customHandleMessage(msg, metadata!!)
             }
         }
     }

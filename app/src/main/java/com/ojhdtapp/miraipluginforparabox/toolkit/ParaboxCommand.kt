@@ -4,22 +4,27 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 object ParaboxKey {
-    const val TYPE_MAIN_APP = 0
-    const val TYPE_CLIENT = 1
+    const val CLIENT_MAIN_APP = 0
+    const val CLIENT_CONTROLLER = 1
+
+    const val TYPE_COMMAND = 9
+    const val TYPE_NOTIFICATION = 8
 
     const val COMMAND_START_SERVICE = 10
     const val COMMAND_STOP_SERVICE = 11
     const val COMMAND_FORCE_STOP_SERVICE = 12
 
-    const val ERROR_TIMEOUT = 20
-    const val ERROR_DISCONNECTED = 21
-    const val ERROR_REPEATED_CALL = 22
+    const val NOTIFICATION_STATE_UPDATE = 20
 
-    const val STATE_STOP = 30
-    const val STATE_PAUSE = 31
-    const val STATE_ERROR = 32
-    const val STATE_LOADING = 33
-    const val STATE_RUNNING = 34
+    const val ERROR_TIMEOUT = 60
+    const val ERROR_DISCONNECTED = 61
+    const val ERROR_REPEATED_CALL = 62
+
+    const val STATE_STOP = 70
+    const val STATE_PAUSE = 71
+    const val STATE_ERROR = 72
+    const val STATE_LOADING = 73
+    const val STATE_RUNNING = 74
 }
 
 @Parcelize

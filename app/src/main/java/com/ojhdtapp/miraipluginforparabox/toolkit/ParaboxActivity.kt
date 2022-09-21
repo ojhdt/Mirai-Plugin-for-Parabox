@@ -14,6 +14,7 @@ import kotlinx.coroutines.withTimeout
 abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompatActivity() {
     abstract fun onParaboxServiceConnected()
     abstract fun onParaboxServiceDisconnected()
+    abstract fun onParaboxServiceStateChanged(state: Int, message: String)
 
     var paraboxService: Messenger? = null
     private lateinit var client: Messenger
@@ -78,6 +79,12 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         }
     }
 
+    /*/
+    what: 指令
+    arg1: 客户端类型
+    arg2: 指令类型
+    obj: Bundle
+     */
     private fun coreSendCommand(timestamp: Long, command: Int, extra: Bundle = Bundle()) {
         if (paraboxService == null) {
             deferredMap[timestamp]?.complete(
@@ -88,11 +95,11 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
                 )
             )
         } else {
-            val msg = Message.obtain(null, command, ParaboxKey.TYPE_CLIENT, 0, extra.apply {
+            val msg = Message.obtain(null, command, ParaboxKey.CLIENT_CONTROLLER, ParaboxKey.TYPE_COMMAND, extra.apply {
                 putParcelable("metadata", ParaboxMetadata(
                     command = command,
                     timestamp = timestamp,
-                    type = ParaboxKey.TYPE_CLIENT
+                    client = ParaboxKey.CLIENT_CONTROLLER
                 ))
             }).apply {
                 replyTo = client
@@ -121,15 +128,28 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
     inner class ParaboxServiceHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             val obj = msg.obj as Bundle
-            val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
-            val isSuccess = obj.getBoolean("isSuccess")
-            val result = if (isSuccess) {
-                obj.getParcelable<ParaboxCommandResult.Success>("result")
-            } else {
-                obj.getParcelable<ParaboxCommandResult.Fail>("result")
-            }
-            result?.let {
-                deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
+            when(msg.arg2){
+                ParaboxKey.TYPE_COMMAND -> {
+                    val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
+                    val isSuccess = obj.getBoolean("isSuccess")
+                    val result = if (isSuccess) {
+                        obj.getParcelable<ParaboxCommandResult.Success>("result")
+                    } else {
+                        obj.getParcelable<ParaboxCommandResult.Fail>("result")
+                    }
+                    result?.let {
+                        deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
+                    }
+                }
+                ParaboxKey.TYPE_NOTIFICATION -> {
+                    when(msg.what){
+                        ParaboxKey.NOTIFICATION_STATE_UPDATE -> {
+                            val state = obj.getInt("state", ParaboxKey.STATE_ERROR)
+                            val message = obj.getString("message", "")
+                            onParaboxServiceStateChanged(state, message)
+                        }
+                    }
+                }
             }
             super.handleMessage(msg)
         }
