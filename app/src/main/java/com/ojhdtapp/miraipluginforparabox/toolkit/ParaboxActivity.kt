@@ -20,7 +20,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
     private lateinit var client: Messenger
     private lateinit var paraboxServiceConnection: ServiceConnection
 
-    var deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxCommandResult>>()
+    var deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxResult>>()
 
     /*/
     推荐于onStart运行
@@ -40,27 +40,22 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         }
     }
 
-    fun sendCommand(command: Int, onResult: (ParaboxCommandResult) -> Unit) {
+    fun sendCommand(command: Int, extra: Bundle = Bundle(), timeoutMillis: Long = 3000, onResult: (ParaboxResult) -> Unit) {
         lifecycleScope.launch {
             val timestamp = System.currentTimeMillis()
             try {
-                withTimeout(3000) {
-                    val deferred = CompletableDeferredWithTag<Long, ParaboxCommandResult>(timestamp)
+                withTimeout(timeoutMillis) {
+                    val deferred = CompletableDeferredWithTag<Long, ParaboxResult>(timestamp)
                     deferredMap[timestamp] = deferred
-                    coreSendCommand(timestamp, command)
+                    coreSendCommand(timestamp, command, extra)
                     deferred.await().also {
-                        onResult(
-                            ParaboxCommandResult.Success(
-                                command,
-                                timestamp
-                            )
-                        )
+                        onResult(it)
                     }
                 }
             } catch (e: TimeoutCancellationException) {
                 deferredMap[timestamp]?.cancel()
                 onResult(
-                    ParaboxCommandResult.Fail(
+                    ParaboxResult.Fail(
                         command,
                         timestamp,
                         ParaboxKey.ERROR_TIMEOUT
@@ -69,7 +64,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
             } catch (e: RemoteException) {
                 deferredMap[timestamp]?.cancel()
                 onResult(
-                    ParaboxCommandResult.Fail(
+                    ParaboxResult.Fail(
                         command,
                         timestamp,
                         ParaboxKey.ERROR_DISCONNECTED
@@ -89,7 +84,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         if (paraboxService == null) {
             deferredMap[timestamp]?.complete(
                 timestamp,
-                ParaboxCommandResult.Fail(
+                ParaboxResult.Fail(
                     command, timestamp,
                     ParaboxKey.ERROR_DISCONNECTED
                 )
@@ -97,9 +92,9 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         } else {
             val msg = Message.obtain(null, command, ParaboxKey.CLIENT_CONTROLLER, ParaboxKey.TYPE_COMMAND, extra.apply {
                 putParcelable("metadata", ParaboxMetadata(
-                    command = command,
+                    commandOrRequest = command,
                     timestamp = timestamp,
-                    client = ParaboxKey.CLIENT_CONTROLLER
+                    sender = ParaboxKey.CLIENT_CONTROLLER
                 ))
             }).apply {
                 replyTo = client
@@ -133,9 +128,9 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
                     val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
                     val isSuccess = obj.getBoolean("isSuccess")
                     val result = if (isSuccess) {
-                        obj.getParcelable<ParaboxCommandResult.Success>("result")
+                        obj.getParcelable<ParaboxResult.Success>("result")
                     } else {
-                        obj.getParcelable<ParaboxCommandResult.Fail>("result")
+                        obj.getParcelable<ParaboxResult.Fail>("result")
                     }
                     result?.let {
                         deferredMap[sendTimestamp]?.complete(sendTimestamp, it)

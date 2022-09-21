@@ -3,12 +3,19 @@ package com.ojhdtapp.miraipluginforparabox.toolkit
 import android.content.Intent
 import android.os.*
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 abstract class ParaboxService : LifecycleService() {
     var serviceState = ParaboxKey.STATE_STOP
     lateinit var paraboxMessenger: Messenger
     private var clientMessenger: Messenger? = null
     private var mainAppMessenger: Messenger? = null
+
+    var deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxResult>>()
 
     abstract fun onStartParabox()
     abstract fun onStopParabox()
@@ -17,18 +24,18 @@ abstract class ParaboxService : LifecycleService() {
     fun startParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_STOP, ParaboxKey.STATE_ERROR)) {
             onStartParabox()
-            sendResponse(true, metadata)
+            sendCommandResponse(true, metadata)
         } else {
-            sendResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
+            sendCommandResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
         }
     }
 
     fun stopParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_RUNNING)) {
             onStopParabox()
-            sendResponse(true, metadata)
+            sendCommandResponse(true, metadata)
         } else {
-            sendResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
+            sendCommandResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
         }
     }
 
@@ -41,9 +48,9 @@ abstract class ParaboxService : LifecycleService() {
             )
         ) {
             onStopParabox()
-            sendResponse(true, metadata)
+            sendCommandResponse(true, metadata)
         } else {
-            sendResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
+            sendCommandResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
         }
     }
 
@@ -56,7 +63,7 @@ abstract class ParaboxService : LifecycleService() {
         })
     }
 
-    fun sendNotification(notification: Int ,extra: Bundle = Bundle()) {
+    fun sendNotification(notification: Int, extra: Bundle = Bundle()) {
         val timestamp = System.currentTimeMillis()
         val msg = Message.obtain(
             null,
@@ -78,39 +85,39 @@ abstract class ParaboxService : LifecycleService() {
 
     abstract fun onSendMessage()
 
-    private fun sendResponse(
+    private fun sendCommandResponse(
         isSuccess: Boolean,
         metadata: ParaboxMetadata,
         errorCode: Int? = null
     ) {
         if (isSuccess) {
-            ParaboxCommandResult.Success(
-                command = metadata.command,
+            ParaboxResult.Success(
+                command = metadata.commandOrRequest,
                 timestamp = metadata.timestamp,
             )
         } else {
-            ParaboxCommandResult.Fail(
-                command = metadata.command,
+            ParaboxResult.Fail(
+                command = metadata.commandOrRequest,
                 timestamp = metadata.timestamp,
                 errorCode = errorCode!!
             )
         }.also {
-            coreSendResponse(isSuccess, metadata, it)
+            coreSendCommandResponse(isSuccess, metadata, it)
         }
     }
 
-    private fun coreSendResponse(
+    private fun coreSendCommandResponse(
         isSuccess: Boolean,
         metadata: ParaboxMetadata,
-        result: ParaboxCommandResult,
+        result: ParaboxResult,
         extra: Bundle = Bundle()
     ) {
-        when (metadata.client) {
+        when (metadata.sender) {
             ParaboxKey.CLIENT_MAIN_APP -> {}
             ParaboxKey.CLIENT_CONTROLLER -> {
                 val msg = Message.obtain(
                     null,
-                    metadata.command,
+                    metadata.commandOrRequest,
                     ParaboxKey.CLIENT_CONTROLLER,
                     ParaboxKey.TYPE_COMMAND,
                     extra.apply {
@@ -122,6 +129,67 @@ abstract class ParaboxService : LifecycleService() {
                 }
                 clientMessenger?.send(msg)
             }
+        }
+    }
+
+    fun sendRequest(request: Int, client: Int, extra: Bundle = Bundle(), timeoutMillis: Long = 3000, onResult: (ParaboxResult) -> Unit) {
+        lifecycleScope.launch {
+            val timestamp = System.currentTimeMillis()
+            try {
+                withTimeout(timeoutMillis) {
+                    val deferred = CompletableDeferredWithTag<Long, ParaboxResult>(timestamp)
+                    deferredMap[timestamp] = deferred
+                    coreSendRequest(timestamp, request, client, extra)
+                    deferred.await().also {
+                        onResult(it)
+                    }
+                }
+            } catch (e: TimeoutCancellationException) {
+                deferredMap[timestamp]?.cancel()
+                onResult(
+                    ParaboxResult.Fail(
+                        request,
+                        timestamp,
+                        ParaboxKey.ERROR_TIMEOUT
+                    )
+                )
+            } catch (e: RemoteException) {
+                deferredMap[timestamp]?.cancel()
+                onResult(
+                    ParaboxResult.Fail(
+                        request,
+                        timestamp,
+                        ParaboxKey.ERROR_DISCONNECTED
+                    )
+                )
+            }
+        }
+    }
+    private fun coreSendRequest(timestamp: Long, request: Int, client: Int, extra: Bundle = Bundle()) {
+        val targetClient = when(client){
+            ParaboxKey.CLIENT_CONTROLLER -> clientMessenger
+            ParaboxKey.CLIENT_MAIN_APP -> mainAppMessenger
+            else ->null
+        }
+        if (targetClient == null) {
+            deferredMap[timestamp]?.complete(
+                timestamp,
+                ParaboxResult.Fail(
+                    request, timestamp,
+                    ParaboxKey.ERROR_DISCONNECTED
+                )
+            )
+        } else {
+            val msg = Message.obtain(null, request, client, ParaboxKey.TYPE_REQUEST, extra.apply {
+                putParcelable("metadata", ParaboxMetadata(
+                    commandOrRequest = request,
+                    timestamp = timestamp,
+                    sender = ParaboxKey.CLIENT_SERVICE
+                ))
+            }).apply {
+                replyTo = paraboxMessenger
+            }
+            targetClient.send(msg)
         }
     }
 

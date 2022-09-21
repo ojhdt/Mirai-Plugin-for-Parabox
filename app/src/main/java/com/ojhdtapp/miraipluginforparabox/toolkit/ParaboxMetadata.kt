@@ -5,7 +5,7 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 class ParaboxMetadata(
-    val command: Int,
+    val commandOrRequest: Int,
     val timestamp: Long,
-    val client: Int
+    val sender: Int
 ) : Parcelable

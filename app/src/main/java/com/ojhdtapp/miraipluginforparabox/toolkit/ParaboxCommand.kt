@@ -1,14 +1,17 @@
 package com.ojhdtapp.miraipluginforparabox.toolkit
 
+import android.os.Bundle
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 object ParaboxKey {
     const val CLIENT_MAIN_APP = 0
     const val CLIENT_CONTROLLER = 1
+    const val CLIENT_SERVICE = 2
 
     const val TYPE_COMMAND = 9
     const val TYPE_NOTIFICATION = 8
+    const val TYPE_REQUEST = 7
 
     const val COMMAND_START_SERVICE = 10
     const val COMMAND_STOP_SERVICE = 11
@@ -28,18 +31,19 @@ object ParaboxKey {
 }
 
 @Parcelize
-sealed class ParaboxCommandResult(
+sealed class ParaboxResult(
     open val command: Int,
     open val timestamp: Long,
 ) : Parcelable {
     data class Success(
         override val command: Int,
         override val timestamp: Long,
-    ) : ParaboxCommandResult(command = command, timestamp = timestamp)
+        val obj : Bundle = Bundle()
+    ) : ParaboxResult(command = command, timestamp = timestamp)
 
     data class Fail(
         override val command: Int,
         override val timestamp: Long,
         val errorCode: Int,
-    ) : ParaboxCommandResult(command = command, timestamp = timestamp)
+    ) : ParaboxResult(command = command, timestamp = timestamp)
 }
