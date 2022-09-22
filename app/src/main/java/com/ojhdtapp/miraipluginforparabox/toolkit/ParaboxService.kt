@@ -24,18 +24,32 @@ abstract class ParaboxService : LifecycleService() {
     fun startParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_STOP, ParaboxKey.STATE_ERROR)) {
             onStartParabox()
-            sendCommandResponse(true, metadata)
+            sendCommandResponse(
+                isSuccess = true,
+                metadata = metadata
+            )
         } else {
-            sendCommandResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
+            sendCommandResponse(
+                isSuccess = false,
+                metadata = metadata,
+                errorCode = ParaboxKey.ERROR_REPEATED_CALL
+            )
         }
     }
 
     fun stopParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_RUNNING)) {
             onStopParabox()
-            sendCommandResponse(true, metadata)
+            sendCommandResponse(
+                isSuccess = true,
+                metadata = metadata
+            )
         } else {
-            sendCommandResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
+            sendCommandResponse(
+                isSuccess = false,
+                metadata = metadata,
+                errorCode = ParaboxKey.ERROR_REPEATED_CALL
+            )
         }
     }
 
@@ -48,9 +62,13 @@ abstract class ParaboxService : LifecycleService() {
             )
         ) {
             onStopParabox()
-            sendCommandResponse(true, metadata)
+            sendCommandResponse(isSuccess = true, metadata = metadata)
         } else {
-            sendCommandResponse(false, metadata, ParaboxKey.ERROR_REPEATED_CALL)
+            sendCommandResponse(
+                isSuccess = false,
+                metadata = metadata,
+                errorCode = ParaboxKey.ERROR_REPEATED_CALL
+            )
         }
     }
 
@@ -88,12 +106,14 @@ abstract class ParaboxService : LifecycleService() {
     private fun sendCommandResponse(
         isSuccess: Boolean,
         metadata: ParaboxMetadata,
+        extra: Bundle = Bundle(),
         errorCode: Int? = null
     ) {
         if (isSuccess) {
             ParaboxResult.Success(
                 command = metadata.commandOrRequest,
                 timestamp = metadata.timestamp,
+                obj = extra,
             )
         } else {
             ParaboxResult.Fail(
@@ -232,7 +252,7 @@ abstract class ParaboxService : LifecycleService() {
                 obj.getParcelable<ParaboxMetadata>("metadata")!!
             }
             // 对command添加deferred
-            when(msg.arg2){
+            when (msg.arg2) {
                 ParaboxKey.TYPE_COMMAND -> {
                     lifecycleScope.launch {
                         try {
@@ -245,12 +265,15 @@ abstract class ParaboxService : LifecycleService() {
                                 ParaboxKey.COMMAND_START_SERVICE -> {
                                     startParabox(metadata)
                                 }
+
                                 ParaboxKey.COMMAND_STOP_SERVICE -> {
                                     stopParabox(metadata)
                                 }
+
                                 ParaboxKey.COMMAND_FORCE_STOP_SERVICE -> {
                                     forceStopParabox(metadata)
                                 }
+
                                 else -> customHandleMessage(msg, metadata)
                             }
                             deferred.await().also {
@@ -269,6 +292,7 @@ abstract class ParaboxService : LifecycleService() {
                         }
                     }
                 }
+
                 ParaboxKey.TYPE_REQUEST -> {
                     val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
                     val isSuccess = obj.getBoolean("isSuccess")
@@ -287,6 +311,7 @@ abstract class ParaboxService : LifecycleService() {
                 ParaboxKey.CLIENT_CONTROLLER -> {
                     clientMessenger = msg.replyTo
                 }
+
                 ParaboxKey.CLIENT_MAIN_APP -> {
                     mainAppMessenger = msg.replyTo
                 }

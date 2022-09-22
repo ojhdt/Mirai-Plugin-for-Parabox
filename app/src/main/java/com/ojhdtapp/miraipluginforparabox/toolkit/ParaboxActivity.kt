@@ -104,15 +104,17 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         }
     }
 
-    private fun sendRequestResponse(
+    fun sendRequestResponse(
         isSuccess: Boolean,
         metadata: ParaboxMetadata,
+        extra: Bundle = Bundle(),
         errorCode: Int? = null
     ) {
         if (isSuccess) {
             ParaboxResult.Success(
                 command = metadata.commandOrRequest,
                 timestamp = metadata.timestamp,
+                obj = extra,
             )
         } else {
             ParaboxResult.Fail(

@@ -5,7 +5,7 @@ import kotlinx.parcelize.Parcelize
 
 sealed class ServiceStatus(open val message: String) : Parcelable{
     @Parcelize data class Loading(override val message: String): ServiceStatus(message)
-    @Parcelize data class Pause(override val message: String, val timestamp : Long): ServiceStatus(message)
+    @Parcelize data class Pause(override val message: String): ServiceStatus(message)
     @Parcelize data class Error(override val message: String) : ServiceStatus(message)
     @Parcelize data class Running(override val message: String) : ServiceStatus(message)
     @Parcelize object Stop : ServiceStatus("")

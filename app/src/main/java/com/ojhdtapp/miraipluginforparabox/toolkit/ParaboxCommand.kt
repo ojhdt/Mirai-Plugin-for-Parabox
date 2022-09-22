@@ -22,6 +22,7 @@ object ParaboxKey {
     const val ERROR_TIMEOUT = 60
     const val ERROR_DISCONNECTED = 61
     const val ERROR_REPEATED_CALL = 62
+    const val ERROR_RESOURCE_NOT_FOUND = 63
 
     const val STATE_STOP = 70
     const val STATE_PAUSE = 71

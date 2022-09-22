@@ -2,6 +2,7 @@ package com.ojhdtapp.miraipluginforparabox
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Message
 import android.util.Log
@@ -51,7 +52,6 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     private lateinit var notificationUtil: NotificationUtilForActivity
     var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
-    private var listeningDeferred: CompletableDeferredWithTag<Long, String>? = null
 
     private val batteryUtil: BatteryUtil by lazy {
         BatteryUtil(this)
@@ -64,10 +64,69 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     }
 
     override fun onParaboxServiceStateChanged(state: Int, message: String) {
-
+        val serviceState = when (state) {
+            ParaboxKey.STATE_ERROR -> ServiceStatus.Error(message)
+            ParaboxKey.STATE_LOADING -> ServiceStatus.Loading(message)
+            ParaboxKey.STATE_PAUSE -> ServiceStatus.Pause(message)
+            ParaboxKey.STATE_STOP -> ServiceStatus.Stop
+            ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(message)
+            else -> ServiceStatus.Stop
+        }
+        viewModel.updateServiceStatusStateFlow(serviceState)
     }
 
     override fun customHandleMessage(msg: Message, metadata: ParaboxMetadata) {
+        val obj = msg.obj as Bundle
+        when (msg.what) {
+            ConnService.REQUEST_SOLVE_PIC_CAPTCHA -> {
+                val bm = obj.getParcelable<Bitmap>("bitmap")
+                if (bm == null) {
+                    sendRequestResponse(
+                        isSuccess = false,
+                        metadata = metadata,
+                        errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
+                    )
+                } else {
+                    viewModel.updateLoginResourceStateFlow(LoginResource.PicCaptcha(bm, metadata))
+                }
+            }
+
+            ConnService.REQUEST_SOLVE_SLIDER_CAPTCHA -> {
+                val url = obj.getString("url")
+                if (url == null) {
+                    sendRequestResponse(
+                        isSuccess = false,
+                        metadata = metadata,
+                        errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
+                    )
+                } else {
+                    viewModel.updateLoginResourceStateFlow(
+                        LoginResource.SliderCaptcha(
+                            url,
+                            metadata
+                        )
+                    )
+                }
+            }
+
+            ConnService.REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY -> {
+                val url = obj.getString("url")
+                if (url == null) {
+                    sendRequestResponse(
+                        isSuccess = false,
+                        metadata = metadata,
+                        errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
+                    )
+                } else {
+                    viewModel.updateLoginResourceStateFlow(
+                        LoginResource.UnsafeDeviceLoginVerify(
+                            url,
+                            metadata
+                        )
+                    )
+                }
+            }
+        }
     }
 
     @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterialNavigationApi::class)
@@ -154,28 +213,37 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
             is StatusPageEvent.OnServiceStart -> {
                 serviceStart()
             }
+
             is StatusPageEvent.OnServiceStop -> {
                 serviceStop()
             }
+
             is StatusPageEvent.OnServiceForceStop -> {
                 serviceForceStop()
             }
+
             is StatusPageEvent.OnRequestIgnoreBatteryOptimizations -> {
                 batteryUtil.ignoreBatteryOptimization()
             }
+
             is StatusPageEvent.OnLoginResourceConfirm -> {
-                Log.d(
-                    "parabox",
-                    "deferred:${listeningDeferred?.getCurrentTag()} now:${event.timestamp}"
+                sendRequestResponse(
+                    isSuccess = true,
+                    metadata = event.metadata,
+                    extra = Bundle().apply {
+                        putString("result", event.res)
+                    }
                 )
-                listeningDeferred?.complete(event.timestamp, event.res)
             }
+
             is StatusPageEvent.OnLaunchBrowser -> {
                 BrowserUtil.launchURL(this, event.url)
             }
+
             is StatusPageEvent.OnShowToast -> {
                 Toast.makeText(this, event.message, Toast.LENGTH_SHORT).show()
             }
+
             is StatusPageEvent.LaunchMainApp -> {
                 val pkg = "com.ojhdtapp.parabox"
                 packageManager.getLaunchIntentForPackage(pkg)?.let {
@@ -224,18 +292,18 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
 
     private fun serviceForceStop() {
         sendCommand(ParaboxKey.COMMAND_FORCE_STOP_SERVICE,
-        onResult = {
-            if (it is ParaboxResult.Fail) {
-                val errorMessage = when (it.errorCode) {
-                    ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                    ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                    ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                    else -> "未知错误"
+            onResult = {
+                if (it is ParaboxResult.Fail) {
+                    val errorMessage = when (it.errorCode) {
+                        ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                        ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                        ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                        else -> "未知错误"
+                    }
+                    viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
+                    notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
                 }
-                viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
-                notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
-            }
-        })
+            })
 
 //        viewModel.updateLoginResourceStateFlow(LoginResource.None)
 //        viewModel.updateServiceStatusStateFlow(ServiceStatus.Stop)

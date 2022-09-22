@@ -2,22 +2,23 @@ package com.ojhdtapp.miraipluginforparabox.domain.util
 
 import android.graphics.Bitmap
 import android.os.Parcelable
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxMetadata
 import kotlinx.android.parcel.Parcelize
 
-sealed class LoginResource(open val timestamp: Long) : Parcelable {
+sealed interface LoginResource : Parcelable {
     @Parcelize
-    object None : LoginResource(-1L)
+    object None : LoginResource
     @Parcelize
-    data class PicCaptcha(val captchaBitMap: Bitmap, override val timestamp: Long) :
-        LoginResource(timestamp)
+    data class PicCaptcha(val captchaBitMap: Bitmap, val metadata: ParaboxMetadata) :
+        LoginResource
 
     @Parcelize
-    data class SliderCaptcha(val url: String, override val timestamp: Long) :
-        LoginResource(timestamp)
+    data class SliderCaptcha(val url: String, val metadata: ParaboxMetadata) :
+        LoginResource
 
     @Parcelize
-    data class UnsafeDeviceLoginVerify(val url: String, override val timestamp: Long) :
-        LoginResource(timestamp)
+    data class UnsafeDeviceLoginVerify(val url: String, val metadata: ParaboxMetadata) :
+        LoginResource
 }
 
 object LoginResourceType {

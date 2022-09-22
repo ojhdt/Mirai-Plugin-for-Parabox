@@ -206,7 +206,7 @@ fun AnimatedVisibilityScope.StatusPage(
                                     onEvent(
                                         StatusPageEvent.OnLoginResourceConfirm(
                                             viewModel.picCaptchaValue.value,
-                                            loginResource.timestamp
+                                            (loginResource as LoginResource.PicCaptcha).metadata
                                         )
                                     )
                                 }) {
@@ -218,14 +218,14 @@ fun AnimatedVisibilityScope.StatusPage(
                             UnSafeWebView(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(300.dp)
+                                    .height(360.dp)
                                     .background(Color.Black),
                                 url = (loginResource as LoginResource.UnsafeDeviceLoginVerify).url,
                                 onConfirm = {
                                     onEvent(
                                         StatusPageEvent.OnLoginResourceConfirm(
                                             it,
-                                            loginResource.timestamp
+                                            (loginResource as LoginResource.UnsafeDeviceLoginVerify).metadata
                                         )
                                     )
                                 }
@@ -235,14 +235,14 @@ fun AnimatedVisibilityScope.StatusPage(
                             UnSafeWebView(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(300.dp)
+                                    .height(360.dp)
                                     .background(Color.Black),
                                 url = (loginResource as LoginResource.SliderCaptcha).url,
                                 onConfirm = {
                                     onEvent(
                                         StatusPageEvent.OnLoginResourceConfirm(
                                             it,
-                                            loginResource.timestamp
+                                            (loginResource as LoginResource.SliderCaptcha).metadata
                                         )
                                     )
                                 }

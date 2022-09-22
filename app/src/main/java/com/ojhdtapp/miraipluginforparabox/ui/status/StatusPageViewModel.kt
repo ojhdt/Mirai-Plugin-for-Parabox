@@ -72,6 +72,24 @@ class StatusPageViewModel @Inject constructor(
     private val _serviceStatusStateFlow = MutableStateFlow<ServiceStatus>(ServiceStatus.Stop)
     val serviceStatusStateFlow = _serviceStatusStateFlow.asStateFlow()
     fun updateServiceStatusStateFlow(value: ServiceStatus) {
+        when(value){
+            is ServiceStatus.Error, ServiceStatus.Stop -> {
+                setMainSwitchState(false)
+                setMainSwitchEnabledState(true)
+            }
+            is ServiceStatus.Running -> {
+                setMainSwitchState(true)
+                setMainSwitchEnabledState(true)
+            }
+            is ServiceStatus.Pause -> {
+                setMainSwitchState(true)
+                setMainSwitchEnabledState(false)
+            }
+            is ServiceStatus.Loading -> {
+                setMainSwitchState(true)
+                setMainSwitchEnabledState(false)
+            }
+        }
         _serviceStatusStateFlow.tryEmit(value)
     }
 
