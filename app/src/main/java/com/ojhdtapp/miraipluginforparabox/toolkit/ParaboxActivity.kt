@@ -60,7 +60,9 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                     val deferred = CompletableDeferredWithTag<Long, ParaboxResult>(timestamp)
                     deferredMap[timestamp] = deferred
                     coreSendCommand(timestamp, command, extra)
+                    Log.d("parabox", "command sent")
                     deferred.await().also {
+                        Log.d("parabox", "successfully complete")
                         onResult(it)
                     }
                 }
@@ -167,6 +169,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                     }).apply {
                     replyTo = client
                 }
+                Log.d("parabox", "send back to service")
                 paraboxService?.send(msg)
             }
         }
@@ -174,7 +177,6 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("parabox", "create")
         client = Messenger(ParaboxServiceHandler())
         paraboxServiceConnection = object : ServiceConnection {
             override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
@@ -194,6 +196,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
             val obj = msg.obj as Bundle
             when (msg.arg2) {
                 ParaboxKey.TYPE_REQUEST -> {
+                    Log.d("parabox", "request received")
                     val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
                     } else {
@@ -211,6 +214,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                             }
 
                             deferred.await().also {
+                                Log.d("parabox", "first deferred completed")
                                 val resObj = if (it is ParaboxResult.Success) {
                                     it.obj
                                 } else Bundle()
@@ -241,6 +245,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                         obj.getParcelable<ParaboxResult.Fail>("result")
                     }
                     result?.let {
+                        Log.d("parabox", "try complete second deferred")
                         deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
                     }
                 }

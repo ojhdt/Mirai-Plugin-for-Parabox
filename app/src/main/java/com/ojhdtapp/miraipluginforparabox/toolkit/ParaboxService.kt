@@ -2,6 +2,7 @@ package com.ojhdtapp.miraipluginforparabox.toolkit
 
 import android.content.Intent
 import android.os.*
+import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
@@ -111,6 +112,7 @@ abstract class ParaboxService : LifecycleService() {
         extra: Bundle = Bundle(),
         errorCode: Int? = null
     ) {
+        Log.d("parabox", "before try sending result")
         if (isSuccess) {
             ParaboxResult.Success(
                 command = metadata.commandOrRequest,
@@ -124,6 +126,7 @@ abstract class ParaboxService : LifecycleService() {
                 errorCode = errorCode!!
             )
         }.also {
+            Log.d("parabox", "try sending result")
             deferredMap[metadata.timestamp]?.complete(metadata.timestamp, it)
 //            coreSendCommandResponse(isSuccess, metadata, it)
         }
@@ -150,6 +153,7 @@ abstract class ParaboxService : LifecycleService() {
                     }).apply {
                     replyTo = paraboxMessenger
                 }
+                Log.d("parabox", "send back to activity")
                 clientMessenger?.send(msg)
             }
         }
@@ -170,6 +174,7 @@ abstract class ParaboxService : LifecycleService() {
                     deferredMap[timestamp] = deferred
                     coreSendRequest(timestamp, request, client, extra)
                     deferred.await().also {
+                        Log.d("parabox", "deferred complete successfully")
                         onResult(it)
                     }
                 }
@@ -227,6 +232,7 @@ abstract class ParaboxService : LifecycleService() {
                 replyTo = paraboxMessenger
             }
             targetClient.send(msg)
+            Log.d("parabox", "request sent")
         }
     }
 
@@ -247,6 +253,17 @@ abstract class ParaboxService : LifecycleService() {
 
     inner class CommandHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
+            // 客户端类型判断
+            when (msg.arg1) {
+                ParaboxKey.CLIENT_CONTROLLER -> {
+                    clientMessenger = msg.replyTo
+                }
+
+                ParaboxKey.CLIENT_MAIN_APP -> {
+                    mainAppMessenger = msg.replyTo
+                }
+            }
+
             val obj = msg.obj as Bundle
             val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
@@ -265,6 +282,7 @@ abstract class ParaboxService : LifecycleService() {
                             // 指令种类判断
                             when (msg.what) {
                                 ParaboxKey.COMMAND_START_SERVICE -> {
+                                    Log.d("parabox", "command receiced")
                                     startParabox(metadata)
                                 }
 
@@ -279,6 +297,7 @@ abstract class ParaboxService : LifecycleService() {
                                 else -> customHandleMessage(msg, metadata)
                             }
                             deferred.await().also {
+                                Log.d("parabox", "first deferred complete")
                                 val resObj = if (it is ParaboxResult.Success) {
                                     it.obj
                                 } else Bundle()
@@ -304,18 +323,9 @@ abstract class ParaboxService : LifecycleService() {
                         obj.getParcelable<ParaboxResult.Fail>("result")
                     }
                     result?.let {
+                        Log.d("parabox", "tr complete second deferred")
                         deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
                     }
-                }
-            }
-            // 客户端类型判断
-            when (msg.arg1) {
-                ParaboxKey.CLIENT_CONTROLLER -> {
-                    clientMessenger = msg.replyTo
-                }
-
-                ParaboxKey.CLIENT_MAIN_APP -> {
-                    mainAppMessenger = msg.replyTo
                 }
             }
         }

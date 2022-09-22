@@ -70,7 +70,7 @@ class ConnService : ParaboxService() {
     }
 
     override fun onStartParabox() {
-        updateServiceState(ParaboxKey.STATE_LOADING)
+        updateServiceState(ParaboxKey.STATE_LOADING, "正在进行身份验证")
         lifecycleScope.launch {
             try {
                 val secret = withContext(Dispatchers.IO) {
