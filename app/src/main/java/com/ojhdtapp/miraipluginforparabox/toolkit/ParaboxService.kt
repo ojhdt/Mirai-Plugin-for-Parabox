@@ -102,7 +102,8 @@ abstract class ParaboxService : LifecycleService() {
                 errorCode = errorCode!!
             )
         }.also {
-            coreSendCommandResponse(isSuccess, metadata, it)
+            deferredMap[metadata.timestamp]?.complete(metadata.timestamp, it)
+//            coreSendCommandResponse(isSuccess, metadata, it)
         }
     }
 
@@ -132,7 +133,13 @@ abstract class ParaboxService : LifecycleService() {
         }
     }
 
-    fun sendRequest(request: Int, client: Int, extra: Bundle = Bundle(), timeoutMillis: Long = 3000, onResult: (ParaboxResult) -> Unit) {
+    fun sendRequest(
+        request: Int,
+        client: Int,
+        extra: Bundle = Bundle(),
+        timeoutMillis: Long = 3000,
+        onResult: (ParaboxResult) -> Unit
+    ) {
         lifecycleScope.launch {
             val timestamp = System.currentTimeMillis()
             try {
@@ -165,11 +172,17 @@ abstract class ParaboxService : LifecycleService() {
             }
         }
     }
-    private fun coreSendRequest(timestamp: Long, request: Int, client: Int, extra: Bundle = Bundle()) {
-        val targetClient = when(client){
+
+    private fun coreSendRequest(
+        timestamp: Long,
+        request: Int,
+        client: Int,
+        extra: Bundle = Bundle()
+    ) {
+        val targetClient = when (client) {
             ParaboxKey.CLIENT_CONTROLLER -> clientMessenger
             ParaboxKey.CLIENT_MAIN_APP -> mainAppMessenger
-            else ->null
+            else -> null
         }
         if (targetClient == null) {
             deferredMap[timestamp]?.complete(
@@ -181,11 +194,13 @@ abstract class ParaboxService : LifecycleService() {
             )
         } else {
             val msg = Message.obtain(null, request, client, ParaboxKey.TYPE_REQUEST, extra.apply {
-                putParcelable("metadata", ParaboxMetadata(
-                    commandOrRequest = request,
-                    timestamp = timestamp,
-                    sender = ParaboxKey.CLIENT_SERVICE
-                ))
+                putParcelable(
+                    "metadata", ParaboxMetadata(
+                        commandOrRequest = request,
+                        timestamp = timestamp,
+                        sender = ParaboxKey.CLIENT_SERVICE
+                    )
+                )
             }).apply {
                 replyTo = paraboxMessenger
             }
@@ -212,9 +227,60 @@ abstract class ParaboxService : LifecycleService() {
         override fun handleMessage(msg: Message) {
             val obj = msg.obj as Bundle
             val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                obj.getParcelable("metadata", ParaboxMetadata::class.java)
+                obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
             } else {
-                obj.getParcelable<ParaboxMetadata>("metadata")
+                obj.getParcelable<ParaboxMetadata>("metadata")!!
+            }
+            // 对command添加deferred
+            when(msg.arg2){
+                ParaboxKey.TYPE_COMMAND -> {
+                    lifecycleScope.launch {
+                        try {
+                            val deferred =
+                                CompletableDeferredWithTag<Long, ParaboxResult>(metadata.timestamp)
+                            deferredMap[metadata.timestamp] = deferred
+
+                            // 指令种类判断
+                            when (msg.what) {
+                                ParaboxKey.COMMAND_START_SERVICE -> {
+                                    startParabox(metadata)
+                                }
+                                ParaboxKey.COMMAND_STOP_SERVICE -> {
+                                    stopParabox(metadata)
+                                }
+                                ParaboxKey.COMMAND_FORCE_STOP_SERVICE -> {
+                                    forceStopParabox(metadata)
+                                }
+                                else -> customHandleMessage(msg, metadata)
+                            }
+                            deferred.await().also {
+                                val resObj = if (it is ParaboxResult.Success) {
+                                    it.obj
+                                } else Bundle()
+                                coreSendCommandResponse(
+                                    it is ParaboxResult.Success,
+                                    metadata,
+                                    it,
+                                    resObj
+                                )
+                            }
+                        } catch (e: RemoteException) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+                ParaboxKey.TYPE_REQUEST -> {
+                    val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
+                    val isSuccess = obj.getBoolean("isSuccess")
+                    val result = if (isSuccess) {
+                        obj.getParcelable<ParaboxResult.Success>("result")
+                    } else {
+                        obj.getParcelable<ParaboxResult.Fail>("result")
+                    }
+                    result?.let {
+                        deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
+                    }
+                }
             }
             // 客户端类型判断
             when (msg.arg1) {
@@ -224,19 +290,6 @@ abstract class ParaboxService : LifecycleService() {
                 ParaboxKey.CLIENT_MAIN_APP -> {
                     mainAppMessenger = msg.replyTo
                 }
-            }
-            // 指令种类判断
-            when (msg.what) {
-                ParaboxKey.COMMAND_START_SERVICE -> {
-                    startParabox(metadata!!)
-                }
-                ParaboxKey.COMMAND_STOP_SERVICE -> {
-                    stopParabox(metadata!!)
-                }
-                ParaboxKey.COMMAND_FORCE_STOP_SERVICE -> {
-                    forceStopParabox(metadata!!)
-                }
-                else -> customHandleMessage(msg, metadata!!)
             }
         }
     }

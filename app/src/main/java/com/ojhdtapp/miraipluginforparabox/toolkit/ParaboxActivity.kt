@@ -15,6 +15,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
     abstract fun onParaboxServiceConnected()
     abstract fun onParaboxServiceDisconnected()
     abstract fun onParaboxServiceStateChanged(state: Int, message: String)
+    abstract fun customHandleMessage(msg: Message, metadata: ParaboxMetadata)
 
     var paraboxService: Messenger? = null
     private lateinit var client: Messenger
@@ -103,6 +104,54 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         }
     }
 
+    private fun sendRequestResponse(
+        isSuccess: Boolean,
+        metadata: ParaboxMetadata,
+        errorCode: Int? = null
+    ) {
+        if (isSuccess) {
+            ParaboxResult.Success(
+                command = metadata.commandOrRequest,
+                timestamp = metadata.timestamp,
+            )
+        } else {
+            ParaboxResult.Fail(
+                command = metadata.commandOrRequest,
+                timestamp = metadata.timestamp,
+                errorCode = errorCode!!
+            )
+        }.also {
+            deferredMap[metadata.timestamp]?.complete(metadata.timestamp, it)
+//            coreSendCommandResponse(isSuccess, metadata, it)
+        }
+    }
+
+    private fun coreSendRequestResponse(
+        isSuccess: Boolean,
+        metadata: ParaboxMetadata,
+        result: ParaboxResult,
+        extra: Bundle = Bundle()
+    ) {
+        when (metadata.sender) {
+            ParaboxKey.CLIENT_MAIN_APP -> {}
+            ParaboxKey.CLIENT_CONTROLLER -> {
+                val msg = Message.obtain(
+                    null,
+                    metadata.commandOrRequest,
+                    ParaboxKey.CLIENT_CONTROLLER,
+                    ParaboxKey.TYPE_REQUEST,
+                    extra.apply {
+                        putBoolean("isSuccess", isSuccess)
+                        putParcelable("metadata", metadata)
+                        putParcelable("result", result)
+                    }).apply {
+                    replyTo = client
+                }
+                paraboxService?.send(msg)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
         client = Messenger(ParaboxServiceHandler())
@@ -124,8 +173,46 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         override fun handleMessage(msg: Message) {
             val obj = msg.obj as Bundle
             when(msg.arg2){
+                ParaboxKey.TYPE_REQUEST -> {
+                    val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
+                    } else {
+                        obj.getParcelable<ParaboxMetadata>("metadata")!!
+                    }
+                    lifecycleScope.launch {
+                        try {
+                            val deferred =
+                                CompletableDeferredWithTag<Long, ParaboxResult>(metadata.timestamp)
+                            deferredMap[metadata.timestamp] = deferred
+
+                            // 指令种类判断
+                            when (msg.what) {
+                                else -> customHandleMessage(msg, metadata)
+                            }
+
+                            deferred.await().also {
+                                val resObj = if (it is ParaboxResult.Success) {
+                                    it.obj
+                                } else Bundle()
+                                coreSendRequestResponse(
+                                    it is ParaboxResult.Success,
+                                    metadata,
+                                    it,
+                                    resObj
+                                )
+                            }
+                        } catch (e: RemoteException) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
                 ParaboxKey.TYPE_COMMAND -> {
-                    val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
+                    val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
+                    } else {
+                        obj.getParcelable<ParaboxMetadata>("metadata")!!
+                    }
+                    val sendTimestamp = metadata.timestamp
                     val isSuccess = obj.getBoolean("isSuccess")
                     val result = if (isSuccess) {
                         obj.getParcelable<ParaboxResult.Success>("result")
