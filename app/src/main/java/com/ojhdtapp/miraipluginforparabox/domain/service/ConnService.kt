@@ -17,6 +17,10 @@ import com.ojhdtapp.miraipluginforparabox.data.local.entity.MiraiMessageEntity
 import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.*
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxKey
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxMetadata
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxResult
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -39,19 +43,184 @@ import net.mamoe.mirai.utils.BotConfiguration
 import net.mamoe.mirai.utils.DeviceInfo
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import net.mamoe.mirai.utils.LoginSolver
+import okhttp3.internal.wait
 import java.io.*
 import java.util.*
 import java.util.concurrent.Executors
 import javax.inject.Inject
+import kotlin.NoSuchElementException
 
 @AndroidEntryPoint
 
 class ConnService : ParaboxService() {
     @Inject
     lateinit var repository: MainRepository
+    lateinit var notificationUtil: NotificationUtilForService
+    private var bot: Bot? = null
+
     companion object {
+        // request code
+        const val REQUEST_SOLVE_PIC_CAPTCHA = 30
+        const val REQUEST_SOLVE_SLIDER_CAPTCHA = 31
+        const val REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY = 32
+
         init {
             System.loadLibrary("silkcodec")
         }
+    }
+
+    override fun onStartParabox() {
+        updateServiceState(ParaboxKey.STATE_LOADING)
+        lifecycleScope.launch {
+            try {
+                val secret = withContext(Dispatchers.IO) {
+                    repository.getSelectedAccount()
+                }
+                val mDeviceInfo = withContext(Dispatchers.IO) {
+                    repository.getDeviceInfo()
+                } ?: DeviceInfo.random()
+                val mLoginSolver = AndroidLoginSolver()
+                val isContactCacheEnabled =
+                    dataStore.data.first()[DataStoreKeys.CONTACT_CACHE] ?: false
+                val selectedProtocol =
+                    when (dataStore.data.first()[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone) {
+                        MiraiProtocol.Phone -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
+                        MiraiProtocol.Pad -> BotConfiguration.MiraiProtocol.ANDROID_PAD
+                        MiraiProtocol.Watch -> BotConfiguration.MiraiProtocol.ANDROID_WATCH
+                        MiraiProtocol.IPad -> BotConfiguration.MiraiProtocol.IPAD
+                        MiraiProtocol.MacOS -> BotConfiguration.MiraiProtocol.MACOS
+                        else -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
+                    }
+                if (secret == null) {
+                    updateServiceState(ParaboxKey.STATE_ERROR, "未选择登陆账户")
+                    return@launch
+                }
+                bot = BotFactory.newBot(secret.account, secret.password) {
+                    loginSolver = mLoginSolver
+                    cacheDir = getExternalFilesDir("cache")!!.absoluteFile
+                    protocol = selectedProtocol
+                    if (isContactCacheEnabled) enableContactCache()
+                    deviceInfo = { _ -> mDeviceInfo }
+                }.also {
+                    it.login()
+                    val version = MIRAI_CORE_VERSION
+                    updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $version")
+                    notificationUtil.updateForegroundServiceNotification("服务正常运行", "Mirai Core - $version")
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            } catch (e: NoSuchElementException) {
+                e.printStackTrace()
+            } catch (e: LoginFailedException) {
+                e.printStackTrace()
+            } catch (e: IllegalStateException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    override fun onStopParabox() {
+        bot?.close()
+        bot = null
+        updateServiceState(ParaboxKey.STATE_STOP)
+        notificationUtil.stopForegroundService()
+    }
+
+    override fun onStateUpdate() {
+    }
+
+    override fun customHandleMessage(msg: Message, metadata: ParaboxMetadata) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onSendMessage() {
+        TODO("Not yet implemented")
+    }
+
+    inner class AndroidLoginSolver() : LoginSolver() {
+
+        override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String {
+            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+            val deferred = CompletableDeferred<String>()
+            val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
+            sendRequest(
+                request = ConnService.REQUEST_SOLVE_PIC_CAPTCHA,
+                client = ParaboxKey.CLIENT_CONTROLLER,
+                extra = Bundle().apply {
+                    putParcelable("bitmap", bm)
+                },
+                timeoutMillis = 6000,
+                onResult = {
+                    if (it is ParaboxResult.Success) {
+                        updateServiceState(ParaboxKey.STATE_LOADING, "身份验证完成")
+                        it.obj.getString("result").also {
+                            if (it != null) deferred.complete(it)
+                            else throw NoSuchElementException("result not found")
+                        }
+                    } else {
+                        deferred.completeExceptionally(IOException("result transmission failed"))
+                    }
+                }
+            )
+            return deferred.await()
+        }
+
+        override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
+            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+            val deferred = CompletableDeferred<String>()
+            sendRequest(
+                request = ConnService.REQUEST_SOLVE_SLIDER_CAPTCHA,
+                client = ParaboxKey.CLIENT_CONTROLLER,
+                extra = Bundle().apply {
+                    putString("url", url)
+                },
+                timeoutMillis = 6000,
+                onResult = {
+                    if (it is ParaboxResult.Success) {
+                        updateServiceState(ParaboxKey.STATE_LOADING, "身份验证完成")
+                        it.obj.getString("result").also {
+                            if (it != null) deferred.complete(it)
+                            else throw NoSuchElementException("result not found")
+                        }
+                    } else {
+                        deferred.completeExceptionally(IOException("result transmission failed"))
+                    }
+                }
+            )
+            return deferred.await()
+        }
+
+        override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
+            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+            val deferred = CompletableDeferred<String>()
+            sendRequest(
+                request = ConnService.REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY,
+                client = ParaboxKey.CLIENT_CONTROLLER,
+                extra = Bundle().apply {
+                    putString("url", url)
+                },
+                timeoutMillis = 6000,
+                onResult = {
+                    if (it is ParaboxResult.Success) {
+                        updateServiceState(ParaboxKey.STATE_LOADING, "身份验证完成")
+                        it.obj.getString("result").also {
+                            if (it != null) deferred.complete(it)
+                            else throw NoSuchElementException("result not found")
+                        }
+                    } else {
+                        deferred.completeExceptionally(IOException("result transmission failed"))
+                    }
+                }
+            )
+            return deferred.await()
+        }
+
+        override val isSliderCaptchaSupported: Boolean
+            get() = true
+    }
+
+    override fun onCreate() {
+        notificationUtil = NotificationUtilForService(this)
+        super.onCreate()
     }
 }

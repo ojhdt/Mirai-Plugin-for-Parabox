@@ -54,7 +54,7 @@ abstract class ParaboxService : LifecycleService() {
         }
     }
 
-    private fun updateServiceState(state: Int, message: String? = null) {
+    fun updateServiceState(state: Int, message: String? = null) {
         serviceState = state
         onStateUpdate()
         sendNotification(ParaboxKey.NOTIFICATION_STATE_UPDATE, Bundle().apply {

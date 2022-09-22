@@ -3,6 +3,7 @@ package com.ojhdtapp.miraipluginforparabox
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Message
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -22,8 +23,13 @@ import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.ojhdtapp.miraipluginforparabox.core.util.*
+import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxActivity
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxKey
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxMetadata
+import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxResult
 import com.ojhdtapp.miraipluginforparabox.ui.NavGraphs
 import com.ojhdtapp.miraipluginforparabox.ui.destinations.StatusPageDestination
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
@@ -41,7 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     private lateinit var notificationUtil: NotificationUtilForActivity
     var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
@@ -51,10 +57,26 @@ class MainActivity : ComponentActivity() {
         BatteryUtil(this)
     }
 
+    override fun onParaboxServiceConnected() {
+    }
+
+    override fun onParaboxServiceDisconnected() {
+    }
+
+    override fun onParaboxServiceStateChanged(state: Int, message: String) {
+
+    }
+
+    override fun customHandleMessage(msg: Message, metadata: ParaboxMetadata) {
+    }
+
     @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterialNavigationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         notificationUtil = NotificationUtilForActivity(this)
+
+        // bind Service
+        bindParaboxService()
 
         checkMainAppInstallation()
 //        checkMainAppOnBackStack()
@@ -165,130 +187,59 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun errorOccurred(status: ServiceStatus? = null) {
-        status?.let {
-            if (it is ServiceStatus.Error) {
-                notificationUtil.sendNotification("启动服务时发生错误", it.message)
-            }
-        }
-        listeningDeferred?.cancel()
-        serviceStartJob?.cancel()
-        viewModel.setMainSwitchEnabledState(true)
-        viewModel.setMainSwitchState(false)
-        viewModel.updateLoginResourceStateFlow(LoginResource.None)
-        try {
-            lifecycleScope.launch {
-                connector.miraiStop()
-            }
-        } catch (e: java.lang.Exception) {
-            e.printStackTrace()
-        }
-        connector.initializeAllState()
-        Log.d("parabox", "cancel")
-    }
-
     private fun serviceStart() {
-        viewModel.setMainSwitchEnabledState(false)
         notificationUtil.cancelAll()
-        serviceStartJob = lifecycleScope.launch {
-            val isTimeOutDisabled =
-                dataStore.data.first()[DataStoreKeys.CANCEL_TIMEOUT] ?: false
-            try {
-                withTimeout(if (isTimeOutDisabled) 1800000 else 1000) {
-                    connector.startAndBind()
-                }.also {
-                    viewModel.updateServiceStatusStateFlow(it)
-                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                        errorOccurred(it)
-                        return@launch
+        sendCommand(
+            command = ParaboxKey.COMMAND_START_SERVICE,
+            onResult = {
+                if (it is ParaboxResult.Fail) {
+                    val errorMessage = when (it.errorCode) {
+                        ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                        ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                        ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                        else -> "未知错误"
                     }
+                    viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
+                    notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
                 }
-                withTimeout(if (isTimeOutDisabled) 1800000 else 1000) {
-                    connector.miraiStart()
-                }.also {
-                    viewModel.updateServiceStatusStateFlow(it)
-                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                        errorOccurred(it)
-                        return@launch
-                    }
-                }
-                withTimeout(if (isTimeOutDisabled) 1800000 else 30000) { connector.miraiLogin() }.also {
-                    viewModel.updateServiceStatusStateFlow(it)
-                    if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                        errorOccurred(it)
-                        return@launch
-                    }
-                    var temp = it
-                    while (temp is ServiceStatus.Pause) {
-                        val newTimestamp = temp.timestamp
-                        listeningDeferred = CompletableDeferredWithTag(newTimestamp)
-                        withTimeout(if (isTimeOutDisabled) 1800000 else 60000) {
-                            connector.submitVerificationResult(
-                                listeningDeferred!!.await()
-                            )
-                        }.also {
-                            viewModel.updateServiceStatusStateFlow(it)
-                            if (it is ServiceStatus.Error || it is ServiceStatus.Stop) {
-                                errorOccurred(it)
-                                return@launch
-                            } else if (it is ServiceStatus.Pause) temp = it
-                        }
-                    }
-//                else if (it is ServiceStatus.Pause) {
-//                    val timestampFromServer = it.timestamp
-//                    listeningDeferred = CompletableDeferredWithTag(timestampFromServer)
-//                    connector.submitVerificationResult(listeningDeferred!!.await()).also {
-//                        viewModel.updateServiceStatusStateFlow(it)
-//                        if (it is ServiceStatus.Error || it is ServiceStatus.Stop) cancel()
-//                    }
-//                }
-                }
-                viewModel.setMainSwitchState(true)
-                viewModel.setMainSwitchEnabledState(true)
-            } catch (e: TimeoutCancellationException) {
-                val status = ServiceStatus.Error("操作超时")
-                viewModel.updateServiceStatusStateFlow(status)
-                errorOccurred(status)
-                return@launch
             }
-        }
+        )
     }
 
     private fun serviceStop() {
-        viewModel.setMainSwitchEnabledState(false)
-        lifecycleScope.launch {
-            val isTimeOutDisabled =
-                dataStore.data.first()[DataStoreKeys.CANCEL_TIMEOUT] ?: false
-            try {
-                withTimeout(if (isTimeOutDisabled) 1800000 else 1000) { connector.miraiStop() }.also {
-                    viewModel.updateServiceStatusStateFlow(it)
+        sendCommand(ParaboxKey.COMMAND_STOP_SERVICE,
+            onResult = {
+                if (it is ParaboxResult.Fail) {
+                    val errorMessage = when (it.errorCode) {
+                        ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                        ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                        ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                        else -> "未知错误"
+                    }
+                    viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
+                    notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
                 }
-            } catch (e: TimeoutCancellationException) {
-                viewModel.updateServiceStatusStateFlow(ServiceStatus.Error("服务响应超时，请手动检查服务状态"))
-                notificationUtil.sendNotification("与服务通信时发生错误", "服务响应超时，请手动检查服务状态")
-            } finally {
-                listeningDeferred?.cancel()
-                serviceStartJob?.cancel()
-                viewModel.setMainSwitchEnabledState(true)
-                viewModel.setMainSwitchState(false)
-            }
-        }
+            })
     }
 
     private fun serviceForceStop() {
-        connector.miraiForceStop()
-        listeningDeferred?.cancel()
-        serviceStartJob?.cancel()
-        viewModel.updateLoginResourceStateFlow(LoginResource.None)
-        viewModel.updateServiceStatusStateFlow(ServiceStatus.Stop)
-        viewModel.setMainSwitchEnabledState(true)
-        viewModel.setMainSwitchState(false)
-    }
+        sendCommand(ParaboxKey.COMMAND_FORCE_STOP_SERVICE,
+        onResult = {
+            if (it is ParaboxResult.Fail) {
+                val errorMessage = when (it.errorCode) {
+                    ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                    ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                    ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                    else -> "未知错误"
+                }
+                viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
+                notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
+            }
+        })
 
-    companion object{
-        init {
-            System.loadLibrary("silkcodec")
-        }
+//        viewModel.updateLoginResourceStateFlow(LoginResource.None)
+//        viewModel.updateServiceStatusStateFlow(ServiceStatus.Stop)
+//        viewModel.setMainSwitchEnabledState(true)
+//        viewModel.setMainSwitchState(false)
     }
-
 }
