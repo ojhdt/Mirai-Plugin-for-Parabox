@@ -4,14 +4,17 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.*
+import android.util.Log
+import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompatActivity() {
+abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : ComponentActivity() {
     abstract fun onParaboxServiceConnected()
     abstract fun onParaboxServiceDisconnected()
     abstract fun onParaboxServiceStateChanged(state: Int, message: String)
@@ -27,9 +30,12 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
     推荐于onStart运行
      */
     fun bindParaboxService() {
-        val intent = Intent(this, serviceClass)
-        startService(intent)
-        bindService(intent, paraboxServiceConnection, BIND_AUTO_CREATE)
+            val intent = Intent(this, serviceClass)
+            startService(intent)
+            bindService(
+                intent,
+                paraboxServiceConnection, BIND_AUTO_CREATE
+            )
     }
 
     /*/
@@ -37,11 +43,16 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
      */
     fun stopParaboxService() {
         if (paraboxService != null) {
-            unbindService(paraboxServiceConnection)
+            paraboxServiceConnection?.let { unbindService(it) }
         }
     }
 
-    fun sendCommand(command: Int, extra: Bundle = Bundle(), timeoutMillis: Long = 3000, onResult: (ParaboxResult) -> Unit) {
+    fun sendCommand(
+        command: Int,
+        extra: Bundle = Bundle(),
+        timeoutMillis: Long = 3000,
+        onResult: (ParaboxResult) -> Unit
+    ) {
         lifecycleScope.launch {
             val timestamp = System.currentTimeMillis()
             try {
@@ -91,13 +102,20 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
                 )
             )
         } else {
-            val msg = Message.obtain(null, command, ParaboxKey.CLIENT_CONTROLLER, ParaboxKey.TYPE_COMMAND, extra.apply {
-                putParcelable("metadata", ParaboxMetadata(
-                    commandOrRequest = command,
-                    timestamp = timestamp,
-                    sender = ParaboxKey.CLIENT_CONTROLLER
-                ))
-            }).apply {
+            val msg = Message.obtain(
+                null,
+                command,
+                ParaboxKey.CLIENT_CONTROLLER,
+                ParaboxKey.TYPE_COMMAND,
+                extra.apply {
+                    putParcelable(
+                        "metadata", ParaboxMetadata(
+                            commandOrRequest = command,
+                            timestamp = timestamp,
+                            sender = ParaboxKey.CLIENT_CONTROLLER
+                        )
+                    )
+                }).apply {
                 replyTo = client
             }
             paraboxService!!.send(msg)
@@ -154,8 +172,9 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
-        super.onCreate(savedInstanceState, persistentState)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Log.d("parabox", "create")
         client = Messenger(ParaboxServiceHandler())
         paraboxServiceConnection = object : ServiceConnection {
             override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
@@ -167,14 +186,13 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
                 paraboxService = null
                 onParaboxServiceDisconnected()
             }
-
         }
     }
 
     inner class ParaboxServiceHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             val obj = msg.obj as Bundle
-            when(msg.arg2){
+            when (msg.arg2) {
                 ParaboxKey.TYPE_REQUEST -> {
                     val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
@@ -208,6 +226,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
                         }
                     }
                 }
+
                 ParaboxKey.TYPE_COMMAND -> {
                     val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
@@ -225,8 +244,9 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : AppCompa
                         deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
                     }
                 }
+
                 ParaboxKey.TYPE_NOTIFICATION -> {
-                    when(msg.what){
+                    when (msg.what) {
                         ParaboxKey.NOTIFICATION_STATE_UPDATE -> {
                             val state = obj.getInt("state", ParaboxKey.STATE_ERROR)
                             val message = obj.getString("message", "")

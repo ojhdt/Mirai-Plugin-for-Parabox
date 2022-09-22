@@ -51,7 +51,6 @@ import javax.inject.Inject
 import kotlin.NoSuchElementException
 
 @AndroidEntryPoint
-
 class ConnService : ParaboxService() {
     @Inject
     lateinit var repository: MainRepository
@@ -59,6 +58,7 @@ class ConnService : ParaboxService() {
     private var bot: Bot? = null
 
     companion object {
+        var connectionType = 0
         // request code
         const val REQUEST_SOLVE_PIC_CAPTCHA = 30
         const val REQUEST_SOLVE_SLIDER_CAPTCHA = 31
@@ -221,6 +221,10 @@ class ConnService : ParaboxService() {
 
     override fun onCreate() {
         notificationUtil = NotificationUtilForService(this)
+        connectionType = packageManager.getApplicationInfo(
+            this@ConnService.packageName,
+            PackageManager.GET_META_DATA
+        ).metaData.getInt("connection_type")
         super.onCreate()
     }
 }

@@ -5,10 +5,12 @@ import android.os.*
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
+@AndroidEntryPoint
 abstract class ParaboxService : LifecycleService() {
     var serviceState = ParaboxKey.STATE_STOP
     lateinit var paraboxMessenger: Messenger

@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Message
+import android.os.PersistableBundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -46,11 +47,12 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlin.properties.Delegates
 
 @AndroidEntryPoint
 class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
+
     private lateinit var notificationUtil: NotificationUtilForActivity
-    var serviceStartJob: Job? = null
     private val viewModel: StatusPageViewModel by viewModels()
 
     private val batteryUtil: BatteryUtil by lazy {
@@ -134,9 +136,6 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
         super.onCreate(savedInstanceState)
         notificationUtil = NotificationUtilForActivity(this)
 
-        // bind Service
-        bindParaboxService()
-
         checkMainAppInstallation()
 //        checkMainAppOnBackStack()
 
@@ -180,6 +179,18 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // bind Service
+        bindParaboxService()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // stop service
+        stopParaboxService()
     }
 
     override fun onNewIntent(intent: Intent?) {
