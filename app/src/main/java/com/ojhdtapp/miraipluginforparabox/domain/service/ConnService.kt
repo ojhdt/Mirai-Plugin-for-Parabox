@@ -44,6 +44,7 @@ import net.mamoe.mirai.utils.DeviceInfo
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import net.mamoe.mirai.utils.LoginSolver
 import okhttp3.internal.wait
+import xyz.cssxsh.mirai.device.MiraiDeviceGenerator
 import java.io.*
 import java.util.*
 import java.util.concurrent.Executors
@@ -76,9 +77,9 @@ class ConnService : ParaboxService() {
                 val secret = withContext(Dispatchers.IO) {
                     repository.getSelectedAccount()
                 }
-                val mDeviceInfo = withContext(Dispatchers.IO) {
-                    repository.getDeviceInfo()
-                } ?: DeviceInfo.random()
+//                val mDeviceInfo = withContext(Dispatchers.IO) {
+//                    repository.getDeviceInfo()
+//                } ?: DeviceInfo.random()
                 val mLoginSolver = AndroidLoginSolver()
                 val isContactCacheEnabled =
                     dataStore.data.first()[DataStoreKeys.CONTACT_CACHE] ?: false
@@ -100,7 +101,7 @@ class ConnService : ParaboxService() {
                     cacheDir = getExternalFilesDir("cache")!!.absoluteFile
                     protocol = selectedProtocol
                     if (isContactCacheEnabled) enableContactCache()
-                    deviceInfo = { _ -> mDeviceInfo }
+                    deviceInfo = MiraiDeviceGenerator()::load
                 }.also {
                     it.login()
                     val version = MIRAI_CORE_VERSION

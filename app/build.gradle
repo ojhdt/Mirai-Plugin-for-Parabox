@@ -130,6 +130,7 @@ dependencies {
 
     // Mirai
     implementation 'net.mamoe:mirai-core:2.12.1'
+    implementation 'xyz.cssxsh.mirai:mirai-device-generator:1.1.1'
 
     // Silk
 //    implementation 'io.github.kasukusakura:silk-codec:0.0.5'
