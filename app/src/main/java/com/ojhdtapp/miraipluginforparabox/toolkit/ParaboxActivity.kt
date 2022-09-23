@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -24,18 +25,18 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
     private lateinit var client: Messenger
     private lateinit var paraboxServiceConnection: ServiceConnection
 
-    var deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxResult>>()
+    var deferredMap = mutableMapOf<Long, CompletableDeferred<ParaboxResult>>()
 
     /*/
     推荐于onStart运行
      */
     fun bindParaboxService() {
-            val intent = Intent(this, serviceClass)
-            startService(intent)
-            bindService(
-                intent,
-                paraboxServiceConnection, BIND_AUTO_CREATE
-            )
+        val intent = Intent(this, serviceClass)
+        startService(intent)
+        bindService(
+            intent,
+            paraboxServiceConnection, BIND_AUTO_CREATE
+        )
     }
 
     /*/
@@ -57,7 +58,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
             val timestamp = System.currentTimeMillis()
             try {
                 withTimeout(timeoutMillis) {
-                    val deferred = CompletableDeferredWithTag<Long, ParaboxResult>(timestamp)
+                    val deferred = CompletableDeferred<ParaboxResult>()
                     deferredMap[timestamp] = deferred
                     coreSendCommand(timestamp, command, extra)
                     Log.d("parabox", "command sent")
@@ -97,7 +98,6 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
     private fun coreSendCommand(timestamp: Long, command: Int, extra: Bundle = Bundle()) {
         if (paraboxService == null) {
             deferredMap[timestamp]?.complete(
-                timestamp,
                 ParaboxResult.Fail(
                     command, timestamp,
                     ParaboxKey.ERROR_DISCONNECTED
@@ -143,7 +143,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                 errorCode = errorCode!!
             )
         }.also {
-            deferredMap[metadata.timestamp]?.complete(metadata.timestamp, it)
+            deferredMap[metadata.timestamp]?.complete(it)
 //            coreSendCommandResponse(isSuccess, metadata, it)
         }
     }
@@ -154,25 +154,21 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
         result: ParaboxResult,
         extra: Bundle = Bundle()
     ) {
-        when (metadata.sender) {
-            ParaboxKey.CLIENT_MAIN_APP -> {}
-            ParaboxKey.CLIENT_CONTROLLER -> {
-                val msg = Message.obtain(
-                    null,
-                    metadata.commandOrRequest,
-                    ParaboxKey.CLIENT_CONTROLLER,
-                    ParaboxKey.TYPE_REQUEST,
-                    extra.apply {
-                        putBoolean("isSuccess", isSuccess)
-                        putParcelable("metadata", metadata)
-                        putParcelable("result", result)
-                    }).apply {
-                    replyTo = client
-                }
-                Log.d("parabox", "send back to service")
-                paraboxService?.send(msg)
-            }
+        val msg = Message.obtain(
+            null,
+            metadata.commandOrRequest,
+            ParaboxKey.CLIENT_CONTROLLER,
+            ParaboxKey.TYPE_REQUEST,
+            extra.apply {
+                putBoolean("isSuccess", isSuccess)
+                putParcelable("metadata", metadata)
+                putParcelable("result", result)
+            }).apply {
+            replyTo = client
         }
+        Log.d("parabox", "send back to service")
+        paraboxService?.send(msg)
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -205,7 +201,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                     lifecycleScope.launch {
                         try {
                             val deferred =
-                                CompletableDeferredWithTag<Long, ParaboxResult>(metadata.timestamp)
+                                CompletableDeferred<ParaboxResult>()
                             deferredMap[metadata.timestamp] = deferred
 
                             // 指令种类判断
@@ -246,7 +242,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                     }
                     result?.let {
                         Log.d("parabox", "try complete second deferred")
-                        deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
+                        deferredMap[sendTimestamp]?.complete(it)
                     }
                 }
 

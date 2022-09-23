@@ -213,9 +213,18 @@ class ConnService : ParaboxService() {
         TODO("Not yet implemented")
     }
 
-    override fun onSendMessage() {
+    override fun onSendMessage(dto: SendMessageDto): Boolean {
         TODO("Not yet implemented")
     }
+
+    override fun onRecallMessage(messageId: Long): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun onRefresh() {
+        TODO("Not yet implemented")
+    }
+
 
     inner class AndroidLoginSolver() : LoginSolver() {
 

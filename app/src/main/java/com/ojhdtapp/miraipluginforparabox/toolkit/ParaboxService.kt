@@ -9,6 +9,7 @@ import com.ojhdtapp.messagedto.ReceiveMessageDto
 import com.ojhdtapp.messagedto.SendMessageDto
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -20,7 +21,7 @@ abstract class ParaboxService : LifecycleService() {
     private var clientMessenger: Messenger? = null
     private var mainAppMessenger: Messenger? = null
 
-    val deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxResult>>()
+    val deferredMap = mutableMapOf<Long, CompletableDeferred<ParaboxResult>>()
     val messageUnreceivedMap = mutableMapOf<Long, ReceiveMessageDto>()
 
     abstract fun onStartParabox()
@@ -28,7 +29,7 @@ abstract class ParaboxService : LifecycleService() {
     abstract fun onStateUpdate()
     abstract fun customHandleMessage(msg: Message, metadata: ParaboxMetadata)
     abstract fun onSendMessage(dto: SendMessageDto): Boolean
-    abstract fun onRecallMessage(dto: SendMessageDto): Boolean
+    abstract fun onRecallMessage(messageId: Long): Boolean
     abstract fun onRefresh()
     fun startParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_STOP, ParaboxKey.STATE_ERROR)) {
@@ -146,9 +147,9 @@ abstract class ParaboxService : LifecycleService() {
         }
     }
 
-    private fun recallMessage(metadata: ParaboxMetadata, dto: SendMessageDto) {
+    private fun recallMessage(metadata: ParaboxMetadata, messageId: Long) {
         if (serviceState == ParaboxKey.STATE_RUNNING) {
-            if (onRecallMessage(dto)) {
+            if (onRecallMessage(messageId)) {
                 // Success
                 sendCommandResponse(
                     isSuccess = true,
@@ -201,7 +202,7 @@ abstract class ParaboxService : LifecycleService() {
             )
         }.also {
             Log.d("parabox", "try sending result")
-            deferredMap[metadata.timestamp]?.complete(metadata.timestamp, it)
+            deferredMap[metadata.timestamp]?.complete(it)
 //            coreSendCommandResponse(isSuccess, metadata, it)
         }
     }
@@ -244,7 +245,7 @@ abstract class ParaboxService : LifecycleService() {
             val timestamp = System.currentTimeMillis()
             try {
                 withTimeout(timeoutMillis) {
-                    val deferred = CompletableDeferredWithTag<Long, ParaboxResult>(timestamp)
+                    val deferred = CompletableDeferred<ParaboxResult>()
                     deferredMap[timestamp] = deferred
                     coreSendRequest(timestamp, request, client, extra)
                     deferred.await().also {
@@ -287,7 +288,6 @@ abstract class ParaboxService : LifecycleService() {
         }
         if (targetClient == null) {
             deferredMap[timestamp]?.complete(
-                timestamp,
                 ParaboxResult.Fail(
                     request, timestamp,
                     ParaboxKey.ERROR_DISCONNECTED
@@ -350,7 +350,7 @@ abstract class ParaboxService : LifecycleService() {
                     lifecycleScope.launch {
                         try {
                             val deferred =
-                                CompletableDeferredWithTag<Long, ParaboxResult>(metadata.timestamp)
+                                CompletableDeferred<ParaboxResult>()
                             deferredMap[metadata.timestamp] = deferred
 
                             // 指令种类判断
@@ -382,15 +382,15 @@ abstract class ParaboxService : LifecycleService() {
                                 }
 
                                 ParaboxKey.COMMAND_RECALL_MESSAGE -> {
-                                    val dto = obj.getParcelable<SendMessageDto>("dto")
-                                    if (dto == null) {
+                                    val messageId = obj.getLong("messageId")
+                                    if (messageId == null) {
                                         sendCommandResponse(
                                             isSuccess = false,
                                             metadata = metadata,
                                             errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
                                         )
                                     } else {
-                                        recallMessage(metadata, dto)
+                                        recallMessage(metadata, messageId)
                                     }
                                 }
 
@@ -428,7 +428,7 @@ abstract class ParaboxService : LifecycleService() {
                     }
                     result?.let {
                         Log.d("parabox", "tr complete second deferred")
-                        deferredMap[sendTimestamp]?.complete(sendTimestamp, it)
+                        deferredMap[sendTimestamp]?.complete(it)
                     }
                 }
             }
