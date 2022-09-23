@@ -267,12 +267,14 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     }
 
     private fun serviceStart() {
+        viewModel.updateServiceStatusStateFlow(ServiceStatus.Running("正在建立与服务的连接"))
         notificationUtil.cancelAll()
         sendCommand(
             command = ParaboxKey.COMMAND_START_SERVICE,
             onResult = {
                 if (it is ParaboxResult.Fail) {
                     val errorMessage = when (it.errorCode) {
+                        ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "资源丢失"
                         ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
                         ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
                         ParaboxKey.ERROR_TIMEOUT -> "操作超时"
