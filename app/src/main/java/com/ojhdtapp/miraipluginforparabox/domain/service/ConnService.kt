@@ -62,8 +62,12 @@ import kotlin.NoSuchElementException
 class ConnService : ParaboxService() {
     @Inject
     lateinit var repository: MainRepository
+
+    @Inject
+    lateinit var downloadService: FileDownloadService
     lateinit var notificationUtil: NotificationUtilForService
     private var bot: Bot? = null
+    private var receiptMap = mutableMapOf<Long, MessageReceipt<Contact>>()
 
     companion object {
         var connectionType = 0
@@ -83,30 +87,134 @@ class ConnService : ParaboxService() {
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<MessageEvent> { event ->
             when (event) {
                 is GroupMessageEvent -> {
+                    val messageContents = event.message.toMessageContentList(
+                        context = this@ConnService,
+                        downloadService = downloadService,
+                        group = event.group,
+                        bot = bot,
+                        repository = repository
+                    )
+                    val messageId = getMessageId(event.message.ids)
+                    messageId?.let {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            repository.insertMiraiMessage(
+                                MiraiMessageEntity(
+                                    it,
+                                    event.message.serializeToMiraiCode(),
+                                    event.message.serializeToJsonString()
+                                )
+                            )
+                        }
+                    }
 
+                    val senderProfile = Profile(
+                        name = event.senderName,
+                        avatar = event.sender.avatarUrl,
+                        id = event.sender.id
+                    )
+                    val groupProfile = Profile(
+                        name = event.group.name,
+                        avatar = event.group.avatarUrl,
+                        id = event.subject.id
+                    )
+                    val pluginConnection = PluginConnection(
+                        connectionType = connectionType,
+                        sendTargetType = SendTargetType.GROUP,
+                        id = event.subject.id
+                    )
+                    val dto = ReceiveMessageDto(
+                        contents = messageContents,
+                        profile = senderProfile,
+                        subjectProfile = groupProfile,
+                        timestamp = "${event.time}000".toLong(),
+                        messageId = messageId,
+                        pluginConnection = pluginConnection
+                    )
+                    receiveMessage(dto)
                 }
 
                 is FriendMessageEvent -> {
+                    val messageContents =
+                        event.message.toMessageContentList(
+                            context = this@ConnService,
+                            downloadService = downloadService,
+                            bot = bot,
+                            repository = repository
+                        )
+                    val messageId = getMessageId(event.message.ids)
+                    messageId?.let {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            repository.insertMiraiMessage(
+                                MiraiMessageEntity(
+                                    it,
+                                    event.message.serializeToMiraiCode(),
+                                    event.message.serializeToJsonString()
+                                )
+                            )
 
+                        }
+                    }
+                    val profile = Profile(
+                        name = event.senderName,
+                        avatar = event.sender.avatarUrl,
+                        id = event.subject.id
+                    )
+                    val pluginConnection = PluginConnection(
+                        connectionType = connectionType,
+                        sendTargetType = SendTargetType.USER,
+                        id = event.subject.id
+                    )
+                    val dto = ReceiveMessageDto(
+                        contents = messageContents,
+                        profile = profile,
+                        subjectProfile = profile,
+                        timestamp = "${event.time}000".toLong(),
+                        messageId = messageId,
+                        pluginConnection = pluginConnection
+                    )
+                    receiveMessage(dto)
                 }
 
                 else -> {
+                    val messageContents =
+                        event.message.toMessageContentList(
+                            context = this@ConnService,
+                            downloadService = downloadService,
+                            bot = bot,
+                            repository = repository
+                        )
+                    val messageId = getMessageId(event.message.ids)
+                    messageId?.let {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            repository.insertMiraiMessage(
+                                MiraiMessageEntity(
+                                    it,
+                                    event.message.serializeToMiraiCode(),
+                                    event.message.serializeToJsonString()
+                                )
+                            )
 
-                }
-            }
-        }
-        GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<MessageEvent> { event ->
-            when (event) {
-                is GroupMessageEvent -> {
-
-                }
-
-                is FriendMessageEvent -> {
-
-                }
-
-                else -> {
-
+                        }
+                    }
+                    val profile = Profile(
+                        name = event.senderName,
+                        avatar = event.sender.avatarUrl,
+                        id = event.subject.id
+                    )
+                    val pluginConnection = PluginConnection(
+                        connectionType = connectionType,
+                        sendTargetType = SendTargetType.USER,
+                        id = event.subject.id
+                    )
+                    val dto = ReceiveMessageDto(
+                        contents = messageContents,
+                        profile = profile,
+                        subjectProfile = profile,
+                        timestamp = "${event.time}000".toLong(),
+                        messageId = messageId,
+                        pluginConnection = pluginConnection
+                    )
+                    receiveMessage(dto)
                 }
             }
         }
@@ -202,27 +310,151 @@ class ConnService : ParaboxService() {
     override fun onStopParabox() {
         bot?.close()
         bot = null
-        updateServiceState(ParaboxKey.STATE_STOP)
         notificationUtil.stopForegroundService()
+        updateServiceState(ParaboxKey.STATE_STOP)
     }
 
-    override fun onStateUpdate() {
+    override fun onStateUpdate(state: Int, message: String?) {
     }
 
     override fun customHandleMessage(msg: Message, metadata: ParaboxMetadata) {
-        TODO("Not yet implemented")
+
     }
 
-    override fun onSendMessage(dto: SendMessageDto): Boolean {
-        TODO("Not yet implemented")
+    override suspend fun onSendMessage(dto: SendMessageDto): Boolean {
+        val messageId = dto.messageId
+        return withContext(Dispatchers.IO) {
+            try {
+                val targetId = dto.pluginConnection.id
+                val targetContact = when (dto.pluginConnection.sendTargetType) {
+                    SendTargetType.USER -> bot?.getFriendOrFail(targetId)
+                    SendTargetType.GROUP -> bot?.getGroupOrFail(targetId)
+                    else -> {
+                        throw java.util.NoSuchElementException("wrong id")
+                    }
+                }
+                targetContact?.let { contact ->
+                    val contents = dto.contents
+                    val messageChain = buildMessageChain {
+                        contents.map {
+                            when (it) {
+                                is com.ojhdtapp.messagedto.message_content.PlainText -> add(
+                                    PlainText(it.text)
+                                )
+
+                                is com.ojhdtapp.messagedto.message_content.Image -> {
+                                    it.uri?.let { uri ->
+                                        val inputPFD: ParcelFileDescriptor? =
+                                            contentResolver.openFileDescriptor(uri, "r")
+                                        val fd = inputPFD!!.fileDescriptor
+                                        val inputStream = FileInputStream(fd)
+                                        inputStream.use { stream ->
+                                            stream.toExternalResource().use { resource ->
+                                                contact.uploadImage(resource).also {
+                                                    add(it)
+                                                }
+                                            }
+                                        }
+                                        inputPFD.close()
+                                    }
+                                }
+
+                                is com.ojhdtapp.messagedto.message_content.At -> add(At(it.target))
+                                is com.ojhdtapp.messagedto.message_content.AtAll -> add(AtAll)
+                                is com.ojhdtapp.messagedto.message_content.Audio -> {
+                                    it.uri?.let { uri ->
+                                        val inputPFD: ParcelFileDescriptor? =
+                                            contentResolver.openFileDescriptor(uri, "r")
+                                        val fd = inputPFD!!.fileDescriptor
+                                        val inputStream = FileInputStream(fd)
+                                        AudioUtils.init(this@ConnService.externalCacheDir!!.absolutePath)
+                                        AudioUtils.mp3ToSilk(inputStream).inputStream()
+                                            .use { silk ->
+                                                silk.toExternalResource().use { resource ->
+                                                    contact.uploadAudio(resource).also {
+                                                        add(it)
+                                                        inputPFD.close()
+                                                    }
+                                                }
+                                            }
+
+                                    }
+                                }
+
+                                is com.ojhdtapp.messagedto.message_content.QuoteReply -> {
+                                    it.quoteMessageId?.also {
+                                        repository.getMiraiMessageById(it)?.let {
+                                            add(
+//                                                MiraiCode.deserializeMiraiCode(it.miraiCode).quote()
+                                                MessageChain.deserializeFromJsonString(it.json)
+                                                    .quote()
+                                            )
+                                        }
+                                    }
+                                }
+
+                                else -> {}
+                            }
+                        }
+                    }
+                    val receipt = contact.sendMessage(messageChain)
+                    if (messageId != null) {
+                        receiptMap.put(messageId, receipt)
+                    }
+                }
+                true
+            } catch (e: java.util.NoSuchElementException) {
+                e.printStackTrace()
+                false
+            } catch (e: EventCancelledException) {
+                e.printStackTrace()
+                false
+            } catch (e: BotIsBeingMutedException) {
+                e.printStackTrace()
+                false
+            } catch (e: MessageTooLargeException) {
+                e.printStackTrace()
+                false
+            } catch (e: IllegalArgumentException) {
+                e.printStackTrace()
+                false
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+                false
+            } catch (e: ServiceConfigurationError) {
+                e.printStackTrace()
+                false
+            } catch (e: IOException) {
+                e.printStackTrace()
+                false
+            }
+        }
     }
 
-    override fun onRecallMessage(messageId: Long): Boolean {
-        TODO("Not yet implemented")
+    override suspend fun onRecallMessage(messageId: Long): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                withTimeout(1000) {
+                    val receipt = receiptMap[messageId]
+                    if (receipt == null) {
+                        throw (java.util.NoSuchElementException("no receipt"))
+                    } else {
+                        receipt.recall()
+                    }
+                }
+                true
+            } catch (e: TimeoutCancellationException) {
+                false
+            } catch (e: java.util.NoSuchElementException) {
+                false
+            } catch (e: IllegalStateException) {
+                false
+            }
+        }
     }
 
     override fun onRefresh() {
-        TODO("Not yet implemented")
+
     }
 
 

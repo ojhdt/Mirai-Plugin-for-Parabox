@@ -26,10 +26,10 @@ abstract class ParaboxService : LifecycleService() {
 
     abstract fun onStartParabox()
     abstract fun onStopParabox()
-    abstract fun onStateUpdate()
+    abstract fun onStateUpdate(state: Int, message: String? = null)
     abstract fun customHandleMessage(msg: Message, metadata: ParaboxMetadata)
-    abstract fun onSendMessage(dto: SendMessageDto): Boolean
-    abstract fun onRecallMessage(messageId: Long): Boolean
+    abstract suspend fun onSendMessage(dto: SendMessageDto): Boolean
+    abstract suspend fun onRecallMessage(messageId: Long): Boolean
     abstract fun onRefresh()
     fun startParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_STOP, ParaboxKey.STATE_ERROR)) {
@@ -84,7 +84,7 @@ abstract class ParaboxService : LifecycleService() {
 
     fun updateServiceState(state: Int, message: String? = null) {
         serviceState = state
-        onStateUpdate()
+        onStateUpdate(state, message)
         sendNotification(ParaboxKey.NOTIFICATION_STATE_UPDATE, Bundle().apply {
             putInt("state", state)
             message?.let { putString("message", it) }
@@ -124,50 +124,54 @@ abstract class ParaboxService : LifecycleService() {
     }
 
     private fun sendMessage(metadata: ParaboxMetadata, dto: SendMessageDto) {
-        if (serviceState == ParaboxKey.STATE_RUNNING) {
-            if (onSendMessage(dto)) {
-                // Success
-                sendCommandResponse(
-                    isSuccess = true,
-                    metadata = metadata
-                )
+        lifecycleScope.launch {
+            if (serviceState == ParaboxKey.STATE_RUNNING) {
+                if (onSendMessage(dto)) {
+                    // Success
+                    sendCommandResponse(
+                        isSuccess = true,
+                        metadata = metadata
+                    )
+                } else {
+                    sendCommandResponse(
+                        isSuccess = false,
+                        metadata = metadata,
+                        errorCode = ParaboxKey.ERROR_SEND_FAILED
+                    )
+                }
             } else {
                 sendCommandResponse(
                     isSuccess = false,
                     metadata = metadata,
-                    errorCode = ParaboxKey.ERROR_SEND_FAILED
+                    errorCode = ParaboxKey.ERROR_DISCONNECTED
                 )
             }
-        } else {
-            sendCommandResponse(
-                isSuccess = false,
-                metadata = metadata,
-                errorCode = ParaboxKey.ERROR_DISCONNECTED
-            )
         }
     }
 
     private fun recallMessage(metadata: ParaboxMetadata, messageId: Long) {
-        if (serviceState == ParaboxKey.STATE_RUNNING) {
-            if (onRecallMessage(messageId)) {
-                // Success
-                sendCommandResponse(
-                    isSuccess = true,
-                    metadata = metadata
-                )
+        lifecycleScope.launch {
+            if (serviceState == ParaboxKey.STATE_RUNNING) {
+                if (onRecallMessage(messageId)) {
+                    // Success
+                    sendCommandResponse(
+                        isSuccess = true,
+                        metadata = metadata
+                    )
+                } else {
+                    sendCommandResponse(
+                        isSuccess = false,
+                        metadata = metadata,
+                        errorCode = ParaboxKey.ERROR_SEND_FAILED
+                    )
+                }
             } else {
                 sendCommandResponse(
                     isSuccess = false,
                     metadata = metadata,
-                    errorCode = ParaboxKey.ERROR_SEND_FAILED
+                    errorCode = ParaboxKey.ERROR_DISCONNECTED
                 )
             }
-        } else {
-            sendCommandResponse(
-                isSuccess = false,
-                metadata = metadata,
-                errorCode = ParaboxKey.ERROR_DISCONNECTED
-            )
         }
     }
 
@@ -179,9 +183,10 @@ abstract class ParaboxService : LifecycleService() {
             true,
             metadata
         )
+        onRefresh()
     }
 
-    private fun sendCommandResponse(
+    fun sendCommandResponse(
         isSuccess: Boolean,
         metadata: ParaboxMetadata,
         extra: Bundle = Bundle(),
