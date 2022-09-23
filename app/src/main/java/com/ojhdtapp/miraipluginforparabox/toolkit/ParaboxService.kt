@@ -5,6 +5,8 @@ import android.os.*
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.messagedto.ReceiveMessageDto
+import com.ojhdtapp.messagedto.SendMessageDto
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.TimeoutCancellationException
@@ -18,12 +20,16 @@ abstract class ParaboxService : LifecycleService() {
     private var clientMessenger: Messenger? = null
     private var mainAppMessenger: Messenger? = null
 
-    var deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxResult>>()
+    val deferredMap = mutableMapOf<Long, CompletableDeferredWithTag<Long, ParaboxResult>>()
+    val messageUnreceivedMap = mutableMapOf<Long, ReceiveMessageDto>()
 
     abstract fun onStartParabox()
     abstract fun onStopParabox()
     abstract fun onStateUpdate()
     abstract fun customHandleMessage(msg: Message, metadata: ParaboxMetadata)
+    abstract fun onSendMessage(dto: SendMessageDto): Boolean
+    abstract fun onRecallMessage(dto: SendMessageDto): Boolean
+    abstract fun onRefresh()
     fun startParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_STOP, ParaboxKey.STATE_ERROR)) {
             onStartParabox()
@@ -100,11 +106,79 @@ abstract class ParaboxService : LifecycleService() {
         mainAppMessenger?.send(msg)
     }
 
-    fun receiveMessage() {
-
+    fun receiveMessage(dto: ReceiveMessageDto) {
+        sendRequest(request = ParaboxKey.REQUEST_RECEIVE_MESSAGE,
+            client = ParaboxKey.CLIENT_MAIN_APP,
+            extra = Bundle().apply {
+                putParcelable("dto", dto)
+            },
+            timeoutMillis = 6000,
+            onResult = {
+                if (it is ParaboxResult.Fail) {
+                    messageUnreceivedMap[dto.messageId!!] = dto
+                } else {
+                    messageUnreceivedMap.remove(dto.messageId!!)
+                }
+            })
     }
 
-    abstract fun onSendMessage()
+    private fun sendMessage(metadata: ParaboxMetadata, dto: SendMessageDto) {
+        if (serviceState == ParaboxKey.STATE_RUNNING) {
+            if (onSendMessage(dto)) {
+                // Success
+                sendCommandResponse(
+                    isSuccess = true,
+                    metadata = metadata
+                )
+            } else {
+                sendCommandResponse(
+                    isSuccess = false,
+                    metadata = metadata,
+                    errorCode = ParaboxKey.ERROR_SEND_FAILED
+                )
+            }
+        } else {
+            sendCommandResponse(
+                isSuccess = false,
+                metadata = metadata,
+                errorCode = ParaboxKey.ERROR_DISCONNECTED
+            )
+        }
+    }
+
+    private fun recallMessage(metadata: ParaboxMetadata, dto: SendMessageDto) {
+        if (serviceState == ParaboxKey.STATE_RUNNING) {
+            if (onRecallMessage(dto)) {
+                // Success
+                sendCommandResponse(
+                    isSuccess = true,
+                    metadata = metadata
+                )
+            } else {
+                sendCommandResponse(
+                    isSuccess = false,
+                    metadata = metadata,
+                    errorCode = ParaboxKey.ERROR_SEND_FAILED
+                )
+            }
+        } else {
+            sendCommandResponse(
+                isSuccess = false,
+                metadata = metadata,
+                errorCode = ParaboxKey.ERROR_DISCONNECTED
+            )
+        }
+    }
+
+    private fun getUnreceivedMessage(metadata: ParaboxMetadata) {
+        messageUnreceivedMap.forEach {
+            receiveMessage(it.value)
+        }
+        sendCommandResponse(
+            true,
+            metadata
+        )
+    }
 
     private fun sendCommandResponse(
         isSuccess: Boolean,
@@ -292,6 +366,36 @@ abstract class ParaboxService : LifecycleService() {
 
                                 ParaboxKey.COMMAND_FORCE_STOP_SERVICE -> {
                                     forceStopParabox(metadata)
+                                }
+
+                                ParaboxKey.COMMAND_SEND_MESSAGE -> {
+                                    val dto = obj.getParcelable<SendMessageDto>("dto")
+                                    if (dto == null) {
+                                        sendCommandResponse(
+                                            isSuccess = false,
+                                            metadata = metadata,
+                                            errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
+                                        )
+                                    } else {
+                                        sendMessage(metadata, dto)
+                                    }
+                                }
+
+                                ParaboxKey.COMMAND_RECALL_MESSAGE -> {
+                                    val dto = obj.getParcelable<SendMessageDto>("dto")
+                                    if (dto == null) {
+                                        sendCommandResponse(
+                                            isSuccess = false,
+                                            metadata = metadata,
+                                            errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
+                                        )
+                                    } else {
+                                        recallMessage(metadata, dto)
+                                    }
+                                }
+
+                                ParaboxKey.COMMAND_GET_UNRECEIVED_MESSAGE -> {
+                                    getUnreceivedMessage(metadata)
                                 }
 
                                 else -> customHandleMessage(msg, metadata)

@@ -16,13 +16,19 @@ object ParaboxKey {
     const val COMMAND_START_SERVICE = 10
     const val COMMAND_STOP_SERVICE = 11
     const val COMMAND_FORCE_STOP_SERVICE = 12
+    const val COMMAND_SEND_MESSAGE = 13
+    const val COMMAND_RECALL_MESSAGE = 14
+    const val COMMAND_GET_UNRECEIVED_MESSAGE = 15
 
     const val NOTIFICATION_STATE_UPDATE = 20
+
+    const val REQUEST_RECEIVE_MESSAGE = 30
 
     const val ERROR_TIMEOUT = 60
     const val ERROR_DISCONNECTED = 61
     const val ERROR_REPEATED_CALL = 62
     const val ERROR_RESOURCE_NOT_FOUND = 63
+    const val ERROR_SEND_FAILED = 63
 
     const val STATE_STOP = 70
     const val STATE_PAUSE = 71
