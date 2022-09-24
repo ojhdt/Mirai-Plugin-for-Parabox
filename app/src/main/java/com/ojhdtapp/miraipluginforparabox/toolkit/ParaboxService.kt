@@ -5,16 +5,17 @@ import android.os.*
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.messagedto.ParaboxMetadata
 import com.ojhdtapp.messagedto.ReceiveMessageDto
 import com.ojhdtapp.messagedto.SendMessageDto
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxResult
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-@AndroidEntryPoint
 abstract class ParaboxService : LifecycleService() {
     var serviceState = ParaboxKey.STATE_STOP
     lateinit var paraboxMessenger: Messenger
@@ -120,6 +121,7 @@ abstract class ParaboxService : LifecycleService() {
                 } else {
                     messageUnreceivedMap.remove(dto.messageId!!)
                 }
+                Log.d("parabox", "unreceived size: ${messageUnreceivedMap.size}")
             })
     }
 
@@ -221,6 +223,9 @@ abstract class ParaboxService : LifecycleService() {
         when (metadata.sender) {
             ParaboxKey.CLIENT_MAIN_APP -> {}
             ParaboxKey.CLIENT_CONTROLLER -> {
+                val errorCode = if (!isSuccess) {
+                    (result as ParaboxResult.Fail).errorCode
+                } else 0
                 val msg = Message.obtain(
                     null,
                     metadata.commandOrRequest,
@@ -229,7 +234,7 @@ abstract class ParaboxService : LifecycleService() {
                     extra.apply {
                         putBoolean("isSuccess", isSuccess)
                         putParcelable("metadata", metadata)
-                        putParcelable("result", result)
+                        putInt("errorCode", errorCode)
                     }).apply {
                     replyTo = paraboxMessenger
                 }
@@ -286,12 +291,15 @@ abstract class ParaboxService : LifecycleService() {
         client: Int,
         extra: Bundle = Bundle()
     ) {
+        Log.d("parabox", "client: $client")
+        Log.d("parabox", "currentMessengers: $clientMessenger, $mainAppMessenger")
         val targetClient = when (client) {
             ParaboxKey.CLIENT_CONTROLLER -> clientMessenger
             ParaboxKey.CLIENT_MAIN_APP -> mainAppMessenger
             else -> null
         }
         if (targetClient == null) {
+            Log.d("parabox", "client is null")
             deferredMap[timestamp]?.complete(
                 ParaboxResult.Fail(
                     request, timestamp,
@@ -310,6 +318,7 @@ abstract class ParaboxService : LifecycleService() {
             }).apply {
                 replyTo = paraboxMessenger
             }
+            Log.d("parabox", "request is not null")
             targetClient.send(msg)
             Log.d("parabox", "request sent")
         }
@@ -332,6 +341,7 @@ abstract class ParaboxService : LifecycleService() {
 
     inner class CommandHandler : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
+            Log.d("parabox", "whatever msg coming with arg1: ${msg.arg1}")
             // 客户端类型判断
             when (msg.arg1) {
                 ParaboxKey.CLIENT_CONTROLLER -> {
@@ -343,17 +353,19 @@ abstract class ParaboxService : LifecycleService() {
                 }
             }
 
-            val obj = msg.obj as Bundle
-            val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
-            } else {
-                obj.getParcelable<ParaboxMetadata>("metadata")!!
-            }
+            val obj = (msg.obj as Bundle)
             // 对command添加deferred
             when (msg.arg2) {
                 ParaboxKey.TYPE_COMMAND -> {
                     lifecycleScope.launch {
                         try {
+                            obj.classLoader = ParaboxMetadata::class.java.classLoader
+                            val metadata =
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
+                                } else {
+                                    obj.getParcelable<ParaboxMetadata>("metadata")!!
+                                }
                             val deferred =
                                 CompletableDeferred<ParaboxResult>()
                             deferredMap[metadata.timestamp] = deferred
@@ -361,7 +373,6 @@ abstract class ParaboxService : LifecycleService() {
                             // 指令种类判断
                             when (msg.what) {
                                 ParaboxKey.COMMAND_START_SERVICE -> {
-                                    Log.d("parabox", "command receiced")
                                     startParabox(metadata)
                                 }
 
@@ -419,22 +430,45 @@ abstract class ParaboxService : LifecycleService() {
                             }
                         } catch (e: RemoteException) {
                             e.printStackTrace()
+                        } catch (e: NullPointerException) {
+                            e.printStackTrace()
                         }
                     }
                 }
 
                 ParaboxKey.TYPE_REQUEST -> {
-                    val sendTimestamp = obj.getParcelable<ParaboxMetadata>("metadata")!!.timestamp
-                    val isSuccess = obj.getBoolean("isSuccess")
-                    val result = if (isSuccess) {
-                        obj.getParcelable<ParaboxResult.Success>("result")
-                    } else {
-                        obj.getParcelable<ParaboxResult.Fail>("result")
-                    }
-                    result?.let {
+                    try {
+                        obj.classLoader = ParaboxMetadata::class.java.classLoader
+                        val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
+                        } else {
+                            obj.getParcelable<ParaboxMetadata>("metadata")!!
+                        }
+                        val isSuccess = obj.getBoolean("isSuccess")
+                        val errorCode = obj.getInt("errorCode")
+                        val result = if (isSuccess) {
+                            ParaboxResult.Success(
+                                command = metadata.commandOrRequest,
+                                timestamp = metadata.timestamp,
+                                obj = obj
+                            )
+                        } else {
+                            ParaboxResult.Fail(
+                                command = metadata.commandOrRequest,
+                                timestamp = metadata.timestamp,
+                                errorCode = errorCode
+                            )
+                        }
                         Log.d("parabox", "tr complete second deferred")
-                        deferredMap[sendTimestamp]?.complete(it)
+                        deferredMap[metadata.timestamp]?.complete(result)
+                    } catch (e: NullPointerException) {
+                        e.printStackTrace()
                     }
+
+                }
+
+                ParaboxKey.TYPE_WELCOME_TEXT -> {
+
                 }
             }
         }

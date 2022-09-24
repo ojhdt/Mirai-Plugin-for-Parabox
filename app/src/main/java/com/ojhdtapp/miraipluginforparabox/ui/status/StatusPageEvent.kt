@@ -1,8 +1,6 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
-import android.content.Intent
-import android.graphics.Bitmap
-import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxMetadata
+import com.ojhdtapp.messagedto.ParaboxMetadata
 
 sealed class StatusPageEvent {
     object OnServiceStart : StatusPageEvent()

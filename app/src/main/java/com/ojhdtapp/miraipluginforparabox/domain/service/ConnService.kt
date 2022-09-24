@@ -1,12 +1,9 @@
 package com.ojhdtapp.miraipluginforparabox.domain.service
 
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.*
 import android.os.Message
-import android.util.Log
-import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.messagedto.*
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
@@ -18,9 +15,8 @@ import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.*
 import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxKey
-import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxMetadata
-import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxResult
 import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxService
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxResult
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -31,8 +27,6 @@ import net.mamoe.mirai.contact.BotIsBeingMutedException
 import net.mamoe.mirai.contact.Contact
 import net.mamoe.mirai.contact.MessageTooLargeException
 import net.mamoe.mirai.event.GlobalEventChannel
-import net.mamoe.mirai.event.Listener
-import net.mamoe.mirai.event.events.BotEvent
 import net.mamoe.mirai.event.events.BotOfflineEvent
 import net.mamoe.mirai.event.events.BotOnlineEvent
 import net.mamoe.mirai.event.events.BotReloginEvent
@@ -46,15 +40,12 @@ import net.mamoe.mirai.message.data.MessageChain.Companion.serializeToJsonString
 import net.mamoe.mirai.message.data.MessageSource.Key.quote
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
-import net.mamoe.mirai.utils.DeviceInfo
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.MiraiInternalApi
-import okhttp3.internal.wait
 import xyz.cssxsh.mirai.device.MiraiDeviceGenerator
 import java.io.*
 import java.util.*
-import java.util.concurrent.Executors
 import javax.inject.Inject
 import kotlin.NoSuchElementException
 

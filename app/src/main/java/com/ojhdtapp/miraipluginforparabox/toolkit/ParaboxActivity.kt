@@ -8,7 +8,9 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.messagedto.ParaboxMetadata
 import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxResult
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
@@ -154,6 +156,9 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
         result: ParaboxResult,
         extra: Bundle = Bundle()
     ) {
+        val errorCode = if (!isSuccess) {
+            (result as ParaboxResult.Fail).errorCode
+        } else 0
         val msg = Message.obtain(
             null,
             metadata.commandOrRequest,
@@ -162,7 +167,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
             extra.apply {
                 putBoolean("isSuccess", isSuccess)
                 putParcelable("metadata", metadata)
-                putParcelable("result", result)
+                putInt("errorCode", errorCode)
             }).apply {
             replyTo = client
         }
@@ -193,6 +198,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
             when (msg.arg2) {
                 ParaboxKey.TYPE_REQUEST -> {
                     Log.d("parabox", "request received")
+                    obj.classLoader = ParaboxMetadata::class.java.classLoader
                     val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
                     } else {
@@ -228,22 +234,29 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                 }
 
                 ParaboxKey.TYPE_COMMAND -> {
+                    obj.classLoader = ParaboxMetadata::class.java.classLoader
                     val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
                     } else {
                         obj.getParcelable<ParaboxMetadata>("metadata")!!
                     }
-                    val sendTimestamp = metadata.timestamp
                     val isSuccess = obj.getBoolean("isSuccess")
+                    val errorCode = obj.getInt("errorCode")
                     val result = if (isSuccess) {
-                        obj.getParcelable<ParaboxResult.Success>("result")
+                        ParaboxResult.Success(
+                            command = metadata.commandOrRequest,
+                            timestamp = metadata.timestamp,
+                            obj = obj
+                        )
                     } else {
-                        obj.getParcelable<ParaboxResult.Fail>("result")
+                        ParaboxResult.Fail(
+                            command = metadata.commandOrRequest,
+                            timestamp = metadata.timestamp,
+                            errorCode = errorCode
+                        )
                     }
-                    result?.let {
-                        Log.d("parabox", "try complete second deferred")
-                        deferredMap[sendTimestamp]?.complete(it)
-                    }
+                    Log.d("parabox", "try complete second deferred")
+                    deferredMap[metadata.timestamp]?.complete(result)
                 }
 
                 ParaboxKey.TYPE_NOTIFICATION -> {

@@ -5,10 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Message
-import android.os.PersistableBundle
-import android.util.Log
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.*
@@ -21,17 +18,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.ojhdtapp.messagedto.ParaboxMetadata
 import com.ojhdtapp.miraipluginforparabox.core.util.*
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxActivity
 import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxKey
-import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxMetadata
-import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxResult
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxResult
 import com.ojhdtapp.miraipluginforparabox.ui.NavGraphs
 import com.ojhdtapp.miraipluginforparabox.ui.destinations.StatusPageDestination
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
@@ -42,12 +38,6 @@ import com.ramcosta.composedestinations.animations.defaults.RootNavGraphDefaultA
 import com.ramcosta.composedestinations.animations.rememberAnimatedNavHostEngine
 import com.ramcosta.composedestinations.navigation.dependency
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
-import kotlin.properties.Delegates
 
 @AndroidEntryPoint
 class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
