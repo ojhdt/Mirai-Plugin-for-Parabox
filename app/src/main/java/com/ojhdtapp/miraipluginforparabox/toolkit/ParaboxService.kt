@@ -410,29 +410,17 @@ abstract class ParaboxService : LifecycleService() {
                                 }
 
                                 ParaboxKey.COMMAND_SEND_MESSAGE -> {
-                                    val dto = obj.getParcelable<SendMessageDto>("dto")
-                                    if (dto == null) {
-                                        sendCommandResponse(
-                                            isSuccess = false,
-                                            metadata = metadata,
-                                            errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
-                                        )
+                                    val dto = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        obj.getParcelable("dto", SendMessageDto::class.java)!!
                                     } else {
-                                        sendMessage(metadata, dto)
+                                        obj.getParcelable<SendMessageDto>("dto")!!
                                     }
+                                    sendMessage(metadata, dto)
                                 }
 
                                 ParaboxKey.COMMAND_RECALL_MESSAGE -> {
                                     val messageId = obj.getLong("messageId")
-                                    if (messageId == null) {
-                                        sendCommandResponse(
-                                            isSuccess = false,
-                                            metadata = metadata,
-                                            errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
-                                        )
-                                    } else {
-                                        recallMessage(metadata, messageId)
-                                    }
+                                    recallMessage(metadata, messageId)
                                 }
 
                                 ParaboxKey.COMMAND_REFRESH_MESSAGE -> {
