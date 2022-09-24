@@ -99,6 +99,11 @@ class StatusPageViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val selectedIndexFlow = repository.getAccountListFlow().mapLatest {
         it.indexOfFirst { secret -> secret.selected }
+    }.onEach {
+        // Update AutoLogin Switch
+        if(it == -1){
+            setAutoLoginSwitch(false)
+        }
     }
 
     fun addNewAccount(secret: Secret) {

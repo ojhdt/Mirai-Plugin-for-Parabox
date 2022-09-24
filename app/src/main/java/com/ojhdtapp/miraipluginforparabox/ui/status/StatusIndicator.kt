@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.PauseCircleOutline
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,7 +80,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                 )
                 is ServiceStatus.Pause -> Icon(
                     modifier = Modifier.padding(PaddingValues(end = 24.dp)),
-                    imageVector = Icons.Outlined.Warning,
+                    imageVector = Icons.Outlined.PauseCircleOutline,
                     contentDescription = "pause",
                     tint = textColor
                 )
@@ -87,7 +88,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
             Column() {
                 Text(
                     text = when (status) {
-                        is ServiceStatus.Error -> "启动服务时发生错误"
+                        is ServiceStatus.Error -> "操作执行时发生错误"
                         is ServiceStatus.Loading -> "服务正在启动"
                         is ServiceStatus.Running -> "服务正常运行"
                         is ServiceStatus.Stop -> "服务已停止"

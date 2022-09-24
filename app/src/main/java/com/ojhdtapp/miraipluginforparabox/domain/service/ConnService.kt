@@ -216,14 +216,23 @@ class ConnService : ParaboxService() {
             )
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOfflineEvent> {
-            val message = when (it) {
-                is BotOfflineEvent.Active -> "账号主动下线"
-                is BotOfflineEvent.Force -> "账号已在他处登陆"
-                is BotOfflineEvent.Dropped -> "网络不畅或被服务器断开"
-                is BotOfflineEvent.RequireReconnect -> "正在更换连接服务器"
-                else -> "账号离线"
+            when (it) {
+                is BotOfflineEvent.Active -> {
+                    updateServiceState(ParaboxKey.STATE_STOP, "账号主动下线")
+                }
+                is BotOfflineEvent.Force -> {
+                    updateServiceState(ParaboxKey.STATE_ERROR, "账号已在他处登陆")
+                }
+                is BotOfflineEvent.Dropped -> {
+                    updateServiceState(ParaboxKey.STATE_LOADING, "网络不畅，正在尝试重连")
+                }
+                is BotOfflineEvent.RequireReconnect -> {
+                    updateServiceState(ParaboxKey.STATE_LOADING, "正在更换连接服务器")
+                }
+                else -> {
+                    updateServiceState(ParaboxKey.STATE_ERROR, "未知原因离线")
+                }
             }
-            updateServiceState(ParaboxKey.STATE_PAUSE, message)
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotReloginEvent> {
             updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
@@ -444,7 +453,7 @@ class ConnService : ParaboxService() {
         }
     }
 
-    override fun onRefresh() {
+    override fun onRefreshMessage() {
 
     }
 

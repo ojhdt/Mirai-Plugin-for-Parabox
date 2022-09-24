@@ -58,6 +58,7 @@ fun AnimatedVisibilityScope.StatusPage(
     var openAccountDialog by remember {
         mutableStateOf(false)
     }
+    val selectedIndexState by viewModel.selectedIndexFlow.collectAsState(initial = -1)
     AccountDialog(
         onEvent = onEvent,
         isOpen = openAccountDialog,
@@ -65,7 +66,7 @@ fun AnimatedVisibilityScope.StatusPage(
         accountList = viewModel.accountFLow.collectAsState(
             initial = emptyList()
         ).value,
-        initialSelectedIndex = viewModel.selectedIndexFlow.collectAsState(initial = -1).value,
+        initialSelectedIndex = selectedIndexState,
         onAddSecret = viewModel::addNewAccount,
         onDeleteSecret = viewModel::deleteAccount,
         onUpdateSelectedSecret = viewModel::updateAccounts
@@ -282,7 +283,7 @@ fun AnimatedVisibilityScope.StatusPage(
                         title = "自动登录",
                         subtitle = "主应用启动时同时以默认账户启动服务",
                         checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
-                        enabled = false,
+                        enabled = selectedIndexState != -1 ,
                         onCheckedChange = viewModel::setAutoLoginSwitch
                     )
                     SwitchPreference(
@@ -310,13 +311,13 @@ fun AnimatedVisibilityScope.StatusPage(
                         enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
                         onSelect = viewModel::setProtocolSimpleMenu
                     )
-                    SwitchPreference(
-                        title = "取消超时",
-                        subtitle = "取消登录各流程的超时错误，但可能导致不可预见的问题",
-                        checked = viewModel.cancelTimeoutSwitchFlow.collectAsState(initial = false).value,
-                        enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
-                        onCheckedChange = viewModel::setCancelTimeoutSwitch
-                    )
+//                    SwitchPreference(
+//                        title = "取消超时",
+//                        subtitle = "取消登录各流程的超时错误，但可能导致不可预见的问题",
+//                        checked = viewModel.cancelTimeoutSwitchFlow.collectAsState(initial = false).value,
+//                        enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
+//                        onCheckedChange = viewModel::setCancelTimeoutSwitch
+//                    )
                     NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
                         onEvent(StatusPageEvent.OnRequestIgnoreBatteryOptimizations)
                     }

@@ -8,9 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.messagedto.ParaboxMetadata
 import com.ojhdtapp.messagedto.ReceiveMessageDto
 import com.ojhdtapp.messagedto.SendMessageDto
-import com.ojhdtapp.miraipluginforparabox.core.util.CompletableDeferredWithTag
 import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxResult
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
@@ -31,7 +29,7 @@ abstract class ParaboxService : LifecycleService() {
     abstract fun customHandleMessage(msg: Message, metadata: ParaboxMetadata)
     abstract suspend fun onSendMessage(dto: SendMessageDto): Boolean
     abstract suspend fun onRecallMessage(messageId: Long): Boolean
-    abstract fun onRefresh()
+    abstract fun onRefreshMessage()
     fun startParabox(metadata: ParaboxMetadata) {
         if (serviceState in listOf<Int>(ParaboxKey.STATE_STOP, ParaboxKey.STATE_ERROR)) {
             onStartParabox()
@@ -177,7 +175,7 @@ abstract class ParaboxService : LifecycleService() {
         }
     }
 
-    private fun getUnreceivedMessage(metadata: ParaboxMetadata) {
+    private fun refreshMessage(metadata: ParaboxMetadata) {
         messageUnreceivedMap.forEach {
             receiveMessage(it.value)
         }
@@ -185,10 +183,10 @@ abstract class ParaboxService : LifecycleService() {
             true,
             metadata
         )
-        onRefresh()
+        onRefreshMessage()
     }
 
-    private fun getState(metadata: ParaboxMetadata) {
+    private fun sendStateResponse(metadata: ParaboxMetadata) {
         sendCommandResponse(
             isSuccess = true,
             metadata = metadata,
@@ -437,12 +435,12 @@ abstract class ParaboxService : LifecycleService() {
                                     }
                                 }
 
-                                ParaboxKey.COMMAND_GET_UNRECEIVED_MESSAGE -> {
-                                    getUnreceivedMessage(metadata)
+                                ParaboxKey.COMMAND_REFRESH_MESSAGE -> {
+                                    refreshMessage(metadata)
                                 }
 
                                 ParaboxKey.COMMAND_GET_STATE -> {
-                                    getState(metadata)
+                                    sendStateResponse(metadata)
                                 }
 
                                 else -> customHandleMessage(msg, metadata)
