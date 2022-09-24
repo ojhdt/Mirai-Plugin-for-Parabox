@@ -198,14 +198,15 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
             when (msg.arg2) {
                 ParaboxKey.TYPE_REQUEST -> {
                     Log.d("parabox", "request received")
-                    obj.classLoader = ParaboxMetadata::class.java.classLoader
-                    val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
-                    } else {
-                        obj.getParcelable<ParaboxMetadata>("metadata")!!
-                    }
                     lifecycleScope.launch {
                         try {
+                            obj.classLoader = ParaboxMetadata::class.java.classLoader
+                            val metadata =
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
+                                } else {
+                                    obj.getParcelable<ParaboxMetadata>("metadata")!!
+                                }
                             val deferred =
                                 CompletableDeferred<ParaboxResult>()
                             deferredMap[metadata.timestamp] = deferred
@@ -229,34 +230,42 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                             }
                         } catch (e: RemoteException) {
                             e.printStackTrace()
+                        } catch (e: ClassNotFoundException) {
+                            e.printStackTrace()
                         }
                     }
                 }
 
                 ParaboxKey.TYPE_COMMAND -> {
-                    obj.classLoader = ParaboxMetadata::class.java.classLoader
-                    val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
-                    } else {
-                        obj.getParcelable<ParaboxMetadata>("metadata")!!
+                    try {
+                        obj.classLoader = ParaboxMetadata::class.java.classLoader
+                        val metadata = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            obj.getParcelable("metadata", ParaboxMetadata::class.java)!!
+                        } else {
+                            obj.getParcelable<ParaboxMetadata>("metadata")!!
+                        }
+                        val isSuccess = obj.getBoolean("isSuccess")
+                        val errorCode = obj.getInt("errorCode")
+                        val result = if (isSuccess) {
+                            ParaboxResult.Success(
+                                command = metadata.commandOrRequest,
+                                timestamp = metadata.timestamp,
+                                obj = obj
+                            )
+                        } else {
+                            ParaboxResult.Fail(
+                                command = metadata.commandOrRequest,
+                                timestamp = metadata.timestamp,
+                                errorCode = errorCode
+                            )
+                        }
+                        Log.d("parabox", "try complete second deferred")
+                        deferredMap[metadata.timestamp]?.complete(result)
+                    } catch (e: NullPointerException) {
+                        e.printStackTrace()
+                    } catch (e: ClassNotFoundException) {
+                        e.printStackTrace()
                     }
-                    val isSuccess = obj.getBoolean("isSuccess")
-                    val errorCode = obj.getInt("errorCode")
-                    val result = if (isSuccess) {
-                        ParaboxResult.Success(
-                            command = metadata.commandOrRequest,
-                            timestamp = metadata.timestamp,
-                            obj = obj
-                        )
-                    } else {
-                        ParaboxResult.Fail(
-                            command = metadata.commandOrRequest,
-                            timestamp = metadata.timestamp,
-                            errorCode = errorCode
-                        )
-                    }
-                    Log.d("parabox", "try complete second deferred")
-                    deferredMap[metadata.timestamp]?.complete(result)
                 }
 
                 ParaboxKey.TYPE_NOTIFICATION -> {

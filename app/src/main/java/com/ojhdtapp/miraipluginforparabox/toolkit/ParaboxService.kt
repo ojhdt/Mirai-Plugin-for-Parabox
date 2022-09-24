@@ -221,7 +221,25 @@ abstract class ParaboxService : LifecycleService() {
         extra: Bundle = Bundle()
     ) {
         when (metadata.sender) {
-            ParaboxKey.CLIENT_MAIN_APP -> {}
+            ParaboxKey.CLIENT_MAIN_APP -> {
+                val errorCode = if (!isSuccess) {
+                    (result as ParaboxResult.Fail).errorCode
+                } else 0
+                val msg = Message.obtain(
+                    null,
+                    metadata.commandOrRequest,
+                    ParaboxKey.CLIENT_MAIN_APP,
+                    ParaboxKey.TYPE_COMMAND,
+                    extra.apply {
+                        putBoolean("isSuccess", isSuccess)
+                        putParcelable("metadata", metadata)
+                        putInt("errorCode", errorCode)
+                    }).apply {
+                    replyTo = paraboxMessenger
+                }
+                Log.d("parabox", "send back to main app")
+                mainAppMessenger?.send(msg)
+            }
             ParaboxKey.CLIENT_CONTROLLER -> {
                 val errorCode = if (!isSuccess) {
                     (result as ParaboxResult.Fail).errorCode
@@ -432,6 +450,8 @@ abstract class ParaboxService : LifecycleService() {
                             e.printStackTrace()
                         } catch (e: NullPointerException) {
                             e.printStackTrace()
+                        } catch (e: ClassNotFoundException){
+                            e.printStackTrace()
                         }
                     }
                 }
@@ -462,6 +482,8 @@ abstract class ParaboxService : LifecycleService() {
                         Log.d("parabox", "tr complete second deferred")
                         deferredMap[metadata.timestamp]?.complete(result)
                     } catch (e: NullPointerException) {
+                        e.printStackTrace()
+                    } catch (e: ClassNotFoundException){
                         e.printStackTrace()
                     }
 
