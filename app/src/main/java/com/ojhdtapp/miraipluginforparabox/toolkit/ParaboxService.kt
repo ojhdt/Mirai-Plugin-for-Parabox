@@ -22,8 +22,8 @@ abstract class ParaboxService : LifecycleService() {
     private var clientMessenger: Messenger? = null
     private var mainAppMessenger: Messenger? = null
 
-    val deferredMap = mutableMapOf<Long, CompletableDeferred<ParaboxResult>>()
-    val messageUnreceivedMap = mutableMapOf<Long, ReceiveMessageDto>()
+    private val deferredMap = mutableMapOf<Long, CompletableDeferred<ParaboxResult>>()
+    private val messageUnreceivedMap = mutableMapOf<Long, ReceiveMessageDto>()
 
     abstract fun onStartParabox()
     abstract fun onStopParabox()
@@ -186,6 +186,15 @@ abstract class ParaboxService : LifecycleService() {
             metadata
         )
         onRefresh()
+    }
+
+    private fun getState(metadata: ParaboxMetadata) {
+        sendCommandResponse(
+            isSuccess = true,
+            metadata = metadata,
+            extra = Bundle().apply {
+                putInt("state", serviceState)
+            })
     }
 
     fun sendCommandResponse(
@@ -430,6 +439,10 @@ abstract class ParaboxService : LifecycleService() {
 
                                 ParaboxKey.COMMAND_GET_UNRECEIVED_MESSAGE -> {
                                     getUnreceivedMessage(metadata)
+                                }
+
+                                ParaboxKey.COMMAND_GET_STATE -> {
+                                    getState(metadata)
                                 }
 
                                 else -> customHandleMessage(msg, metadata)

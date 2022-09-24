@@ -55,16 +55,18 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     override fun onParaboxServiceDisconnected() {
     }
 
-    override fun onParaboxServiceStateChanged(state: Int, message: String) {
-        val serviceState = when (state) {
-            ParaboxKey.STATE_ERROR -> ServiceStatus.Error(message)
-            ParaboxKey.STATE_LOADING -> ServiceStatus.Loading(message)
-            ParaboxKey.STATE_PAUSE -> ServiceStatus.Pause(message)
-            ParaboxKey.STATE_STOP -> ServiceStatus.Stop
-            ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(message)
-            else -> ServiceStatus.Stop
+    override fun onParaboxServiceStateChanged(state: Int, message: String?) {
+        message?.let{
+            val serviceState = when (state) {
+                ParaboxKey.STATE_ERROR -> ServiceStatus.Error(it)
+                ParaboxKey.STATE_LOADING -> ServiceStatus.Loading(it)
+                ParaboxKey.STATE_PAUSE -> ServiceStatus.Pause(it)
+                ParaboxKey.STATE_STOP -> ServiceStatus.Stop
+                ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(it)
+                else -> ServiceStatus.Stop
+            }
+            viewModel.updateServiceStatusStateFlow(serviceState)
         }
-        viewModel.updateServiceStatusStateFlow(serviceState)
     }
 
     override fun customHandleMessage(msg: Message, metadata: ParaboxMetadata) {

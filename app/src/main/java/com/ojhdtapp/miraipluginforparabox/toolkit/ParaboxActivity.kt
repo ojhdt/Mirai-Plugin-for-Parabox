@@ -20,7 +20,7 @@ import kotlinx.coroutines.withTimeout
 abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : ComponentActivity() {
     abstract fun onParaboxServiceConnected()
     abstract fun onParaboxServiceDisconnected()
-    abstract fun onParaboxServiceStateChanged(state: Int, message: String)
+    abstract fun onParaboxServiceStateChanged(state: Int, message: String?)
     abstract fun customHandleMessage(msg: Message, metadata: ParaboxMetadata)
 
     var paraboxService: Messenger? = null
@@ -48,6 +48,18 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
         if (paraboxService != null) {
             paraboxServiceConnection?.let { unbindService(it) }
         }
+    }
+
+    fun getState() {
+        sendCommand(
+            command = ParaboxKey.COMMAND_GET_STATE,
+            onResult = {
+                if (it is ParaboxResult.Success) {
+                    val state = it.obj.getInt("state")
+                    onParaboxServiceStateChanged(state, null)
+                }
+            }
+        )
     }
 
     fun sendCommand(
