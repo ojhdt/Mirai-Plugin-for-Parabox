@@ -2,7 +2,7 @@ package com.ojhdtapp.miraipluginforparabox.domain.util
 
 import android.graphics.Bitmap
 import android.os.Parcelable
-import com.ojhdtapp.messagedto.ParaboxMetadata
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxMetadata
 import kotlinx.parcelize.Parcelize
 
 sealed interface LoginResource : Parcelable {

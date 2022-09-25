@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
-import com.ojhdtapp.messagedto.ParaboxMetadata
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxMetadata
+
 
 sealed class StatusPageEvent {
     object OnServiceStart : StatusPageEvent()

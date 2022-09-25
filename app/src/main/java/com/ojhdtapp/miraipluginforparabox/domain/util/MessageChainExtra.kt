@@ -3,12 +3,12 @@ package com.ojhdtapp.miraipluginforparabox.domain.util
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.ojhdtapp.messagedto.message_content.MessageContent
 import com.ojhdtapp.miraipluginforparabox.core.util.FaceMap
 import com.ojhdtapp.miraipluginforparabox.core.util.FileUtil
 import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
+import com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.MessageContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -66,7 +66,7 @@ suspend fun MessageChain.toMessageContentList(
                         e.printStackTrace()
                         null
                     }
-                    com.ojhdtapp.messagedto.message_content.QuoteReply(
+                     com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.QuoteReply(
                         nick,
                         "${it.source.time}000".toLong(),
                         quoteMessageId,
@@ -79,24 +79,24 @@ suspend fun MessageChain.toMessageContentList(
                         )
                     )
                 }
-                is PlainText -> com.ojhdtapp.messagedto.message_content.PlainText(
+                is PlainText ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
                     it.content
                 )
-                is Image -> com.ojhdtapp.messagedto.message_content.Image(
+                is Image ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image(
                     it.queryUrl(),
                     it.width,
                     it.height
                 )
-                is FlashImage -> com.ojhdtapp.messagedto.message_content.Image(
+                is FlashImage ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image(
                     it.image.queryUrl(),
                     it.image.width,
                     it.image.height
                 )
-                is At -> com.ojhdtapp.messagedto.message_content.At(
+                is At ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.At(
                     it.target, it.getDisplay(group).replace("@","")
                 )
-                is AtAll -> com.ojhdtapp.messagedto.message_content.AtAll
-                is Face -> com.ojhdtapp.messagedto.message_content.PlainText(
+                is AtAll ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.AtAll
+                is Face ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
                     FaceMap.query(it.id) ?: it.content
                 )
                 is Audio -> {
@@ -139,7 +139,7 @@ suspend fun MessageChain.toMessageContentList(
                         e.printStackTrace()
                         null
                     }
-                    com.ojhdtapp.messagedto.message_content.Audio(
+                     com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Audio(
                         url,
                         it.length,
                         uri?.let { it.path?.substringAfterLast("/") } ?: it.filename,
@@ -150,7 +150,7 @@ suspend fun MessageChain.toMessageContentList(
                 is FileMessage -> {
                     group?.let { group ->
                         it.toAbsoluteFile(group)?.let { file ->
-                            com.ojhdtapp.messagedto.message_content.File(
+                             com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.File(
                                 url = file.getUrl(),
                                 name = file.name,
                                 extension = file.extension,
@@ -160,11 +160,11 @@ suspend fun MessageChain.toMessageContentList(
                             )
                         }
                     }
-                        ?: com.ojhdtapp.messagedto.message_content.PlainText(
+                        ?:  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
                             it.content
                         )
                 }
-                else -> com.ojhdtapp.messagedto.message_content.PlainText(
+                else ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
                     it.content
                 )
             }

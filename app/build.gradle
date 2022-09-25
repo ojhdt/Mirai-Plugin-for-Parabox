@@ -95,12 +95,12 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
     implementation "androidx.compose.material:material-icons-extended:$compose_version"
 
+    // Development Kit
+    implementation 'com.ojhdt:parabox-development-kit:1.0.1-SNAPSHOT'
+
     // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-
-    // Custom Dto
-    implementation 'com.github.ojhdt:ParaboxDto:1.17'
 
     // Compose Destinations
     implementation 'io.github.raamcosta.compose-destinations:animations-core:1.7.15-beta'

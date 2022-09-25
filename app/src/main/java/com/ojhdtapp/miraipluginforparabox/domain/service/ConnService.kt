@@ -6,7 +6,6 @@ import android.os.*
 import android.os.Message
 import android.util.Log
 import androidx.lifecycle.lifecycleScope
-import com.ojhdtapp.messagedto.*
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
@@ -15,9 +14,11 @@ import com.ojhdtapp.miraipluginforparabox.data.local.entity.MiraiMessageEntity
 import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
 import com.ojhdtapp.miraipluginforparabox.domain.util.*
-import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxKey
-import com.ojhdtapp.miraipluginforparabox.toolkit.ParaboxService
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxKey
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxMetadata
 import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxResult
+import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxService
+import com.ojhdtapp.paraboxdevelopmentkit.messagedto.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -343,11 +344,11 @@ class ConnService : ParaboxService() {
                     val messageChain = buildMessageChain {
                         contents.map {
                             when (it) {
-                                is com.ojhdtapp.messagedto.message_content.PlainText -> add(
+                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText -> add(
                                     PlainText(it.text)
                                 )
 
-                                is com.ojhdtapp.messagedto.message_content.Image -> {
+                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image -> {
                                     it.uri?.let { uri ->
                                         val inputPFD: ParcelFileDescriptor? =
                                             contentResolver.openFileDescriptor(uri, "r")
@@ -364,9 +365,9 @@ class ConnService : ParaboxService() {
                                     }
                                 }
 
-                                is com.ojhdtapp.messagedto.message_content.At -> add(At(it.target))
-                                is com.ojhdtapp.messagedto.message_content.AtAll -> add(AtAll)
-                                is com.ojhdtapp.messagedto.message_content.Audio -> {
+                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.At -> add(At(it.target))
+                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.AtAll -> add(AtAll)
+                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Audio -> {
                                     it.uri?.let { uri ->
                                         val inputPFD: ParcelFileDescriptor? =
                                             contentResolver.openFileDescriptor(uri, "r")
@@ -386,7 +387,7 @@ class ConnService : ParaboxService() {
                                     }
                                 }
 
-                                is com.ojhdtapp.messagedto.message_content.QuoteReply -> {
+                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.QuoteReply -> {
                                     it.quoteMessageId?.also {
                                         repository.getMiraiMessageById(it)?.let {
                                             add(
