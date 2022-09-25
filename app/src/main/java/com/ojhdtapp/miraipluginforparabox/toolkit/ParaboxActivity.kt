@@ -281,6 +281,7 @@ abstract class ParaboxActivity<T>(private val serviceClass: Class<T>) : Componen
                 }
 
                 ParaboxKey.TYPE_NOTIFICATION -> {
+                    val timestamp = obj.getLong("timestamp")
                     when (msg.what) {
                         ParaboxKey.NOTIFICATION_STATE_UPDATE -> {
                             val state = obj.getInt("state", ParaboxKey.STATE_ERROR)

@@ -4,6 +4,7 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.*
 import android.os.Message
+import android.util.Log
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.messagedto.*
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
@@ -220,15 +221,19 @@ class ConnService : ParaboxService() {
                 is BotOfflineEvent.Active -> {
                     updateServiceState(ParaboxKey.STATE_STOP, "账号主动下线")
                 }
+
                 is BotOfflineEvent.Force -> {
                     updateServiceState(ParaboxKey.STATE_ERROR, "账号已在他处登陆")
                 }
+
                 is BotOfflineEvent.Dropped -> {
                     updateServiceState(ParaboxKey.STATE_LOADING, "网络不畅，正在尝试重连")
                 }
+
                 is BotOfflineEvent.RequireReconnect -> {
                     updateServiceState(ParaboxKey.STATE_LOADING, "正在更换连接服务器")
                 }
+
                 else -> {
                     updateServiceState(ParaboxKey.STATE_ERROR, "未知原因离线")
                 }
@@ -455,6 +460,19 @@ class ConnService : ParaboxService() {
 
     override fun onRefreshMessage() {
 
+    }
+
+    override fun onMainAppLaunch() {
+        Log.d("parabox", "main app launched")
+        if (getServiceState() == ParaboxKey.STATE_STOP) {
+            lifecycleScope.launch {
+                val isAutoLoginEnabled =
+                    dataStore.data.first()[DataStoreKeys.AUTO_LOGIN] ?: false
+                if (isAutoLoginEnabled) {
+                    onStartParabox()
+                }
+            }
+        }
     }
 
 

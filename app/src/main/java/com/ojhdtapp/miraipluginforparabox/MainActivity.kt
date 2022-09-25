@@ -177,6 +177,7 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
         super.onStart()
         // bind Service
         bindParaboxService()
+        getState()
     }
 
     override fun onStop() {
