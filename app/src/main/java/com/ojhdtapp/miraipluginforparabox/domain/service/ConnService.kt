@@ -344,11 +344,11 @@ class ConnService : ParaboxService() {
                     val messageChain = buildMessageChain {
                         contents.map {
                             when (it) {
-                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText -> add(
+                                is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText -> add(
                                     PlainText(it.text)
                                 )
 
-                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image -> {
+                                is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image -> {
                                     it.uri?.let { uri ->
                                         val inputPFD: ParcelFileDescriptor? =
                                             contentResolver.openFileDescriptor(uri, "r")
@@ -365,9 +365,15 @@ class ConnService : ParaboxService() {
                                     }
                                 }
 
-                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.At -> add(At(it.target))
-                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.AtAll -> add(AtAll)
-                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Audio -> {
+                                is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.At -> add(
+                                    At(it.target)
+                                )
+
+                                is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.AtAll -> add(
+                                    AtAll
+                                )
+
+                                is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Audio -> {
                                     it.uri?.let { uri ->
                                         val inputPFD: ParcelFileDescriptor? =
                                             contentResolver.openFileDescriptor(uri, "r")
@@ -387,7 +393,7 @@ class ConnService : ParaboxService() {
                                     }
                                 }
 
-                                is  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.QuoteReply -> {
+                                is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.QuoteReply -> {
                                     it.quoteMessageId?.also {
                                         repository.getMiraiMessageById(it)?.let {
                                             add(
@@ -409,7 +415,10 @@ class ConnService : ParaboxService() {
                     }
                 }
                 true
-            } catch (e: java.util.NoSuchElementException) {
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+                false
+            } catch (e: NoSuchElementException) {
                 e.printStackTrace()
                 false
             } catch (e: EventCancelledException) {
