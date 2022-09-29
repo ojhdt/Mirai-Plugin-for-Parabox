@@ -16,7 +16,7 @@ interface SecretDao {
     @Delete
     suspend fun deleteSecret(secret: SecretEntity)
 
-    @Query("SELECT * FROM secretentity WHERE selected = true LIMIT 1")
+    @Query("SELECT * FROM secretentity WHERE selected LIMIT 1")
     suspend fun getSelectedSecret() : SecretEntity?
 
     @Query("SELECT * FROM secretentity")

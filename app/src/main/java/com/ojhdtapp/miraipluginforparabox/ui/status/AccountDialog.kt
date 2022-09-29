@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.text.isDigitsOnly
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 
@@ -324,7 +325,7 @@ private fun checkAndSubmit(
     onAccountNumError: (Boolean) -> Unit,
     onPasswdError: (Boolean) -> Unit
 ) {
-    if (accountNum.isNotBlank() && passwd.isNotBlank()) {
+    if (accountNum.isNotBlank() && accountNum.isDigitsOnly() && passwd.isNotBlank()) {
         onAddSecret(
             Secret(
                 account = accountNum.toLong(),
@@ -333,7 +334,7 @@ private fun checkAndSubmit(
         )
         onDismissRequest()
     } else {
-        onAccountNumError(accountNum.isBlank())
+        onAccountNumError(accountNum.isBlank() || !accountNum.isDigitsOnly())
         onPasswdError(passwd.isBlank())
     }
 }
