@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Message
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.*
 import com.ojhdtapp.miraipluginforparabox.domain.service.ConnService
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
@@ -50,22 +52,29 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     }
 
     override fun onParaboxServiceConnected() {
+        getState()
     }
 
     override fun onParaboxServiceDisconnected() {
     }
 
     override fun onParaboxServiceStateChanged(state: Int, message: String?) {
-        message?.let{
-            val serviceState = when (state) {
-                ParaboxKey.STATE_ERROR -> ServiceStatus.Error(it)
-                ParaboxKey.STATE_LOADING -> ServiceStatus.Loading(it)
-                ParaboxKey.STATE_PAUSE -> ServiceStatus.Pause(it)
-                ParaboxKey.STATE_STOP -> ServiceStatus.Stop
-                ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(it)
-                else -> ServiceStatus.Stop
+        Log.d("parabox", "received update state: ${state}")
+        val serviceState = when (state) {
+            ParaboxKey.STATE_ERROR -> ServiceStatus.Error(message ?: "发生错误")
+            ParaboxKey.STATE_LOADING -> ServiceStatus.Loading(message ?: "服务加载中")
+            ParaboxKey.STATE_PAUSE -> ServiceStatus.Pause(message ?: "服务已暂停")
+            ParaboxKey.STATE_STOP -> ServiceStatus.Stop
+            ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(
+                message ?: "Mirai Core - $MIRAI_CORE_VERSION"
+            )
+            else -> ServiceStatus.Stop
+        }
+        viewModel.updateServiceStatusStateFlow(serviceState)
+        when(state){
+            ParaboxKey.STATE_ERROR, ParaboxKey.STATE_STOP -> {
+                viewModel.updateLoginResourceStateFlow(LoginResource.None)
             }
-            viewModel.updateServiceStatusStateFlow(serviceState)
         }
     }
 
@@ -127,7 +136,6 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         notificationUtil = NotificationUtilForActivity(this)
-
         checkMainAppInstallation()
 //        checkMainAppOnBackStack()
 
@@ -291,6 +299,7 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
                         else -> "未知错误"
                     }
                     viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
+                    viewModel.updateLoginResourceStateFlow(LoginResource.None)
                     notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
                 }
             })
@@ -307,6 +316,7 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
                         else -> "未知错误"
                     }
                     viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
+                    viewModel.updateLoginResourceStateFlow(LoginResource.None)
                     notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
                 }
             })
