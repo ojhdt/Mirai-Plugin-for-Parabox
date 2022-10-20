@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
@@ -40,6 +41,8 @@ import com.ramcosta.composedestinations.animations.defaults.RootNavGraphDefaultA
 import com.ramcosta.composedestinations.animations.rememberAnimatedNavHostEngine
 import com.ramcosta.composedestinations.navigation.dependency
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
@@ -72,7 +75,7 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
         }
         viewModel.updateServiceStatusStateFlow(serviceState)
         when(state){
-            ParaboxKey.STATE_ERROR, ParaboxKey.STATE_STOP -> {
+            ParaboxKey.STATE_ERROR, ParaboxKey.STATE_STOP, ParaboxKey.STATE_RUNNING -> {
                 viewModel.updateLoginResourceStateFlow(LoginResource.None)
             }
         }
@@ -185,13 +188,12 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
         super.onStart()
         // bind Service
         bindParaboxService()
-        getState()
     }
 
     override fun onStop() {
         super.onStop()
-        // stop service
-        stopParaboxService()
+        // unbind service
+        unbindParaboxService()
     }
 
     override fun onNewIntent(intent: Intent?) {

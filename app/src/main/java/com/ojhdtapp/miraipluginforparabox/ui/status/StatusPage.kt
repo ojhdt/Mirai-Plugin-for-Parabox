@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.ui.status
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,11 +51,15 @@ fun AnimatedVisibilityScope.StatusPage(
         }
     }
     // topBar
-    val decayAnimationSpec = rememberSplineBasedDecay<Float>()
-    val scrollState = rememberTopAppBarState()
-    val scrollBehavior = remember(decayAnimationSpec) {
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(decayAnimationSpec, scrollState)
-    }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val colorTransitionFraction = scrollBehavior.state.collapsedFraction
+    val appBarContainerColor by rememberUpdatedState(
+        lerp(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+            FastOutLinearInEasing.transform(colorTransitionFraction)
+        )
+    )
     // accountDialog
     var openAccountDialog by remember {
         mutableStateOf(false)
@@ -87,13 +93,7 @@ fun AnimatedVisibilityScope.StatusPage(
                     )
                 },
                 modifier = Modifier
-                    .background(
-                        TopAppBarDefaults
-                            .largeTopAppBarColors()
-                            .containerColor(
-                                colorTransitionFraction = scrollBehavior.state.collapsedFraction
-                            ).value
-                    )
+                    .background(appBarContainerColor)
                     .statusBarsPadding(),
                 actions = {
                     IconButton(onClick = {
@@ -152,7 +152,7 @@ fun AnimatedVisibilityScope.StatusPage(
             contentPadding = paddingValues,
             state = rememberLazyListState()
         ) {
-            item {
+            item(key = "main_switch") {
                 MainSwitch(
                     modifier = Modifier
                         .padding(16.dp)
@@ -167,7 +167,7 @@ fun AnimatedVisibilityScope.StatusPage(
                     enabled = viewModel.mainSwitchEnabledState.value
                 )
             }
-            item {
+            item(key = "status_indicator") {
                 StatusIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -176,7 +176,7 @@ fun AnimatedVisibilityScope.StatusPage(
                 )
             }
 
-            item {
+            item(key = "login_resource") {
                 val loginResource by viewModel.loginResourceStateFlow.collectAsState()
                 Box(
                     modifier = Modifier
@@ -253,7 +253,7 @@ fun AnimatedVisibilityScope.StatusPage(
                 }
             }
 
-            item {
+            item(key = "info") {
                 AnimatedVisibility(
                     visible = !viewModel.mainSwitchState.value || !viewModel.mainSwitchEnabledState.value,
                     enter = expandVertically(),
@@ -275,7 +275,7 @@ fun AnimatedVisibilityScope.StatusPage(
                 }
             }
 
-            item {
+            item(key = "settings") {
                 Column() {
                     Spacer(modifier = Modifier.height(16.dp))
                     PreferencesCategory(text = "行为")
@@ -345,7 +345,7 @@ fun AnimatedVisibilityScope.StatusPage(
                     }
                 }
             }
-            item {
+            item(key = "padding") {
                 Spacer(modifier = Modifier.navigationBarsPadding())
             }
         }

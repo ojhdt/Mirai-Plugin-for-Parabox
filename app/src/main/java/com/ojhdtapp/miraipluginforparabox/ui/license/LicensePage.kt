@@ -1,6 +1,7 @@
 package com.ojhdtapp.miraipluginforparabox.ui.license
 
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,7 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.ojhdtapp.miraipluginforparabox.ui.status.StatusPageEvent
@@ -29,15 +32,21 @@ fun AnimatedVisibilityScope.LicensePage(
     onEvent: (StatusPageEvent) -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
-    val scrollFraction = scrollBehavior.state.overlappedFraction
-    val topAppBarColor by TopAppBarDefaults.smallTopAppBarColors().containerColor(scrollFraction)
+    val colorTransitionFraction = scrollBehavior.state.collapsedFraction
+    val appBarContainerColor by rememberUpdatedState(
+        lerp(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+            FastOutLinearInEasing.transform(colorTransitionFraction)
+        )
+    )
     Scaffold(modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            SmallTopAppBar(
-                modifier = Modifier
-                    .background(topAppBarColor)
-                    .statusBarsPadding(),
+            TopAppBar(
                 title = { Text(text = "开放源代码许可") },
+                modifier = Modifier
+                    .background(appBarContainerColor)
+                    .statusBarsPadding(),
                 navigationIcon = {
                     IconButton(onClick = { navigator.navigateUp() }) {
                         Icon(

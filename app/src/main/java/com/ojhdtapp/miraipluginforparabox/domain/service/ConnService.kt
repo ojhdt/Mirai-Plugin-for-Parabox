@@ -123,7 +123,7 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto)
+                    receiveMessage(dto){}
                 }
 
                 is FriendMessageEvent -> {
@@ -165,7 +165,7 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto)
+                    receiveMessage(dto){}
                 }
 
                 else -> {
@@ -207,7 +207,7 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto)
+                    receiveMessage(dto){}
                 }
             }
         }
