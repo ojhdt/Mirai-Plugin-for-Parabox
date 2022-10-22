@@ -335,7 +335,7 @@ fun AnimatedVisibilityScope.StatusPage(
                         title = "Mirai Core 版本",
                         subtitle = viewModel.miraiCoreVersion
                     ) {
-
+                        onEvent(StatusPageEvent.OnLaunchBrowser("https://github.com/mamoe/mirai"))
                     }
                     NormalPreference(title = "项目地址") {
                         onEvent(StatusPageEvent.OnLaunchBrowser("https://github.com/ojhdt/Mirai-Plugin-for-Parabox"))
