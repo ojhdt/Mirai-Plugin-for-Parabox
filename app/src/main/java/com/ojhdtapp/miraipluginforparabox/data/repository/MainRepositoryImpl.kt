@@ -40,7 +40,7 @@ class MainRepositoryImpl @Inject constructor(
         return secretDao.getAllSecretsFlow().flatMapLatest {
             flow {
                 emit(it.map { it.toSecret() })
-                emit(it.map { it.toAvatarDownloadedSecret() })
+//                emit(it.map { it.toAvatarDownloadedSecret() })
             }
         }
     }

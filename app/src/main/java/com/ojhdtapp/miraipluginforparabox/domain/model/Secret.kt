@@ -3,8 +3,6 @@ package com.ojhdtapp.miraipluginforparabox.domain.model
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.ojhdtapp.miraipluginforparabox.data.local.entity.SecretEntity
-import io.ktor.client.*
-import io.ktor.client.request.*
 
 data class Secret(
     var account: Long,
@@ -13,25 +11,25 @@ data class Secret(
     var avatarUrl: String? = null,
     var bitmap: Bitmap? = null
 ) {
-    suspend fun toAvatarDownloadedSecret(): Secret = Secret(
-        account = account,
-        password = password,
-        selected = selected,
-        avatarUrl = avatarUrl,
-        bitmap = downloadAvatar()
-    )
+//    suspend fun toAvatarDownloadedSecret(): Secret = Secret(
+//        account = account,
+//        password = password,
+//        selected = selected,
+//        avatarUrl = avatarUrl,
+//        bitmap = downloadAvatar()
+//    )
 
-    private suspend fun downloadAvatar(): Bitmap? =
-        avatarUrl?.let {
-            try {
-                HttpClient().get<ByteArray>(it).let { avatarData ->
-                    BitmapFactory.decodeByteArray(avatarData, 0, avatarData.size)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-        }
+//    private suspend fun downloadAvatar(): Bitmap? =
+//        avatarUrl?.let {
+//            try {
+//                HttpClient().get<ByteArray>(it).let { avatarData ->
+//                    BitmapFactory.decodeByteArray(avatarData, 0, avatarData.size)
+//                }
+//            } catch (e: Exception) {
+//                e.printStackTrace()
+//                null
+//            }
+//        }
 
     fun toSecretsEntity() =
         SecretEntity(

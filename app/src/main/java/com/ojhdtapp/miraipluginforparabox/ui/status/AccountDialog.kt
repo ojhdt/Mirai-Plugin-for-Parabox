@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 
 @Composable
@@ -174,15 +176,27 @@ fun AccountItem(
             modifier = Modifier.padding(start = 16.dp)
         )
         Spacer(modifier = Modifier.weight(1f))
-        data.bitmap?.let {
-            Image(
-                modifier = modifier
+        data.avatarUrl?.let {
+            AsyncImage(
+                model = it,
+                contentDescription = "avatar",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
                     .size(36.dp)
-                    .clip(CircleShape),
-                bitmap = it.asImageBitmap(),
-                contentDescription = "avatar"
+                    .clip(
+                        CircleShape
+                    )
             )
         }
+//        data.bitmap?.let {
+//            Image(
+//                modifier = modifier
+//                    .size(36.dp)
+//                    .clip(CircleShape),
+//                bitmap = it.asImageBitmap(),
+//                contentDescription = "avatar"
+//            )
+//        }
     }
 }
 
