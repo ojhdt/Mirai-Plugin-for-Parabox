@@ -19,6 +19,12 @@ sealed interface LoginResource : Parcelable {
     @Parcelize
     data class UnsafeDeviceLoginVerify(val url: String, val metadata: ParaboxMetadata) :
         LoginResource
+
+    @Parcelize
+    data class Sms(val number: String, val metadata: ParaboxMetadata): LoginResource
+
+    @Parcelize
+    data class Fallback(val url: String, val metadata: ParaboxMetadata): LoginResource
 }
 
 object LoginResourceType {

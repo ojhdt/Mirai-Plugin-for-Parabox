@@ -14,8 +14,8 @@ android {
         applicationId "com.ojhdtapp.miraipluginforparabox"
         minSdk 26
         targetSdk 33
-        versionCode 3
-        versionName "0.2.2-alpha"
+        versionCode 4
+        versionName "0.2.3-alpha"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -112,7 +112,8 @@ dependencies {
     implementation "androidx.datastore:datastore-preferences:1.0.0"
 
     // Accompanist
-    implementation "com.google.accompanist:accompanist-systemuicontroller:0.26.1-alpha"
+    implementation "com.google.accompanist:accompanist-systemuicontroller:0.27.0"
+    implementation "com.google.accompanist:accompanist-webview:0.27.0"
 
     // Navigation Compose
     def nav_version = "2.5.2"

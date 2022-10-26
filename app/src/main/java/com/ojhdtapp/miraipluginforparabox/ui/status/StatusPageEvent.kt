@@ -8,6 +8,8 @@ sealed class StatusPageEvent {
     object OnServiceStop : StatusPageEvent()
     object OnServiceForceStop : StatusPageEvent()
     data class OnLoginResourceConfirm(val res: String, val metadata: ParaboxMetadata) : StatusPageEvent()
+    data class OnDeviceVerificationSmsConfirm(val res: String, val metadata: ParaboxMetadata): StatusPageEvent()
+    data class OnDeviceVerificationFallbackConfirm(val metadata: ParaboxMetadata): StatusPageEvent()
     object OnRequestIgnoreBatteryOptimizations : StatusPageEvent()
     data class OnShowToast(val message: String) : StatusPageEvent()
     data class OnLaunchBrowser(val url: String) : StatusPageEvent()

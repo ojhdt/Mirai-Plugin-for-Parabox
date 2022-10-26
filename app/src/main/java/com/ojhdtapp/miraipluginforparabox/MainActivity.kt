@@ -71,10 +71,11 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
             ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(
                 message ?: "Mirai Core - $MIRAI_CORE_VERSION"
             )
+
             else -> ServiceStatus.Stop
         }
         viewModel.updateServiceStatusStateFlow(serviceState)
-        when(state){
+        when (state) {
             ParaboxKey.STATE_ERROR, ParaboxKey.STATE_STOP, ParaboxKey.STATE_RUNNING -> {
                 viewModel.updateLoginResourceStateFlow(LoginResource.None)
             }
@@ -129,6 +130,28 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
                             url,
                             metadata
                         )
+                    )
+                }
+            }
+
+            ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_SMS -> {
+                val number = obj.getString("number")
+                viewModel.updateLoginResourceStateFlow(
+                    LoginResource.Sms(number ?: "null", metadata)
+                )
+            }
+
+            ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_FALLBACK -> {
+                val url = obj.getString("url")
+                if (url == null) {
+                    sendRequestResponse(
+                        isSuccess = false,
+                        metadata = metadata,
+                        errorCode = ParaboxKey.ERROR_RESOURCE_NOT_FOUND
+                    )
+                } else {
+                    viewModel.updateLoginResourceStateFlow(
+                        LoginResource.Fallback(url, metadata)
                     )
                 }
             }
@@ -247,6 +270,23 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
                     extra = Bundle().apply {
                         putString("result", event.res)
                     }
+                )
+            }
+
+            is StatusPageEvent.OnDeviceVerificationSmsConfirm -> {
+                sendRequestResponse(
+                    isSuccess = true,
+                    metadata = event.metadata,
+                    extra = Bundle().apply {
+                        putString("result", event.res)
+                    }
+                )
+            }
+
+            is StatusPageEvent.OnDeviceVerificationFallbackConfirm -> {
+                sendRequestResponse(
+                    isSuccess = true,
+                    metadata = event.metadata
                 )
             }
 

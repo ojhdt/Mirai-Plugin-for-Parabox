@@ -42,6 +42,8 @@ import net.mamoe.mirai.message.data.MessageChain.Companion.serializeToJsonString
 import net.mamoe.mirai.message.data.MessageSource.Key.quote
 import net.mamoe.mirai.network.LoginFailedException
 import net.mamoe.mirai.utils.BotConfiguration
+import net.mamoe.mirai.utils.DeviceVerificationRequests
+import net.mamoe.mirai.utils.DeviceVerificationResult
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.MiraiInternalApi
@@ -50,6 +52,9 @@ import java.io.*
 import java.util.*
 import javax.inject.Inject
 import kotlin.NoSuchElementException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 @AndroidEntryPoint
 class ConnService : ParaboxService() {
@@ -69,6 +74,8 @@ class ConnService : ParaboxService() {
         const val REQUEST_SOLVE_PIC_CAPTCHA = 30
         const val REQUEST_SOLVE_SLIDER_CAPTCHA = 31
         const val REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY = 32
+        const val REQUEST_SOLVE_DEVICE_VERIFICATION_SMS = 33
+        const val REQUEST_SOLVE_DEVICE_VERIFICATION_FALLBACK = 34
 
         init {
             System.loadLibrary("silkcodec")
@@ -123,7 +130,7 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto){}
+                    receiveMessage(dto) {}
                 }
 
                 is FriendMessageEvent -> {
@@ -165,7 +172,7 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto){}
+                    receiveMessage(dto) {}
                 }
 
                 else -> {
@@ -207,7 +214,7 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto){}
+                    receiveMessage(dto) {}
                 }
             }
         }
@@ -321,6 +328,7 @@ class ConnService : ParaboxService() {
     }
 
     override fun onStateUpdate(state: Int, message: String?) {
+        Log.d("parabox", "state update: $state")
     }
 
     override fun customHandleMessage(msg: Message, metadata: ParaboxMetadata) {
@@ -487,74 +495,158 @@ class ConnService : ParaboxService() {
 
 
     inner class AndroidLoginSolver() : LoginSolver() {
-
-        override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String {
-            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
-            val deferred = CompletableDeferred<String>()
-            val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
-            sendRequest(
-                request = ConnService.REQUEST_SOLVE_PIC_CAPTCHA,
-                client = ParaboxKey.CLIENT_CONTROLLER,
-                extra = Bundle().apply {
-                    putParcelable("bitmap", bm)
-                },
-                timeoutMillis = 60000,
-                onResult = {
-                    if (it is ParaboxResult.Success) {
-                        updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
-                        it.obj.getString("result").also {
-                            if (it != null) deferred.complete(it)
-                            else throw NoSuchElementException("result not found")
+        override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String? {
+            return suspendCoroutine<String?> { cot ->
+                updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+                val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
+                sendRequest(
+                    request = ConnService.REQUEST_SOLVE_PIC_CAPTCHA,
+                    client = ParaboxKey.CLIENT_CONTROLLER,
+                    extra = Bundle().apply {
+                        putParcelable("bitmap", bm)
+                    },
+                    timeoutMillis = 60000,
+                    onResult = {
+                        if (it is ParaboxResult.Success) {
+                            updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                            it.obj.getString("result").also {
+                                cot.resume(it)
+                            }
+                        } else {
+                            val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
+                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
+                                ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                                ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                                ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                                else -> "未知错误"
+                            }
+                            cot.resume(null)
+                            updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
                         }
-                    } else {
-                        val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
-                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                            ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                            ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                            ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                            else -> "未知错误"
-                        }
-                        deferred.completeExceptionally(IOException("result transmission failed"))
-                        updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
                     }
-                }
-            )
-            return deferred.await()
+                )
+            }
         }
 
         override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
-            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
-            val deferred = CompletableDeferred<String>()
-            sendRequest(
-                request = ConnService.REQUEST_SOLVE_SLIDER_CAPTCHA,
-                client = ParaboxKey.CLIENT_CONTROLLER,
-                extra = Bundle().apply {
-                    putString("url", url)
-                },
-                timeoutMillis = 90000,
-                onResult = {
-                    if (it is ParaboxResult.Success) {
-                        updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
-                        it.obj.getString("result").also {
-                            if (it != null) deferred.complete(it)
-                            else throw NoSuchElementException("result not found")
+            return suspendCoroutine<String?> { cot ->
+                updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+                sendRequest(
+                    request = ConnService.REQUEST_SOLVE_SLIDER_CAPTCHA,
+                    client = ParaboxKey.CLIENT_CONTROLLER,
+                    extra = Bundle().apply {
+                        putString("url", url)
+                    },
+                    timeoutMillis = 90000,
+                    onResult = {
+                        if (it is ParaboxResult.Success) {
+                            updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                            it.obj.getString("result").also {
+                                cot.resume(it)
+                            }
+                        } else {
+                            val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
+                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
+                                ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                                ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                                ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                                else -> "未知错误"
+                            }
+                            cot.resume(null)
+                            updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
                         }
-                    } else {
-                        val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
-                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                            ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                            ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                            ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                            else -> "未知错误"
-                        }
-                        deferred.completeExceptionally(IOException("result transmission failed"))
-                        updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
                     }
-                }
-            )
-            return deferred.await()
+                )
+            }
         }
 
+        override suspend fun onSolveDeviceVerification(
+            bot: Bot,
+            requests: DeviceVerificationRequests
+        ): DeviceVerificationResult {
+            Log.d("parabox", "onSolveDeviceVerification")
+            return if (requests.sms != null) {
+                updateServiceState(ParaboxKey.STATE_PAUSE, "请完成短信验证")
+                requests.sms!!.let {
+                    it.requestSms()
+                    it.solved(
+                        suspendCoroutine<String> { cot ->
+                            sendRequest(
+                                request = ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_SMS,
+                                client = ParaboxKey.CLIENT_CONTROLLER,
+                                extra = Bundle().apply {
+                                    putString("number", it.phoneNumber)
+                                },
+                                timeoutMillis = 90000,
+                                onResult = {
+                                    if (it is ParaboxResult.Success) {
+                                        updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                                        it.obj.getString("result").also {
+                                            it?.let { cot.resume(it) } ?: cot.resumeWithException(
+                                                NoSuchElementException("missing result")
+                                            )
+                                        }
+                                    } else {
+                                        val errMessage =
+                                            when ((it as ParaboxResult.Fail).errorCode) {
+                                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
+                                                ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                                                ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                                                ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                                                else -> "未知错误"
+                                            }
+                                        cot.resumeWithException(IOException("connection failed"))
+                                        updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
+                                    }
+                                }
+                            )
+                        }
+                    )
+                }
+            } else {
+                requests.fallback!!.let {
+                    updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+                    val res = suspendCoroutine<Boolean> { cot ->
+                        sendRequest(
+                            request = ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_SMS,
+                            client = ParaboxKey.CLIENT_CONTROLLER,
+                            extra = Bundle().apply {
+                                putString("url", it.url)
+                            },
+                            timeoutMillis = 90000,
+                            onResult = {
+                                if (it is ParaboxResult.Success) {
+                                    updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                                    cot.resume(true)
+                                } else {
+                                    val errMessage =
+                                        when ((it as ParaboxResult.Fail).errorCode) {
+                                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
+                                            ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                                            ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                                            ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                                            else -> "未知错误"
+                                        }
+                                    cot.resume(false)
+                                    updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
+                                }
+                            }
+                        )
+                    }
+                    if (res) {
+                        it.solved()
+                    } else {
+                        throw (Exception("failed"))
+                    }
+                }
+            }
+        }
+
+        @Deprecated(
+            "Please use onSolveDeviceVerification instead",
+            replaceWith = ReplaceWith("onSolveDeviceVerification(bot, url, null)"),
+            level = DeprecationLevel.WARNING
+        )
         override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
             updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
             val deferred = CompletableDeferred<String>()

@@ -92,7 +92,9 @@ fun AccountDialog(
                             data = secret,
                             selected = selectedIndex == index,
                             index = index,
-                            onOptionSelected = { newIndex -> selectedIndex = newIndex },
+                            onOptionSelected = { newIndex ->
+                                selectedIndex = newIndex
+                            },
                             onDelete = {
                                 onDeleteSecret(accountList[it])
                                 selectedIndex = initialSelectedIndex
@@ -147,7 +149,9 @@ fun AccountItem(
                 indication = LocalIndication.current,
                 enabled = true,
                 onLongClick = { menuExpanded = true },
-                onClick = {}
+                onClick = {
+                    onOptionSelected(index)
+                }
             )
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically

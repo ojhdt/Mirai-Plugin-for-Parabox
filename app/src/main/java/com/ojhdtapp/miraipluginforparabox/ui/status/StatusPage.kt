@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.web.WebView
+import com.google.accompanist.web.rememberWebViewState
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.destinations.LicensePageDestination
@@ -82,6 +84,9 @@ fun AnimatedVisibilityScope.StatusPage(
     var menuExpanded by remember {
         mutableStateOf(false)
     }
+
+    // login resource
+    val loginResource by viewModel.loginResourceStateFlow.collectAsState()
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -177,7 +182,6 @@ fun AnimatedVisibilityScope.StatusPage(
             }
 
             item(key = "login_resource") {
-                val loginResource by viewModel.loginResourceStateFlow.collectAsState()
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -186,6 +190,7 @@ fun AnimatedVisibilityScope.StatusPage(
                     when (loginResource) {
                         is LoginResource.None -> {
                         }
+
                         is LoginResource.PicCaptcha -> {
                             Row(
                                 modifier = Modifier
@@ -215,6 +220,7 @@ fun AnimatedVisibilityScope.StatusPage(
                                 }
                             }
                         }
+
                         is LoginResource.UnsafeDeviceLoginVerify -> {
                             UnSafeWebView(
                                 modifier = Modifier
@@ -232,6 +238,7 @@ fun AnimatedVisibilityScope.StatusPage(
                                 }
                             )
                         }
+
                         is LoginResource.SliderCaptcha -> {
                             UnSafeWebView(
                                 modifier = Modifier
@@ -248,6 +255,67 @@ fun AnimatedVisibilityScope.StatusPage(
                                     )
                                 }
                             )
+                        }
+
+                        is LoginResource.Sms -> {
+                            var input by remember {
+                                mutableStateOf("")
+                            }
+                            var submitted by remember {
+                                mutableStateOf(false)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    modifier = Modifier.weight(1f),
+                                    value = input, onValueChange = { input = it })
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Button(
+                                    enabled = input.length >= 6 && !submitted,
+                                    onClick = {
+                                        submitted = true
+                                        onEvent(
+                                            StatusPageEvent.OnDeviceVerificationSmsConfirm(
+                                                input,
+                                                (loginResource as LoginResource.Sms).metadata
+                                            )
+                                        )
+                                    }) {
+                                    Text(text = "提交")
+                                }
+                            }
+                        }
+
+                        is LoginResource.Fallback -> {
+                            val state =
+                                rememberWebViewState((loginResource as LoginResource.Fallback).url)
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    modifier = Modifier.padding(16.dp),
+                                    text = "完成验证后，点击确认按钮回送结果",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                                WebView(
+                                    modifier = Modifier
+                                        .padding(vertical = 8.dp)
+                                        .fillMaxWidth()
+                                        .defaultMinSize(minHeight = 360.dp),
+                                    state = state
+                                )
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    Button(modifier = Modifier.align(Alignment.Center), onClick = {
+                                        onEvent(
+                                            StatusPageEvent.OnDeviceVerificationFallbackConfirm((loginResource as LoginResource.Fallback).metadata)
+                                        )
+                                    }) {
+                                        Text(text = "确认完成")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -283,7 +351,7 @@ fun AnimatedVisibilityScope.StatusPage(
                         title = "自动登录",
                         subtitle = "主应用启动时同时以默认账户启动服务",
                         checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
-                        enabled = selectedIndexState != -1 ,
+                        enabled = selectedIndexState != -1,
                         onCheckedChange = viewModel::setAutoLoginSwitch
                     )
                     SwitchPreference(
