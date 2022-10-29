@@ -98,7 +98,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.2.2")
 
     // Development Kit
-    implementation 'com.ojhdt:parabox-development-kit:1.0.3'
+    implementation 'com.ojhdt:parabox-development-kit:1.0.11-SNAPSHOT'
 
     // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'

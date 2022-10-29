@@ -21,13 +21,19 @@ import com.ojhdtapp.paraboxdevelopmentkit.connector.ParaboxService
 import com.ojhdtapp.paraboxdevelopmentkit.messagedto.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.sample
 import moe.ore.silk.AudioUtils
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.contact.BotIsBeingMutedException
 import net.mamoe.mirai.contact.Contact
+import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.MessageTooLargeException
+import net.mamoe.mirai.contact.PermissionDeniedException
+import net.mamoe.mirai.contact.file.RemoteFiles
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.events.BotOfflineEvent
 import net.mamoe.mirai.event.events.BotOnlineEvent
@@ -47,6 +53,7 @@ import net.mamoe.mirai.utils.DeviceVerificationResult
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.MiraiInternalApi
+import net.mamoe.mirai.utils.ProgressionCallback.Companion.asProgressionCallback
 import xyz.cssxsh.mirai.device.MiraiDeviceGenerator
 import java.io.*
 import java.util.*
@@ -55,6 +62,9 @@ import kotlin.NoSuchElementException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.ExperimentalTime
 
 @AndroidEntryPoint
 class ConnService : ParaboxService() {
@@ -335,6 +345,7 @@ class ConnService : ParaboxService() {
 
     }
 
+    @OptIn(FlowPreview::class)
     override suspend fun onSendMessage(dto: SendMessageDto): Boolean {
         val messageId = dto.messageId
         return withContext(Dispatchers.IO) {
@@ -412,7 +423,30 @@ class ConnService : ParaboxService() {
                                         }
                                     }
                                 }
-
+                                is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.File -> {
+                                    it.uri?.let { uri ->
+                                        val inputPFD: ParcelFileDescriptor? =
+                                            contentResolver.openFileDescriptor(uri, "r")
+                                        val fd = inputPFD!!.fileDescriptor
+                                        val inputStream = FileInputStream(fd)
+                                        inputStream.use { stream ->
+                                            stream.toExternalResource().use { resource ->
+                                                val progress = Channel<Long>(Channel.BUFFERED)
+                                                launch {
+                                                    progress.receiveAsFlow().sample(1.seconds).collect { bytes ->
+                                                        val progress = (bytes.toDouble() / resource.size * 100).toInt() / 100
+                                                    }
+                                                }
+                                                (contact as Group).files.uploadNewFile(
+                                                    "/${it.name}",
+                                                    resource,
+                                                    progress.asProgressionCallback(true)
+                                                )
+                                            }
+                                        }
+                                        inputPFD.close()
+                                    }
+                                }
                                 else -> {}
                             }
                         }
@@ -423,6 +457,9 @@ class ConnService : ParaboxService() {
                     }
                 }
                 true
+            } catch (e: PermissionDeniedException) {
+                e.printStackTrace()
+                false
             } catch (e: SecurityException) {
                 e.printStackTrace()
                 false
