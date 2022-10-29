@@ -14,8 +14,8 @@ android {
         applicationId "com.ojhdtapp.miraipluginforparabox"
         minSdk 26
         targetSdk 33
-        versionCode 4
-        versionName "0.2.3-alpha"
+        versionCode 5
+        versionName "0.2.4-alpha"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -98,7 +98,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.2.2")
 
     // Development Kit
-    implementation 'com.ojhdt:parabox-development-kit:1.0.11-SNAPSHOT'
+    implementation 'com.ojhdt:parabox-development-kit:1.0.4'
 
     // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
