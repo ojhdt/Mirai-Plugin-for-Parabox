@@ -28,7 +28,8 @@
 
         <meta-data android:name="connection_type" android:value="810"/>
         <meta-data android:name="connection_name" android:value="Mirai"/>
-
+        <meta-data android:name="author" android:value="Ojhdt"/>
+        <meta-data android:name="description" android:value="mirai extension for Parabox."/>
         <meta-data android:name="plain_text_support" android:value="2"/>
         <meta-data android:name="image_support" android:value="2"/>
         <meta-data android:name="audio_support" android:value="2"/>

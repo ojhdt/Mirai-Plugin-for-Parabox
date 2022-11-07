@@ -392,7 +392,7 @@ fun AnimatedVisibilityScope.StatusPage(
                     Spacer(modifier = Modifier.height(16.dp))
                     PreferencesCategory(text = "故障排除")
                     NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
-                        onEvent(StatusPageEvent.OnLaunchBrowser("https://www.baidu.com/"))
+                        onEvent(StatusPageEvent.OnLaunchBrowser("https://github.com/ojhdt/Mirai-Plugin-for-Parabox/blob/main/FAQ.md"))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     PreferencesCategory(text = "关于")
