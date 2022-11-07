@@ -679,43 +679,43 @@ class ConnService : ParaboxService() {
             }
         }
 
-        @Deprecated(
-            "Please use onSolveDeviceVerification instead",
-            replaceWith = ReplaceWith("onSolveDeviceVerification(bot, url, null)"),
-            level = DeprecationLevel.WARNING
-        )
-        override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
-            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
-            val deferred = CompletableDeferred<String>()
-            sendRequest(
-                request = ConnService.REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY,
-                client = ParaboxKey.CLIENT_CONTROLLER,
-                extra = Bundle().apply {
-                    putString("url", url)
-                },
-                timeoutMillis = 300000,
-                onResult = {
-                    if (it is ParaboxResult.Success) {
-                        updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
-                        it.obj.getString("result").also {
-                            if (it != null) deferred.complete(it)
-                            else throw NoSuchElementException("result not found")
-                        }
-                    } else {
-                        val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
-                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                            ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                            ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                            ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                            else -> "未知错误"
-                        }
-                        deferred.completeExceptionally(IOException("result transmission failed"))
-                        updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
-                    }
-                }
-            )
-            return deferred.await()
-        }
+//        @Deprecated(
+//            "Please use onSolveDeviceVerification instead",
+//            replaceWith = ReplaceWith("onSolveDeviceVerification(bot, url, null)"),
+//            level = DeprecationLevel.WARNING
+//        )
+//        override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
+//            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+//            val deferred = CompletableDeferred<String>()
+//            sendRequest(
+//                request = ConnService.REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY,
+//                client = ParaboxKey.CLIENT_CONTROLLER,
+//                extra = Bundle().apply {
+//                    putString("url", url)
+//                },
+//                timeoutMillis = 300000,
+//                onResult = {
+//                    if (it is ParaboxResult.Success) {
+//                        updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+//                        it.obj.getString("result").also {
+//                            if (it != null) deferred.complete(it)
+//                            else throw NoSuchElementException("result not found")
+//                        }
+//                    } else {
+//                        val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
+//                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
+//                            ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+//                            ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+//                            ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+//                            else -> "未知错误"
+//                        }
+//                        deferred.completeExceptionally(IOException("result transmission failed"))
+//                        updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
+//                    }
+//                }
+//            )
+//            return deferred.await()
+//        }
 
         override val isSliderCaptchaSupported: Boolean
             get() = true

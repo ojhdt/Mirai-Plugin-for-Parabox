@@ -179,14 +179,14 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
                 val navHostEngine = rememberAnimatedNavHostEngine(
                     navHostContentAlignment = Alignment.TopCenter,
                     rootDefaultAnimations = RootNavGraphDefaultAnimations(
-//                    enterTransition = { slideInHorizontally { it }},
-//                    exitTransition = { slideOutHorizontally { -it }},
-//                    popEnterTransition = { slideInHorizontally { -it }},
-//                    popExitTransition = { slideOutHorizontally { it }},
-                        enterTransition = { fadeIn(tween(300)) + scaleIn(tween(300), 0.9f) },
-                        exitTransition = { fadeOut(tween(300)) + scaleOut(tween(300), 1.1f) },
-                        popEnterTransition = { fadeIn(tween(450)) + scaleIn(tween(450), 1.1f) },
-                        popExitTransition = { fadeOut(tween(450)) + scaleOut(tween(450), 0.9f) }
+                        enterTransition = { slideInHorizontally { 100 } + fadeIn() },
+                        exitTransition = { slideOutHorizontally { -100 } + fadeOut() },
+                        popEnterTransition = { slideInHorizontally { -100 } + fadeIn() },
+                        popExitTransition = { slideOutHorizontally { 100 } + fadeOut() }
+//                        enterTransition = { fadeIn(tween(300)) + scaleIn(tween(300), 0.9f) },
+//                        exitTransition = { fadeOut(tween(300)) + scaleOut(tween(300), 1.1f) },
+//                        popEnterTransition = { fadeIn(tween(300)) + scaleIn(tween(300), 1.1f) },
+//                        popExitTransition = { fadeOut(tween(300)) + scaleOut(tween(300), 0.9f) }
                     ),
                 )
                 DestinationsNavHost(
