@@ -20,7 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.ojhdtapp.miraipluginforparabox.R
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 
 @Composable
@@ -30,6 +33,7 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
         enter = expandVertically(),
         exit = shrinkVertically()
     ) {
+        val context = LocalContext.current
         val backgroundColor by animateColorAsState(
             targetValue = when (status) {
                 is ServiceStatus.Error -> MaterialTheme.colorScheme.errorContainer
@@ -88,11 +92,11 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
             Column() {
                 Text(
                     text = when (status) {
-                        is ServiceStatus.Error -> "操作执行时发生错误"
-                        is ServiceStatus.Loading -> "服务正在启动"
-                        is ServiceStatus.Running -> "服务正常运行"
-                        is ServiceStatus.Stop -> "服务已停止"
-                        is ServiceStatus.Pause -> "等待事务处理"
+                        is ServiceStatus.Error -> stringResource(R.string.service_status_error)
+                        is ServiceStatus.Loading -> stringResource(R.string.service_status_loading)
+                        is ServiceStatus.Running -> stringResource(R.string.service_status_running)
+                        is ServiceStatus.Stop -> stringResource(R.string.service_status_stop)
+                        is ServiceStatus.Pause -> stringResource(R.string.service_status_pause)
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = textColor

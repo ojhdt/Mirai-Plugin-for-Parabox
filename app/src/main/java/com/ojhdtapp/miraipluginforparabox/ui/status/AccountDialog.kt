@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.ojhdtapp.miraipluginforparabox.R
 import com.ojhdtapp.miraipluginforparabox.domain.model.Secret
 
 @Composable
@@ -43,6 +45,7 @@ fun AccountDialog(
     onDeleteSecret: (secret: Secret) -> Unit,
     onUpdateSelectedSecret: (selectedIndex: Int, accountList: List<Secret>) -> Unit,
 ) {
+    val context = LocalContext.current
     var selectedIndex by remember(initialSelectedIndex) {
         mutableStateOf(initialSelectedIndex)
     }
@@ -60,15 +63,15 @@ fun AccountDialog(
                         onUpdateSelectedSecret(selectedIndex, accountList)
                         onDismissRequest()
                     } else {
-                        onEvent(StatusPageEvent.OnShowToast("未选择任何选项"))
+                        onEvent(StatusPageEvent.OnShowToast(context.getString(R.string.confirm_not_options_selected_notice)))
                     }
                 }) {
-                    Text(text = "确定")
+                    Text(text = stringResource(id = R.string.confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { isEditing = true }) {
-                    Text(text = "添加账户")
+                    Text(text = stringResource(R.string.add_account))
                 }
             },
             icon = {
@@ -77,7 +80,7 @@ fun AccountDialog(
                     contentDescription = "account"
                 )
             },
-            title = { Text(text = "选择账户") },
+            title = { Text(text = stringResource(R.string.select_account)) },
             text = {
                 Column(
                     modifier = modifier
@@ -85,7 +88,7 @@ fun AccountDialog(
 //                        .weight(weight = 1f, fill = false)
                 ) {
                     if (accountList.isEmpty()) {
-                        Text(text = "无数据，请先至少添加一个账户。")
+                        Text(text = stringResource(R.string.no_account_notice))
                     }
                     accountList.forEachIndexed { index, secret ->
                         AccountItem(
@@ -158,7 +161,7 @@ fun AccountItem(
     ) {
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             DropdownMenuItem(
-                text = { Text(text = "删除") },
+                text = { Text(text = stringResource(R.string.delete)) },
                 onClick = {
                     menuExpanded = false
                     onDelete(index)
@@ -227,7 +230,7 @@ fun AddAccountDialog(
     if (isOpen) {
         AlertDialog(
             onDismissRequest = onDismissRequest,
-            title = { Text(text = "添加账户") },
+            title = { Text(text = stringResource(id = R.string.add_account)) },
             text = {
                 Column(modifier = modifier.verticalScroll(rememberScrollState())) {
                     val focusManager = LocalFocusManager.current
@@ -240,7 +243,7 @@ fun AddAccountDialog(
                         },
                         label = {
                             Text(
-                                text = "账号"
+                                text = stringResource(R.string.account)
                             )
                         },
                         singleLine = true,
@@ -263,7 +266,7 @@ fun AddAccountDialog(
                         },
                         label = {
                             Text(
-                                text = "密码"
+                                text = stringResource(R.string.password)
                             )
                         },
                         singleLine = true,
@@ -297,7 +300,7 @@ fun AddAccountDialog(
                     )
                     Spacer(modifier = modifier.height(16.dp))
                     Text(
-                        text = "你的账号和密码将被保存并在服务启动时完成登录。\n一切信息仅将被保存于本地。",
+                        text = stringResource(R.string.account_notice),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -318,7 +321,7 @@ fun AddAccountDialog(
                         { passwdError = it }
                     )
                 }) {
-                    Text(text = "确定")
+                    Text(text = stringResource(id = R.string.confirm))
                 }
             },
             dismissButton = {
@@ -327,7 +330,7 @@ fun AddAccountDialog(
                     passwdError = false
                     onDismissRequest()
                 }) {
-                    Text(text = "取消")
+                    Text(text = stringResource(R.string.cancel))
                 }
             },
         )

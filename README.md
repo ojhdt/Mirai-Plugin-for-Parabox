@@ -38,3 +38,10 @@
 ## 开源许可
 
 [AGPL-3.0](https://github.com/ojhdt/Mirai-Plugin-for-Parabox/blob/main/LICENSE)
+
+## 鸣谢
+
+本项目代码部分参考以下项目。
+
+- [MiraiAndroid](https://github.com/mzdluo123/MiraiAndroid)
+- [silk4j](https://github.com/mzdluo123/silk4j)
