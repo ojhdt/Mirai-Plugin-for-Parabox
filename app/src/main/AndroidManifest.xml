@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.ojhdtapp.miraipluginforparabox" >
 
 <!--    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />-->
@@ -24,7 +25,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MiraiPluginForParabox"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:localeConfig="@xml/locales_config"
+        tools:targetApi="tiramisu">
 
         <meta-data android:name="connection_type" android:value="810"/>
         <meta-data android:name="connection_name" android:value="Mirai"/>

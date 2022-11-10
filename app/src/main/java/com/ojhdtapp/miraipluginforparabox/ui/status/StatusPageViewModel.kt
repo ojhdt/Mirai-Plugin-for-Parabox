@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ojhdtapp.miraipluginforparabox.R
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
@@ -109,14 +110,14 @@ class StatusPageViewModel @Inject constructor(
     fun addNewAccount(secret: Secret) {
         viewModelScope.launch {
             repository.addNewAccount(secret)
-            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已成功添加账户"))
+            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar(context.getString(R.string.account_added)))
         }
     }
 
     fun deleteAccount(secret: Secret) {
         viewModelScope.launch {
             repository.deleteAccount(secret)
-            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已成功删除账户"))
+            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar(context.getString(R.string.account_deleted)))
         }
     }
 
@@ -127,7 +128,7 @@ class StatusPageViewModel @Inject constructor(
                     selected = index == selectedIndex
                 }
             })
-            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("已保存更改"))
+            _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar(context.getString(R.string.changed_saved)))
         }
     }
 
@@ -165,7 +166,7 @@ class StatusPageViewModel @Inject constructor(
                 context.dataStore.edit { settings ->
                     settings[DataStoreKeys.AUTO_LOGIN] = false
                 }
-                _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar("未选中默认账户，自动登录不可用"))
+                _uiEventFlow.emit(StatusPageUiEvent.ShowSnackBar(context.getString(R.string.automatic_login_account_not_selected_notice)))
             } else {
                 context.dataStore.edit { settings ->
                     settings[DataStoreKeys.AUTO_LOGIN] = value
@@ -215,9 +216,9 @@ class StatusPageViewModel @Inject constructor(
     }
 
     val protocolOptionsMap = mapOf<Int, String>(
-        MiraiProtocol.Phone to "Android 手机（默认）",
-        MiraiProtocol.Pad to "Android 平板",
-        MiraiProtocol.Watch to "Android 手表"
+        MiraiProtocol.Phone to context.getString(R.string.protocol_phone),
+        MiraiProtocol.Pad to context.getString(R.string.protocol_tablet),
+        MiraiProtocol.Watch to context.getString(R.string.protocol_watch)
     )
     val protocolSimpleMenuFLow: Flow<Int> = context.dataStore.data
         .catch { exception ->

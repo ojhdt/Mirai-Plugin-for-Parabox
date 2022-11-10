@@ -6,6 +6,7 @@ import android.os.*
 import android.os.Message
 import android.util.Log
 import androidx.lifecycle.lifecycleScope
+import com.ojhdtapp.miraipluginforparabox.R
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
@@ -120,12 +121,14 @@ class ConnService : ParaboxService() {
                     val senderProfile = Profile(
                         name = event.senderName,
                         avatar = event.sender.avatarUrl,
-                        id = event.sender.id
+                        id = event.sender.id,
+                        avatarUri = null,
                     )
                     val groupProfile = Profile(
                         name = event.group.name,
                         avatar = event.group.avatarUrl,
-                        id = event.subject.id
+                        id = event.subject.id,
+                        avatarUri = null,
                     )
                     val pluginConnection = PluginConnection(
                         connectionType = connectionType,
@@ -167,7 +170,8 @@ class ConnService : ParaboxService() {
                     val profile = Profile(
                         name = event.senderName,
                         avatar = event.sender.avatarUrl,
-                        id = event.subject.id
+                        id = event.subject.id,
+                        avatarUri = null,
                     )
                     val pluginConnection = PluginConnection(
                         connectionType = connectionType,
@@ -209,7 +213,8 @@ class ConnService : ParaboxService() {
                     val profile = Profile(
                         name = event.senderName,
                         avatar = event.sender.avatarUrl,
-                        id = event.subject.id
+                        id = event.subject.id,
+                        avatarUri = null,
                     )
                     val pluginConnection = PluginConnection(
                         connectionType = connectionType,
@@ -230,44 +235,44 @@ class ConnService : ParaboxService() {
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOnlineEvent> {
             notificationUtil.updateForegroundServiceNotification(
-                "服务正常运行",
+                getString(R.string.service_running_normally),
                 "Mirai Core - $MIRAI_CORE_VERSION"
             )
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOfflineEvent> {
             when (it) {
                 is BotOfflineEvent.Active -> {
-                    updateServiceState(ParaboxKey.STATE_STOP, "账号主动下线")
+                    updateServiceState(ParaboxKey.STATE_STOP, getString(R.string.account_offline_initiative))
                 }
 
                 is BotOfflineEvent.Force -> {
-                    updateServiceState(ParaboxKey.STATE_ERROR, "账号已在他处登陆")
+                    updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.account_offline_signin_else_where))
                 }
 
                 is BotOfflineEvent.Dropped -> {
-                    updateServiceState(ParaboxKey.STATE_LOADING, "网络不畅，正在尝试重连")
+                    updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.account_offline_poor_network))
                 }
 
                 is BotOfflineEvent.RequireReconnect -> {
-                    updateServiceState(ParaboxKey.STATE_LOADING, "正在更换连接服务器")
+                    updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.account_offline_server_changed))
                 }
 
                 else -> {
-                    updateServiceState(ParaboxKey.STATE_ERROR, "未知原因离线")
+                    updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.account_offline_unknown))
                 }
             }
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotReloginEvent> {
             updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
             notificationUtil.updateForegroundServiceNotification(
-                "服务正常运行",
+                getString(R.string.service_running_normally),
                 "Mirai Core - $MIRAI_CORE_VERSION"
             )
         }
     }
 
     override fun onStartParabox() {
-        updateServiceState(ParaboxKey.STATE_LOADING, "正在进行身份验证")
+        updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.authentication_running))
         lifecycleScope.launch {
             try {
                 val secret = withContext(Dispatchers.IO) {
@@ -294,7 +299,7 @@ class ConnService : ParaboxService() {
                         else -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
                     }
                 if (secret == null) {
-                    updateServiceState(ParaboxKey.STATE_ERROR, "未选择登陆账户")
+                    updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.account_not_selected))
                     return@launch
                 }
                 bot = BotFactory.newBot(secret.account, secret.password) {
@@ -310,21 +315,21 @@ class ConnService : ParaboxService() {
                     val version = MIRAI_CORE_VERSION
                     updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $version")
                     notificationUtil.updateForegroundServiceNotification(
-                        "服务正常运行",
+                        getString(R.string.service_running_normally),
                         "Mirai Core - $version"
                     )
                 }
             } catch (e: IOException) {
-                updateServiceState(ParaboxKey.STATE_ERROR, "数据存取期间发生致命错误")
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_io))
                 e.printStackTrace()
             } catch (e: NoSuchElementException) {
-                updateServiceState(ParaboxKey.STATE_ERROR, "必要数据于传输期间丢失")
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_data_lost))
                 e.printStackTrace()
             } catch (e: LoginFailedException) {
-                updateServiceState(ParaboxKey.STATE_ERROR, "登陆失败")
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_login_failed))
                 e.printStackTrace()
             } catch (e: IllegalStateException) {
-                updateServiceState(ParaboxKey.STATE_ERROR, "未知错误")
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_unknown))
                 e.printStackTrace()
             }
         }
@@ -534,7 +539,7 @@ class ConnService : ParaboxService() {
     inner class AndroidLoginSolver() : LoginSolver() {
         override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String? {
             return suspendCoroutine<String?> { cot ->
-                updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+                updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.authentication_notice))
                 val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
                 sendRequest(
                     request = ConnService.REQUEST_SOLVE_PIC_CAPTCHA,
@@ -545,17 +550,17 @@ class ConnService : ParaboxService() {
                     timeoutMillis = 60000,
                     onResult = {
                         if (it is ParaboxResult.Success) {
-                            updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                            updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
                             it.obj.getString("result").also {
                                 cot.resume(it)
                             }
                         } else {
                             val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
-                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                                ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                                ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                                ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                                else -> "未知错误"
+                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> getString(R.string.error_resource_not_found)
+                                ParaboxKey.ERROR_DISCONNECTED -> getString(R.string.error_disconnected)
+                                ParaboxKey.ERROR_REPEATED_CALL -> getString(R.string.error_repeated_call)
+                                ParaboxKey.ERROR_TIMEOUT -> getString(R.string.error_timeout)
+                                else -> getString(R.string.error_unknown)
                             }
                             cot.resume(null)
                             updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
@@ -567,7 +572,7 @@ class ConnService : ParaboxService() {
 
         override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
             return suspendCoroutine<String?> { cot ->
-                updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+                updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.authentication_notice))
                 sendRequest(
                     request = ConnService.REQUEST_SOLVE_SLIDER_CAPTCHA,
                     client = ParaboxKey.CLIENT_CONTROLLER,
@@ -577,17 +582,17 @@ class ConnService : ParaboxService() {
                     timeoutMillis = 90000,
                     onResult = {
                         if (it is ParaboxResult.Success) {
-                            updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                            updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
                             it.obj.getString("result").also {
                                 cot.resume(it)
                             }
                         } else {
                             val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
-                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                                ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                                ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                                ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                                else -> "未知错误"
+                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> getString(R.string.error_resource_not_found)
+                                ParaboxKey.ERROR_DISCONNECTED -> getString(R.string.error_disconnected)
+                                ParaboxKey.ERROR_REPEATED_CALL -> getString(R.string.error_repeated_call)
+                                ParaboxKey.ERROR_TIMEOUT -> getString(R.string.error_timeout)
+                                else -> getString(R.string.error_unknown)
                             }
                             cot.resume(null)
                             updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
@@ -603,7 +608,7 @@ class ConnService : ParaboxService() {
         ): DeviceVerificationResult {
             Log.d("parabox", "onSolveDeviceVerification")
             return if (requests.sms != null) {
-                updateServiceState(ParaboxKey.STATE_PAUSE, "请完成短信验证")
+                updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.sms_authentication_notice))
                 requests.sms!!.let {
                     it.requestSms()
                     it.solved(
@@ -617,7 +622,7 @@ class ConnService : ParaboxService() {
                                 timeoutMillis = 90000,
                                 onResult = {
                                     if (it is ParaboxResult.Success) {
-                                        updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                                        updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
                                         it.obj.getString("result").also {
                                             it?.let { cot.resume(it) } ?: cot.resumeWithException(
                                                 NoSuchElementException("missing result")
@@ -626,11 +631,11 @@ class ConnService : ParaboxService() {
                                     } else {
                                         val errMessage =
                                             when ((it as ParaboxResult.Fail).errorCode) {
-                                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                                                ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                                                ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                                                ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                                                else -> "未知错误"
+                                                ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> getString(R.string.error_resource_not_found)
+                                                ParaboxKey.ERROR_DISCONNECTED -> getString(R.string.error_disconnected)
+                                                ParaboxKey.ERROR_REPEATED_CALL -> getString(R.string.error_repeated_call)
+                                                ParaboxKey.ERROR_TIMEOUT -> getString(R.string.error_timeout)
+                                                else -> getString(R.string.error_unknown)
                                             }
                                         cot.resumeWithException(IOException("connection failed"))
                                         updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
@@ -642,7 +647,7 @@ class ConnService : ParaboxService() {
                 }
             } else {
                 requests.fallback!!.let {
-                    updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+                    updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.sms_authentication_notice))
                     val res = suspendCoroutine<Boolean> { cot ->
                         sendRequest(
                             request = ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_SMS,
@@ -653,16 +658,16 @@ class ConnService : ParaboxService() {
                             timeoutMillis = 90000,
                             onResult = {
                                 if (it is ParaboxResult.Success) {
-                                    updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                                    updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
                                     cot.resume(true)
                                 } else {
                                     val errMessage =
                                         when ((it as ParaboxResult.Fail).errorCode) {
-                                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                                            ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                                            ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                                            ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                                            else -> "未知错误"
+                                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> getString(R.string.error_resource_not_found)
+                                            ParaboxKey.ERROR_DISCONNECTED -> getString(R.string.error_disconnected)
+                                            ParaboxKey.ERROR_REPEATED_CALL -> getString(R.string.error_repeated_call)
+                                            ParaboxKey.ERROR_TIMEOUT -> getString(R.string.error_timeout)
+                                            else -> getString(R.string.error_unknown)
                                         }
                                     cot.resume(false)
                                     updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
@@ -685,7 +690,7 @@ class ConnService : ParaboxService() {
             level = DeprecationLevel.WARNING
         )
         override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
-            updateServiceState(ParaboxKey.STATE_PAUSE, "请遵照提示完成身份验证")
+            updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.sms_authentication_notice))
             val deferred = CompletableDeferred<String>()
             sendRequest(
                 request = ConnService.REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY,
@@ -696,18 +701,18 @@ class ConnService : ParaboxService() {
                 timeoutMillis = 300000,
                 onResult = {
                     if (it is ParaboxResult.Success) {
-                        updateServiceState(ParaboxKey.STATE_LOADING, "正在尝试登陆")
+                        updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
                         it.obj.getString("result").also {
                             if (it != null) deferred.complete(it)
                             else throw NoSuchElementException("result not found")
                         }
                     } else {
                         val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
-                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> "必要资源丢失"
-                            ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
-                            ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
-                            ParaboxKey.ERROR_TIMEOUT -> "操作超时"
-                            else -> "未知错误"
+                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> getString(R.string.error_resource_not_found)
+                            ParaboxKey.ERROR_DISCONNECTED -> getString(R.string.error_disconnected)
+                            ParaboxKey.ERROR_REPEATED_CALL -> getString(R.string.error_repeated_call)
+                            ParaboxKey.ERROR_TIMEOUT -> getString(R.string.error_timeout)
+                            else -> getString(R.string.error_unknown)
                         }
                         deferred.completeExceptionally(IOException("result transmission failed"))
                         updateServiceState(ParaboxKey.STATE_ERROR, errMessage)

@@ -18,10 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.web.WebView
 import com.google.accompanist.web.rememberWebViewState
+import com.ojhdtapp.miraipluginforparabox.R
 import com.ojhdtapp.miraipluginforparabox.domain.util.LoginResource
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import com.ojhdtapp.miraipluginforparabox.ui.destinations.LicensePageDestination
@@ -42,6 +45,7 @@ fun AnimatedVisibilityScope.StatusPage(
     onEvent: (StatusPageEvent) -> Unit
 ) {
     val snackBarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     // snackBar & navigation
     LaunchedEffect(true) {
         viewModel.uiEventFlow.collect { event ->
@@ -94,7 +98,7 @@ fun AnimatedVisibilityScope.StatusPage(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = "Mirai Plugin",
+                        text = stringResource(R.string.top_app_bar_title),
                     )
                 },
                 modifier = Modifier
@@ -105,7 +109,7 @@ fun AnimatedVisibilityScope.StatusPage(
                         if (viewModel.serviceStatusStateFlow.value is ServiceStatus.Stop || viewModel.serviceStatusStateFlow.value is ServiceStatus.Error) {
                             openAccountDialog = true
                         } else {
-                            onEvent(StatusPageEvent.OnShowToast("服务运行期间不可修改账户信息"))
+                            onEvent(StatusPageEvent.OnShowToast(context.getString(R.string.account_setting_error_toast)))
                         }
                     }) {
                         Icon(
@@ -121,10 +125,14 @@ fun AnimatedVisibilityScope.StatusPage(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false }) {
                             DropdownMenuItem(
-                                text = { Text(text = "强行停止服务") },
+                                text = { Text(text = stringResource(R.string.force_stop_service)) },
                                 onClick = {
                                     onEvent(StatusPageEvent.OnServiceForceStop)
-                                    viewModel.emitToUiEventFlow(StatusPageUiEvent.ShowSnackBar("已强行停止服务"))
+                                    viewModel.emitToUiEventFlow(
+                                        StatusPageUiEvent.ShowSnackBar(
+                                            context.getString(R.string.service_forcibly_stopped)
+                                        )
+                                    )
                                     menuExpanded = false
                                 },
                                 leadingIcon = {
@@ -285,7 +293,7 @@ fun AnimatedVisibilityScope.StatusPage(
                                             )
                                         )
                                     }) {
-                                    Text(text = "提交")
+                                    Text(text = stringResource(R.string.submit))
                                 }
                             }
                         }
@@ -296,7 +304,7 @@ fun AnimatedVisibilityScope.StatusPage(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     modifier = Modifier.padding(16.dp),
-                                    text = "完成验证后，点击确认按钮回送结果",
+                                    text = stringResource(R.string.login_resource_fallback_notice),
                                     style = MaterialTheme.typography.labelMedium
                                 )
                                 WebView(
@@ -312,7 +320,7 @@ fun AnimatedVisibilityScope.StatusPage(
                                             StatusPageEvent.OnDeviceVerificationFallbackConfirm((loginResource as LoginResource.Fallback).metadata)
                                         )
                                     }) {
-                                        Text(text = "确认完成")
+                                        Text(text = stringResource(R.string.confirm))
                                     }
                                 }
                             }
@@ -335,7 +343,7 @@ fun AnimatedVisibilityScope.StatusPage(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "本插件将为 Parabox 添加 Mirai 支持，需首先安装主端",
+                            text = stringResource(R.string.extension_info),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -346,17 +354,17 @@ fun AnimatedVisibilityScope.StatusPage(
             item(key = "settings") {
                 Column() {
                     Spacer(modifier = Modifier.height(16.dp))
-                    PreferencesCategory(text = "行为")
+                    PreferencesCategory(text = stringResource(R.string.action))
                     SwitchPreference(
-                        title = "自动登录",
-                        subtitle = "主应用启动时同时以默认账户启动服务",
+                        title = stringResource(R.string.automatic_login),
+                        subtitle = stringResource(R.string.automatic_login_sub),
                         checked = viewModel.autoLoginSwitchFlow.collectAsState(initial = false).value,
                         enabled = selectedIndexState != -1,
                         onCheckedChange = viewModel::setAutoLoginSwitch
                     )
                     SwitchPreference(
-                        title = "前台服务",
-                        subtitle = "可提高后台留存能力",
+                        title = stringResource(R.string.foreground_service),
+                        subtitle = stringResource(R.string.foreground_service_sub),
                         checked = viewModel.foregroundServiceSwitchFLow.collectAsState(
                             initial = false
                         ).value,
@@ -364,14 +372,14 @@ fun AnimatedVisibilityScope.StatusPage(
                         onCheckedChange = viewModel::setForegroundServiceSwitch
                     )
                     SwitchPreference(
-                        title = "列表缓存",
-                        subtitle = "可大幅加速登陆进程，但可能引起好友列表不同步问题",
+                        title = stringResource(R.string.contact_cache),
+                        subtitle = stringResource(R.string.contact_cache_sub),
                         checked = viewModel.contactCacheSwitchFlow.collectAsState(initial = false).value,
                         enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
                         onCheckedChange = viewModel::setContactCacheSwitch
                     )
                     SimpleMenuPreference<Int>(
-                        title = "切换登陆协议",
+                        title = stringResource(R.string.protocol_options),
                         optionsMap = viewModel.protocolOptionsMap,
                         selectedKey = viewModel.protocolSimpleMenuFLow.collectAsState(
                             initial = null
@@ -386,35 +394,39 @@ fun AnimatedVisibilityScope.StatusPage(
 //                        enabled = !viewModel.mainSwitchState.value && viewModel.mainSwitchEnabledState.value,
 //                        onCheckedChange = viewModel::setCancelTimeoutSwitch
 //                    )
-                    NormalPreference(title = "忽略电池优化", subtitle = "可提高后台留存能力") {
+                    NormalPreference(
+                        title = stringResource(R.string.request_ignore_battery_optimizations),
+                        subtitle = stringResource(
+                            R.string.request_ignore_battery_optimizations_sub
+                        )
+                    ) {
                         onEvent(StatusPageEvent.OnRequestIgnoreBatteryOptimizations)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    PreferencesCategory(text = "故障排除")
-                    NormalPreference(title = "疑难解答", subtitle = "常见问题及其解决方案") {
+                    PreferencesCategory(text = stringResource(R.string.trouble_shooting))
+                    NormalPreference(title = stringResource(R.string.faq), subtitle = stringResource(
+                                            R.string.faq_sub)
+                                        ) {
                         onEvent(StatusPageEvent.OnLaunchBrowser("https://github.com/ojhdt/Mirai-Plugin-for-Parabox/blob/main/FAQ.md"))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    PreferencesCategory(text = "关于")
-                    NormalPreference(title = "版本", subtitle = viewModel.appVersion) {
+                    PreferencesCategory(text = stringResource(R.string.about))
+                    NormalPreference(title = stringResource(R.string.version), subtitle = viewModel.appVersion) {
 
                     }
                     NormalPreference(
-                        title = "Mirai Core 版本",
+                        title = stringResource(R.string.mirai_core_version),
                         subtitle = viewModel.miraiCoreVersion
                     ) {
                         onEvent(StatusPageEvent.OnLaunchBrowser("https://github.com/mamoe/mirai"))
                     }
-                    NormalPreference(title = "项目地址") {
+                    NormalPreference(title = stringResource(R.string.github_repository)) {
                         onEvent(StatusPageEvent.OnLaunchBrowser("https://github.com/ojhdt/Mirai-Plugin-for-Parabox"))
                     }
-                    NormalPreference(title = "开放源代码许可") {
+                    NormalPreference(title = stringResource(R.string.license)) {
                         navigator.navigate(LicensePageDestination())
                     }
                 }
-            }
-            item(key = "padding") {
-                Spacer(modifier = Modifier.navigationBarsPadding())
             }
         }
 
@@ -575,13 +587,14 @@ fun MainSwitch(
     onCheckedChange: (value: Boolean) -> Unit,
     enabled: Boolean
 ) {
+    val context = LocalContext.current
     val switchColor by animateColorAsState(targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(32.dp))
             .clickable {
                 if (enabled) onCheckedChange(!checked)
-                else onEvent(StatusPageEvent.OnShowToast("操作进行中，请勿重复点击"))
+                else onEvent(StatusPageEvent.OnShowToast(context.getString(R.string.repeat_click_toast)))
             },
         color = switchColor,
         tonalElevation = 3.dp
@@ -593,7 +606,7 @@ fun MainSwitch(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "启用插件",
+                text = stringResource(R.string.enable_extension),
                 style = MaterialTheme.typography.titleLarge,
                 fontSize = MaterialTheme.fontSize.title,
                 color = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
