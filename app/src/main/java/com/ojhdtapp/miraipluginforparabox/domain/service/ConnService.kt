@@ -29,20 +29,10 @@ import kotlinx.coroutines.flow.sample
 import moe.ore.silk.AudioUtils
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
-import net.mamoe.mirai.contact.BotIsBeingMutedException
-import net.mamoe.mirai.contact.Contact
-import net.mamoe.mirai.contact.Group
-import net.mamoe.mirai.contact.MessageTooLargeException
-import net.mamoe.mirai.contact.PermissionDeniedException
+import net.mamoe.mirai.contact.*
 import net.mamoe.mirai.contact.file.RemoteFiles
 import net.mamoe.mirai.event.GlobalEventChannel
-import net.mamoe.mirai.event.events.BotOfflineEvent
-import net.mamoe.mirai.event.events.BotOnlineEvent
-import net.mamoe.mirai.event.events.BotReloginEvent
-import net.mamoe.mirai.event.events.EventCancelledException
-import net.mamoe.mirai.event.events.FriendMessageEvent
-import net.mamoe.mirai.event.events.GroupMessageEvent
-import net.mamoe.mirai.event.events.MessageEvent
+import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.message.MessageReceipt
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.MessageChain.Companion.serializeToJsonString
@@ -189,7 +179,78 @@ class ConnService : ParaboxService() {
                     receiveMessage(dto) {}
                 }
 
+                is GroupMessageSyncEvent -> {
+                    val messageContents =
+                        event.message.toMessageContentList(
+                            context = this@ConnService,
+                            downloadService = downloadService,
+                            bot = bot,
+                            repository = repository
+                        )
+                    val messageId = getMessageId(event.message.ids)
+                    messageId?.let {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            repository.insertMiraiMessage(
+                                MiraiMessageEntity(
+                                    it,
+                                    event.message.serializeToMiraiCode(),
+                                    event.message.serializeToJsonString()
+                                )
+                            )
+
+                        }
+                    }
+                    val pluginConnection = PluginConnection(
+                        connectionType = connectionType,
+                        sendTargetType = SendTargetType.GROUP,
+                        id = event.subject.id
+                    )
+                    val dto = SendMessageDto(
+                        contents = messageContents,
+                        timestamp = "${event.time}000".toLong(),
+                        pluginConnection = pluginConnection,
+                        messageId = messageId,
+                    )
+                    syncMessage(dto) {}
+                }
+
+                is FriendMessageSyncEvent -> {
+                    val messageContents =
+                        event.message.toMessageContentList(
+                            context = this@ConnService,
+                            downloadService = downloadService,
+                            bot = bot,
+                            repository = repository
+                        )
+                    val messageId = getMessageId(event.message.ids)
+                    messageId?.let {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            repository.insertMiraiMessage(
+                                MiraiMessageEntity(
+                                    it,
+                                    event.message.serializeToMiraiCode(),
+                                    event.message.serializeToJsonString()
+                                )
+                            )
+
+                        }
+                    }
+                    val pluginConnection = PluginConnection(
+                        connectionType = connectionType,
+                        sendTargetType = SendTargetType.USER,
+                        id = event.subject.id
+                    )
+                    val dto = SendMessageDto(
+                        contents = messageContents,
+                        timestamp = "${event.time}000".toLong(),
+                        pluginConnection = pluginConnection,
+                        messageId = messageId,
+                    )
+                    syncMessage(dto) {}
+                }
+
                 else -> {
+                    Log.d("parabox", event.toString())
                     val messageContents =
                         event.message.toMessageContentList(
                             context = this@ConnService,
@@ -242,23 +303,38 @@ class ConnService : ParaboxService() {
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOfflineEvent> {
             when (it) {
                 is BotOfflineEvent.Active -> {
-                    updateServiceState(ParaboxKey.STATE_STOP, getString(R.string.account_offline_initiative))
+                    updateServiceState(
+                        ParaboxKey.STATE_STOP,
+                        getString(R.string.account_offline_initiative)
+                    )
                 }
 
                 is BotOfflineEvent.Force -> {
-                    updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.account_offline_signin_else_where))
+                    updateServiceState(
+                        ParaboxKey.STATE_ERROR,
+                        getString(R.string.account_offline_signin_else_where)
+                    )
                 }
 
                 is BotOfflineEvent.Dropped -> {
-                    updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.account_offline_poor_network))
+                    updateServiceState(
+                        ParaboxKey.STATE_LOADING,
+                        getString(R.string.account_offline_poor_network)
+                    )
                 }
 
                 is BotOfflineEvent.RequireReconnect -> {
-                    updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.account_offline_server_changed))
+                    updateServiceState(
+                        ParaboxKey.STATE_LOADING,
+                        getString(R.string.account_offline_server_changed)
+                    )
                 }
 
                 else -> {
-                    updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.account_offline_unknown))
+                    updateServiceState(
+                        ParaboxKey.STATE_ERROR,
+                        getString(R.string.account_offline_unknown)
+                    )
                 }
             }
         }
@@ -299,7 +375,10 @@ class ConnService : ParaboxService() {
                         else -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
                     }
                 if (secret == null) {
-                    updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.account_not_selected))
+                    updateServiceState(
+                        ParaboxKey.STATE_ERROR,
+                        getString(R.string.account_not_selected)
+                    )
                     return@launch
                 }
                 bot = BotFactory.newBot(secret.account, secret.password) {
@@ -352,6 +431,7 @@ class ConnService : ParaboxService() {
 
     @OptIn(FlowPreview::class)
     override suspend fun onSendMessage(dto: SendMessageDto): Boolean {
+        Log.d("parabox", dto.toString())
         val messageId = dto.messageId
         return withContext(Dispatchers.IO) {
             try {
@@ -429,36 +509,44 @@ class ConnService : ParaboxService() {
                                     }
                                 }
                                 is com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.File -> {
-                                    it.uri?.let { uri ->
-                                        val inputPFD: ParcelFileDescriptor? =
-                                            contentResolver.openFileDescriptor(uri, "r")
-                                        val fd = inputPFD!!.fileDescriptor
-                                        val inputStream = FileInputStream(fd)
-                                        inputStream.use { stream ->
-                                            stream.toExternalResource().use { resource ->
-                                                val progress = Channel<Long>(Channel.BUFFERED)
-                                                launch {
-                                                    progress.receiveAsFlow().sample(1.seconds).collect { bytes ->
-                                                        val progress = (bytes.toDouble() / resource.size * 100).toInt() / 100
+                                    if (dto.pluginConnection.sendTargetType == SendTargetType.GROUP) {
+                                        it.uri?.let { uri ->
+                                            val inputPFD: ParcelFileDescriptor? =
+                                                contentResolver.openFileDescriptor(uri, "r")
+                                            val fd = inputPFD!!.fileDescriptor
+                                            val inputStream = FileInputStream(fd)
+                                            inputStream.use { stream ->
+                                                stream.toExternalResource().use { resource ->
+                                                    val progress = Channel<Long>(Channel.BUFFERED)
+                                                    launch {
+                                                        progress.receiveAsFlow().sample(1.seconds)
+                                                            .collect { bytes ->
+                                                                val progress =
+                                                                    (bytes.toDouble() / resource.size * 100).toInt() / 100
+                                                            }
                                                     }
+                                                    (contact as Group).files.uploadNewFile(
+                                                        "/${it.name}",
+                                                        resource,
+                                                        progress.asProgressionCallback(true)
+                                                    )
                                                 }
-                                                (contact as Group).files.uploadNewFile(
-                                                    "/${it.name}",
-                                                    resource,
-                                                    progress.asProgressionCallback(true)
-                                                )
                                             }
+                                            inputPFD.close()
                                         }
-                                        inputPFD.close()
+                                    } else {
+
                                     }
                                 }
                                 else -> {}
                             }
                         }
                     }
-                    val receipt = contact.sendMessage(messageChain)
-                    if (messageId != null) {
-                        receiptMap.put(messageId, receipt)
+                    if (!messageChain.isContentEmpty()) {
+                        val receipt = contact.sendMessage(messageChain)
+                        if (messageId != null) {
+                            receiptMap[messageId] = receipt
+                        }
                     }
                 }
                 true
@@ -539,7 +627,10 @@ class ConnService : ParaboxService() {
     inner class AndroidLoginSolver() : LoginSolver() {
         override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String? {
             return suspendCoroutine<String?> { cot ->
-                updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.authentication_notice))
+                updateServiceState(
+                    ParaboxKey.STATE_PAUSE,
+                    getString(R.string.authentication_notice)
+                )
                 val bm = BitmapFactory.decodeByteArray(data, 0, data.size)
                 sendRequest(
                     request = ConnService.REQUEST_SOLVE_PIC_CAPTCHA,
@@ -550,7 +641,10 @@ class ConnService : ParaboxService() {
                     timeoutMillis = 60000,
                     onResult = {
                         if (it is ParaboxResult.Success) {
-                            updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
+                            updateServiceState(
+                                ParaboxKey.STATE_LOADING,
+                                getString(R.string.try_to_login)
+                            )
                             it.obj.getString("result").also {
                                 cot.resume(it)
                             }
@@ -572,7 +666,10 @@ class ConnService : ParaboxService() {
 
         override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
             return suspendCoroutine<String?> { cot ->
-                updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.authentication_notice))
+                updateServiceState(
+                    ParaboxKey.STATE_PAUSE,
+                    getString(R.string.authentication_notice)
+                )
                 sendRequest(
                     request = ConnService.REQUEST_SOLVE_SLIDER_CAPTCHA,
                     client = ParaboxKey.CLIENT_CONTROLLER,
@@ -582,7 +679,10 @@ class ConnService : ParaboxService() {
                     timeoutMillis = 90000,
                     onResult = {
                         if (it is ParaboxResult.Success) {
-                            updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
+                            updateServiceState(
+                                ParaboxKey.STATE_LOADING,
+                                getString(R.string.try_to_login)
+                            )
                             it.obj.getString("result").also {
                                 cot.resume(it)
                             }
@@ -608,7 +708,10 @@ class ConnService : ParaboxService() {
         ): DeviceVerificationResult {
             Log.d("parabox", "onSolveDeviceVerification")
             return if (requests.sms != null) {
-                updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.sms_authentication_notice))
+                updateServiceState(
+                    ParaboxKey.STATE_PAUSE,
+                    getString(R.string.sms_authentication_notice)
+                )
                 requests.sms!!.let {
                     it.requestSms()
                     it.solved(
@@ -622,7 +725,10 @@ class ConnService : ParaboxService() {
                                 timeoutMillis = 90000,
                                 onResult = {
                                     if (it is ParaboxResult.Success) {
-                                        updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
+                                        updateServiceState(
+                                            ParaboxKey.STATE_LOADING,
+                                            getString(R.string.try_to_login)
+                                        )
                                         it.obj.getString("result").also {
                                             it?.let { cot.resume(it) } ?: cot.resumeWithException(
                                                 NoSuchElementException("missing result")
@@ -647,7 +753,10 @@ class ConnService : ParaboxService() {
                 }
             } else {
                 requests.fallback!!.let {
-                    updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.sms_authentication_notice))
+                    updateServiceState(
+                        ParaboxKey.STATE_PAUSE,
+                        getString(R.string.sms_authentication_notice)
+                    )
                     val res = suspendCoroutine<Boolean> { cot ->
                         sendRequest(
                             request = ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_SMS,
@@ -658,7 +767,10 @@ class ConnService : ParaboxService() {
                             timeoutMillis = 90000,
                             onResult = {
                                 if (it is ParaboxResult.Success) {
-                                    updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
+                                    updateServiceState(
+                                        ParaboxKey.STATE_LOADING,
+                                        getString(R.string.try_to_login)
+                                    )
                                     cot.resume(true)
                                 } else {
                                     val errMessage =
@@ -684,43 +796,43 @@ class ConnService : ParaboxService() {
             }
         }
 
-        @Deprecated(
-            "Please use onSolveDeviceVerification instead",
-            replaceWith = ReplaceWith("onSolveDeviceVerification(bot, url, null)"),
-            level = DeprecationLevel.WARNING
-        )
-        override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
-            updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.sms_authentication_notice))
-            val deferred = CompletableDeferred<String>()
-            sendRequest(
-                request = ConnService.REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY,
-                client = ParaboxKey.CLIENT_CONTROLLER,
-                extra = Bundle().apply {
-                    putString("url", url)
-                },
-                timeoutMillis = 300000,
-                onResult = {
-                    if (it is ParaboxResult.Success) {
-                        updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
-                        it.obj.getString("result").also {
-                            if (it != null) deferred.complete(it)
-                            else throw NoSuchElementException("result not found")
-                        }
-                    } else {
-                        val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
-                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> getString(R.string.error_resource_not_found)
-                            ParaboxKey.ERROR_DISCONNECTED -> getString(R.string.error_disconnected)
-                            ParaboxKey.ERROR_REPEATED_CALL -> getString(R.string.error_repeated_call)
-                            ParaboxKey.ERROR_TIMEOUT -> getString(R.string.error_timeout)
-                            else -> getString(R.string.error_unknown)
-                        }
-                        deferred.completeExceptionally(IOException("result transmission failed"))
-                        updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
-                    }
-                }
-            )
-            return deferred.await()
-        }
+//        @Deprecated(
+//            "Please use onSolveDeviceVerification instead",
+//            replaceWith = ReplaceWith("onSolveDeviceVerification(bot, url, null)"),
+//            level = DeprecationLevel.WARNING
+//        )
+//        override suspend fun onSolveUnsafeDeviceLoginVerify(bot: Bot, url: String): String? {
+//            updateServiceState(ParaboxKey.STATE_PAUSE, getString(R.string.sms_authentication_notice))
+//            val deferred = CompletableDeferred<String>()
+//            sendRequest(
+//                request = ConnService.REQUEST_SOLVE_UNSAFE_DEVICE_LOGIN_VERIFY,
+//                client = ParaboxKey.CLIENT_CONTROLLER,
+//                extra = Bundle().apply {
+//                    putString("url", url)
+//                },
+//                timeoutMillis = 300000,
+//                onResult = {
+//                    if (it is ParaboxResult.Success) {
+//                        updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
+//                        it.obj.getString("result").also {
+//                            if (it != null) deferred.complete(it)
+//                            else throw NoSuchElementException("result not found")
+//                        }
+//                    } else {
+//                        val errMessage = when ((it as ParaboxResult.Fail).errorCode) {
+//                            ParaboxKey.ERROR_RESOURCE_NOT_FOUND -> getString(R.string.error_resource_not_found)
+//                            ParaboxKey.ERROR_DISCONNECTED -> getString(R.string.error_disconnected)
+//                            ParaboxKey.ERROR_REPEATED_CALL -> getString(R.string.error_repeated_call)
+//                            ParaboxKey.ERROR_TIMEOUT -> getString(R.string.error_timeout)
+//                            else -> getString(R.string.error_unknown)
+//                        }
+//                        deferred.completeExceptionally(IOException("result transmission failed"))
+//                        updateServiceState(ParaboxKey.STATE_ERROR, errMessage)
+//                    }
+//                }
+//            )
+//            return deferred.await()
+//        }
 
         override val isSliderCaptchaSupported: Boolean
             get() = true
