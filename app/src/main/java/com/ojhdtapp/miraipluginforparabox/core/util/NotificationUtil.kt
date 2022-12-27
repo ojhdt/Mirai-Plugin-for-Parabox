@@ -44,7 +44,7 @@ class NotificationUtilForService(val context: Service) {
         createNotificationChannel("服务状态", "服务状态")
         val notification: Notification =
             Notification.Builder(context, SERVICE_STATE_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setSmallIcon(R.drawable.ic_outline_extension_24)
 //                .setContentText("服务正在启动")
                 .setContentTitle("尝试以默认账户登录")
                 .setCategory(Notification.CATEGORY_SERVICE)
@@ -65,7 +65,7 @@ class NotificationUtilForService(val context: Service) {
         }
         val notification: Notification =
             Notification.Builder(context, SERVICE_STATE_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setSmallIcon(R.drawable.ic_outline_extension_24)
                 .setContentTitle(text)
 //                .setContentText(text)
                 .setContentIntent(pendingIntent)
@@ -116,7 +116,7 @@ class NotificationUtilForActivity(val context: Context) {
         }
         val notification: Notification =
             Notification.Builder(context, SERVICE_STATE_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setSmallIcon(R.drawable.ic_outline_extension_24)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setContentIntent(pendingIntent)
