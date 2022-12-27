@@ -14,8 +14,8 @@ android {
         applicationId "com.ojhdtapp.miraipluginforparabox"
         minSdk 26
         targetSdk 33
-        versionCode 7
-        versionName "0.2.7"
+        versionCode 8
+        versionName "0.2.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
