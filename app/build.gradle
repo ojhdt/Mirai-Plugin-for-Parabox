@@ -14,8 +14,8 @@ android {
         applicationId "com.ojhdtapp.miraipluginforparabox"
         minSdk 26
         targetSdk 33
-        versionCode 8
-        versionName "0.2.8"
+        versionCode 9
+        versionName "0.2.9"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -69,7 +69,24 @@ android {
             version '3.22.1'
         }
     }
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64' //select ABIs to build APKs for
+            universalApk true //generate an additional APK that contains all the ABIs
+        }
+    }
     applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def abi = output.getFilter(com.android.build.OutputFile.ABI)
+            if (abi == null) abi = "all"//兼容
+            def version = variant.versionName
+            outputFileName = "mirai-plugin-for-parabox" +
+                    "-${version}" +
+                    "-${abi}" +
+                    ".apk"
+        }
         kotlin.sourceSets {
             getByName(variant.name) {
                 kotlin.srcDir("build/generated/ksp/${variant.name}/kotlin")
@@ -133,7 +150,7 @@ dependencies {
     implementation "androidx.browser:browser:1.4.0"
 
     // Mirai
-    implementation('net.mamoe:mirai-core:2.13.2')
+    implementation('net.mamoe:mirai-core:2.13.4')
     implementation 'xyz.cssxsh.mirai:mirai-device-generator:1.1.3'
 
     // Silk
