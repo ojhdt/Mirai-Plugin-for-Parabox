@@ -61,7 +61,7 @@
     <string name="delete">删除</string>
     <string name="account">账号</string>
     <string name="password">密码</string>
-    <string name="account_notice">你的账号和密码将被保存并在服务启动时完成登录。\\n一切信息仅将被保存于本地。</string>
+    <string name="account_notice">你的账号和密码将被保存并在服务启动时完成登录。\n一切信息仅将被保存于本地。</string>
     <string name="cancel">取消</string>
     <string name="service_status_error">操作执行时发生错误</string>
     <string name="service_status_loading">服务正在启动</string>

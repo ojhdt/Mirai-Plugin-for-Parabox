@@ -7,4 +7,4 @@ import dagger.hilt.android.HiltAndroidApp
 class HiltApplication : Application() {
 }
 
-const val MIRAI_CORE_VERSION = "2.13.2"
+const val MIRAI_CORE_VERSION = "2.13.4"
