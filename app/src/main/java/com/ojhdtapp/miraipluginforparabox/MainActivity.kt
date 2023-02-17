@@ -3,11 +3,14 @@ package com.ojhdtapp.miraipluginforparabox
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.os.Message
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -48,6 +51,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
 
     private lateinit var notificationUtil: NotificationUtilForActivity
+    private lateinit var permissionRequester: ActivityResultLauncher<Array<String>>
     private val viewModel: StatusPageViewModel by viewModels()
 
     private val batteryUtil: BatteryUtil by lazy {
@@ -162,8 +166,20 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         notificationUtil = NotificationUtilForActivity(this)
+        permissionRequester = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            if (it.all { it.value }) {
+                // all permission granted
+                Log.d("parabox", "all permission granted")
+            } else {
+                // permission denied
+                Log.d("parabox", "permission denied")
+                finish()
+            }
+        }
         checkMainAppInstallation()
 //        checkMainAppOnBackStack()
+        // request notification permission
+        requestNotificationPermission()
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
@@ -367,5 +383,11 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
 //        viewModel.updateServiceStatusStateFlow(ServiceStatus.Stop)
 //        viewModel.setMainSwitchEnabledState(true)
 //        viewModel.setMainSwitchState(false)
+    }
+
+    private fun requestNotificationPermission(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionRequester.launch(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS))
+        }
     }
 }

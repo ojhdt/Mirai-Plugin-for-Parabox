@@ -33,6 +33,7 @@ import net.mamoe.mirai.contact.*
 import net.mamoe.mirai.contact.roaming.RoamingMessageFilter
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.events.*
+import net.mamoe.mirai.internal.deps.io.ktor.util.collections.CopyOnWriteHashMap
 import net.mamoe.mirai.message.MessageReceipt
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.MessageChain.Companion.serializeToJsonString
@@ -54,6 +55,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import kotlin.time.Duration.Companion.seconds
+import java.util.concurrent.ConcurrentHashMap
 
 @AndroidEntryPoint
 class ConnService : ParaboxService() {
@@ -87,7 +89,7 @@ class ConnService : ParaboxService() {
             val currentValue =
                 dataStore.data.first()[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP]
             val currentTime = System.currentTimeMillis()
-            if (currentValue == null || currentTime - currentValue > 1000 * 60 * 3) {
+            if (currentValue != null && currentTime - currentValue < 1000 * 60 * 3) {
                 dataStore.edit { settings ->
                     settings[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP] = currentTime
                 }
@@ -337,10 +339,10 @@ class ConnService : ParaboxService() {
             }
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOnlineEvent> {
-            notificationUtil.updateForegroundServiceNotification(
-                getString(R.string.service_running_normally),
-                "Mirai Core - $MIRAI_CORE_VERSION"
-            )
+//            notificationUtil.updateForegroundServiceNotification(
+//                getString(R.string.service_running_normally),
+//                "Mirai Core - $MIRAI_CORE_VERSION"
+//            )
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOfflineEvent> {
             when (it) {
@@ -382,14 +384,15 @@ class ConnService : ParaboxService() {
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotReloginEvent> {
             updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
-            notificationUtil.updateForegroundServiceNotification(
-                getString(R.string.service_running_normally),
-                "Mirai Core - $MIRAI_CORE_VERSION"
-            )
+//            notificationUtil.updateForegroundServiceNotification(
+//                getString(R.string.service_running_normally),
+//                "Mirai Core - $MIRAI_CORE_VERSION"
+//            )
         }
     }
 
     private fun getRoamingMessages() {
+        Log.d("parabox", "gettingRoamingMessage: $gettingRoamingMessage")
         if (bot != null && !gettingRoamingMessage) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
@@ -397,8 +400,10 @@ class ConnService : ParaboxService() {
                     val currentTime = System.currentTimeMillis()
                     val lastSuccessfulHandleTimestamp =
                         dataStore.data.first()[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP] ?: 0
-                    val jobMap = mutableMapOf<String, Job>()
-                    val timestampMap = mutableMapOf<String, Long>()
+//                    val jobMap = mutableMapOf<String, Job>()
+                    val jobMap = ConcurrentHashMap<String, Job>()
+//                    val timestampMap = mutableMapOf<String, Long>()
+                    val timestampMap = ConcurrentHashMap<String, Long>()
                     bot!!.groups.forEach { group ->
                         launch {
                             group.roamingMessages.getMessagesIn(
@@ -455,9 +460,13 @@ class ConnService : ParaboxService() {
                             }
                         }
                         Log.d("Roaming", "Roaming message collection finished:${System.currentTimeMillis()}")
+                        gettingRoamingMessage = false
                         jobMap.values.forEach { it.cancel() }
                         jobMap.clear()
                         timestampMap.clear()
+                        dataStore.edit { settings ->
+                            settings[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP] = currentTime
+                        }
                     }
                 } catch (e: Exception) {
                     gettingRoamingMessage = false
@@ -516,9 +525,7 @@ class ConnService : ParaboxService() {
         )
         receiveMessage(dto) {
             if (it is ParaboxResult.Success) {
-                lifecycleScope.launch {
-                    updateLastSuccessfulHandleTimestamp()
-                }
+
             }
         }
     }
@@ -557,9 +564,7 @@ class ConnService : ParaboxService() {
         )
         syncMessage(dto) {
             if (it is ParaboxResult.Success) {
-                lifecycleScope.launch {
-                    updateLastSuccessfulHandleTimestamp()
-                }
+
             }
         }
     }
@@ -606,9 +611,7 @@ class ConnService : ParaboxService() {
         )
         receiveMessage(dto) {
             if (it is ParaboxResult.Success) {
-                lifecycleScope.launch {
-                    updateLastSuccessfulHandleTimestamp()
-                }
+
             }
         }
     }
@@ -647,9 +650,7 @@ class ConnService : ParaboxService() {
         )
         syncMessage(dto) {
             if (it is ParaboxResult.Success) {
-                lifecycleScope.launch {
-                    updateLastSuccessfulHandleTimestamp()
-                }
+
             }
         }
     }
@@ -662,7 +663,7 @@ class ConnService : ParaboxService() {
                     repository.getSelectedAccount()
                 }
                 val isForegroundServiceEnabled =
-                    dataStore.data.first()[DataStoreKeys.FOREGROUND_SERVICE] ?: false
+                    dataStore.data.first()[DataStoreKeys.FOREGROUND_SERVICE] ?: true
                 if (isForegroundServiceEnabled) {
                     notificationUtil.startForegroundService()
                 }
@@ -700,10 +701,10 @@ class ConnService : ParaboxService() {
                     it.login()
                     val version = MIRAI_CORE_VERSION
                     updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $version")
-                    notificationUtil.updateForegroundServiceNotification(
-                        getString(R.string.service_running_normally),
-                        "Mirai Core - $version"
-                    )
+//                    notificationUtil.updateForegroundServiceNotification(
+//                        getString(R.string.service_running_normally),
+//                        "Mirai Core - $version"
+//                    )
                 }
             } catch (e: IOException) {
                 updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_io))
