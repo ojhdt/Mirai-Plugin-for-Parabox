@@ -229,7 +229,7 @@ class StatusPageViewModel @Inject constructor(
             }
         }
         .map { settings ->
-            settings[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone
+            settings[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Pad
         }
 
     fun setProtocolSimpleMenu(value: Int) {

@@ -5,12 +5,14 @@ import android.graphics.BitmapFactory
 import android.os.*
 import android.os.Message
 import android.util.Log
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.lifecycleScope
 import com.ojhdtapp.miraipluginforparabox.R
 import com.ojhdtapp.miraipluginforparabox.core.MIRAI_CORE_VERSION
 import com.ojhdtapp.miraipluginforparabox.core.util.DataStoreKeys
 import com.ojhdtapp.miraipluginforparabox.core.util.NotificationUtilForService
 import com.ojhdtapp.miraipluginforparabox.core.util.dataStore
+import com.ojhdtapp.miraipluginforparabox.core.util.getTimestampInSecond
 import com.ojhdtapp.miraipluginforparabox.data.local.entity.MiraiMessageEntity
 import com.ojhdtapp.miraipluginforparabox.data.remote.api.FileDownloadService
 import com.ojhdtapp.miraipluginforparabox.domain.repository.MainRepository
@@ -23,16 +25,15 @@ import com.ojhdtapp.paraboxdevelopmentkit.messagedto.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.*
 import moe.ore.silk.AudioUtils
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.contact.*
-import net.mamoe.mirai.contact.file.RemoteFiles
+import net.mamoe.mirai.contact.roaming.RoamingMessageFilter
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.events.*
+import net.mamoe.mirai.internal.deps.io.ktor.util.collections.CopyOnWriteHashMap
 import net.mamoe.mirai.message.MessageReceipt
 import net.mamoe.mirai.message.data.*
 import net.mamoe.mirai.message.data.MessageChain.Companion.serializeToJsonString
@@ -53,9 +54,8 @@ import kotlin.NoSuchElementException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.ExperimentalTime
+import java.util.concurrent.ConcurrentHashMap
 
 @AndroidEntryPoint
 class ConnService : ParaboxService() {
@@ -67,6 +67,7 @@ class ConnService : ParaboxService() {
     lateinit var notificationUtil: NotificationUtilForService
     private var bot: Bot? = null
     private var receiptMap = mutableMapOf<Long, MessageReceipt<Contact>>()
+    var gettingRoamingMessage = false
 
     companion object {
         var connectionType = 0
@@ -80,6 +81,19 @@ class ConnService : ParaboxService() {
 
         init {
             System.loadLibrary("silkcodec")
+        }
+    }
+
+    private suspend fun updateLastSuccessfulHandleTimestamp() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val currentValue =
+                dataStore.data.first()[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP]
+            val currentTime = System.currentTimeMillis()
+            if (currentValue != null && currentTime - currentValue < 1000 * 60 * 3) {
+                dataStore.edit { settings ->
+                    settings[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP] = currentTime
+                }
+            }
         }
     }
 
@@ -133,7 +147,13 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto) {}
+                    receiveMessage(dto) {
+                        if (it is ParaboxResult.Success) {
+                            lifecycleScope.launch {
+                                updateLastSuccessfulHandleTimestamp()
+                            }
+                        }
+                    }
                 }
 
                 is FriendMessageEvent -> {
@@ -176,7 +196,13 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto) {}
+                    receiveMessage(dto) {
+                        if (it is ParaboxResult.Success) {
+                            lifecycleScope.launch {
+                                updateLastSuccessfulHandleTimestamp()
+                            }
+                        }
+                    }
                 }
 
                 is GroupMessageSyncEvent -> {
@@ -211,7 +237,13 @@ class ConnService : ParaboxService() {
                         pluginConnection = pluginConnection,
                         messageId = messageId,
                     )
-                    syncMessage(dto) {}
+                    syncMessage(dto) {
+                        if (it is ParaboxResult.Success) {
+                            lifecycleScope.launch {
+                                updateLastSuccessfulHandleTimestamp()
+                            }
+                        }
+                    }
                 }
 
                 is FriendMessageSyncEvent -> {
@@ -246,7 +278,13 @@ class ConnService : ParaboxService() {
                         pluginConnection = pluginConnection,
                         messageId = messageId,
                     )
-                    syncMessage(dto) {}
+                    syncMessage(dto) {
+                        if (it is ParaboxResult.Success) {
+                            lifecycleScope.launch {
+                                updateLastSuccessfulHandleTimestamp()
+                            }
+                        }
+                    }
                 }
 
                 else -> {
@@ -290,15 +328,21 @@ class ConnService : ParaboxService() {
                         messageId = messageId,
                         pluginConnection = pluginConnection
                     )
-                    receiveMessage(dto) {}
+                    receiveMessage(dto) {
+                        if (it is ParaboxResult.Success) {
+                            lifecycleScope.launch {
+                                updateLastSuccessfulHandleTimestamp()
+                            }
+                        }
+                    }
                 }
             }
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOnlineEvent> {
-            notificationUtil.updateForegroundServiceNotification(
-                getString(R.string.service_running_normally),
-                "Mirai Core - $MIRAI_CORE_VERSION"
-            )
+//            notificationUtil.updateForegroundServiceNotification(
+//                getString(R.string.service_running_normally),
+//                "Mirai Core - $MIRAI_CORE_VERSION"
+//            )
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOfflineEvent> {
             when (it) {
@@ -340,10 +384,274 @@ class ConnService : ParaboxService() {
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotReloginEvent> {
             updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
-            notificationUtil.updateForegroundServiceNotification(
-                getString(R.string.service_running_normally),
-                "Mirai Core - $MIRAI_CORE_VERSION"
+//            notificationUtil.updateForegroundServiceNotification(
+//                getString(R.string.service_running_normally),
+//                "Mirai Core - $MIRAI_CORE_VERSION"
+//            )
+        }
+    }
+
+    private fun getRoamingMessages() {
+        Log.d("parabox", "gettingRoamingMessage: $gettingRoamingMessage")
+        if (bot != null && !gettingRoamingMessage) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    gettingRoamingMessage = true
+                    val currentTime = System.currentTimeMillis()
+                    val lastSuccessfulHandleTimestamp =
+                        dataStore.data.first()[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP] ?: 0
+//                    val jobMap = mutableMapOf<String, Job>()
+                    val jobMap = ConcurrentHashMap<String, Job>()
+//                    val timestampMap = mutableMapOf<String, Long>()
+                    val timestampMap = ConcurrentHashMap<String, Long>()
+                    bot!!.groups.forEach { group ->
+                        launch {
+                            group.roamingMessages.getMessagesIn(
+                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                timeEnd = currentTime.getTimestampInSecond(),
+                                filter = RoamingMessageFilter.RECEIVED
+                            ).collect {
+                                timestampMap["${group.id}gr"] = System.currentTimeMillis()
+                                handleGroupRoamingReceiveMessage(it, group)
+                            }
+                        }.also { jobMap["${group.id}gr"] = it }
+                        launch {
+                            group.roamingMessages.getMessagesIn(
+                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                timeEnd = currentTime.getTimestampInSecond(),
+                                filter = RoamingMessageFilter.SENT
+                            ).collect {
+                                timestampMap["${group.id}gs"] = System.currentTimeMillis()
+                                handleGroupRoamingSendMessage(it, group)
+                            }
+                        }.also { jobMap["${group.id}gs"] = it }
+                    }
+                    bot!!.friends.forEach { friend ->
+                        launch {
+                            friend.roamingMessages.getMessagesIn(
+                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                timeEnd = currentTime.getTimestampInSecond(),
+                                filter = RoamingMessageFilter.RECEIVED
+                            ).collect {
+                                timestampMap["${friend.id}fr"] = System.currentTimeMillis()
+                                handleFriendRoamingReceiveMessage(it, friend)
+                            }
+                        }.also { jobMap["${friend.id}fr"] = it }
+                        launch {
+                            friend.roamingMessages.getMessagesIn(
+                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                timeEnd = currentTime.getTimestampInSecond(),
+                                filter = RoamingMessageFilter.SENT
+                            ).collect {
+                                timestampMap["${friend.id}fs"] = System.currentTimeMillis()
+                                handleFriendRoamingSendMessage(it, friend)
+                            }
+                        }.also { jobMap["${friend.id}fs"] = it }
+                    }
+                    launch {
+                        while (jobMap.values.any { it.isActive } && System.currentTimeMillis() - currentTime < 16000){
+                            delay(1000)
+                            timestampMap.forEach { id, timestamp ->
+                                if (System.currentTimeMillis() - timestamp > 2000) {
+                                    jobMap[id]?.cancel()
+                                    jobMap.remove(id)
+                                    timestampMap.remove(id)
+                                }
+                            }
+                        }
+                        Log.d("Roaming", "Roaming message collection finished:${System.currentTimeMillis()}")
+                        gettingRoamingMessage = false
+                        jobMap.values.forEach { it.cancel() }
+                        jobMap.clear()
+                        timestampMap.clear()
+                        dataStore.edit { settings ->
+                            settings[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP] = currentTime
+                        }
+                    }
+                } catch (e: Exception) {
+                    gettingRoamingMessage = false
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    private suspend fun handleGroupRoamingReceiveMessage(message: MessageChain, group: Group) {
+        val messageContents =
+            message.toMessageContentList(
+                context = this@ConnService,
+                downloadService = downloadService,
+                group = group,
+                bot = message.bot,
+                repository = repository
             )
+        val messageId = getMessageId(message.ids)
+        messageId?.let {
+            lifecycleScope.launch(Dispatchers.IO) {
+                repository.insertMiraiMessage(
+                    MiraiMessageEntity(
+                        it,
+                        message.serializeToMiraiCode(),
+                        message.serializeToJsonString()
+                    )
+                )
+
+            }
+        }
+        val profile = Profile(
+            name = group.get(message.source.fromId)?.nameCardOrNick ?: "Unknown",
+            avatar = group.get(message.source.fromId)?.avatarUrl,
+            id = message.source.fromId,
+            avatarUri = null,
+        )
+        val subjectProfile = Profile(
+            name = group.name,
+            avatar = group.avatarUrl,
+            id = group.id,
+            avatarUri = null,
+        )
+        val pluginConnection = PluginConnection(
+            connectionType = connectionType,
+            sendTargetType = SendTargetType.GROUP,
+            id = group.id
+        )
+        val dto = ReceiveMessageDto(
+            contents = messageContents,
+            profile = profile,
+            subjectProfile = subjectProfile,
+            timestamp = "${message.time}000".toLong(),
+            messageId = messageId,
+            pluginConnection = pluginConnection
+        )
+        receiveMessage(dto) {
+            if (it is ParaboxResult.Success) {
+
+            }
+        }
+    }
+
+    private suspend fun handleGroupRoamingSendMessage(message: MessageChain, group: Group) {
+        val messageContents =
+            message.toMessageContentList(
+                context = this@ConnService,
+                downloadService = downloadService,
+                bot = message.bot,
+                repository = repository
+            )
+        val messageId = getMessageId(message.ids)
+        messageId?.let {
+            lifecycleScope.launch(Dispatchers.IO) {
+                repository.insertMiraiMessage(
+                    MiraiMessageEntity(
+                        it,
+                        message.serializeToMiraiCode(),
+                        message.serializeToJsonString()
+                    )
+                )
+
+            }
+        }
+        val pluginConnection = PluginConnection(
+            connectionType = connectionType,
+            sendTargetType = SendTargetType.GROUP,
+            id = group.id
+        )
+        val dto = SendMessageDto(
+            contents = messageContents,
+            timestamp = "${message.time}000".toLong(),
+            messageId = messageId,
+            pluginConnection = pluginConnection
+        )
+        syncMessage(dto) {
+            if (it is ParaboxResult.Success) {
+
+            }
+        }
+    }
+
+    private suspend fun handleFriendRoamingReceiveMessage(message: MessageChain, friend: Friend) {
+        val messageContents =
+            message.toMessageContentList(
+                context = this@ConnService,
+                downloadService = downloadService,
+                bot = message.bot,
+                repository = repository
+            )
+        val messageId = getMessageId(message.ids)
+        messageId?.let {
+            lifecycleScope.launch(Dispatchers.IO) {
+                repository.insertMiraiMessage(
+                    MiraiMessageEntity(
+                        it,
+                        message.serializeToMiraiCode(),
+                        message.serializeToJsonString()
+                    )
+                )
+
+            }
+        }
+        val profile = Profile(
+            name = friend.nick,
+            avatar = friend.avatarUrl,
+            id = friend.id,
+            avatarUri = null,
+        )
+        val pluginConnection = PluginConnection(
+            connectionType = connectionType,
+            sendTargetType = SendTargetType.USER,
+            id = friend.id
+        )
+        val dto = ReceiveMessageDto(
+            contents = messageContents,
+            profile = profile,
+            subjectProfile = profile,
+            timestamp = "${message.time}000".toLong(),
+            messageId = messageId,
+            pluginConnection = pluginConnection
+        )
+        receiveMessage(dto) {
+            if (it is ParaboxResult.Success) {
+
+            }
+        }
+    }
+
+    private suspend fun handleFriendRoamingSendMessage(message: MessageChain, friend: Friend) {
+        val messageContents =
+            message.toMessageContentList(
+                context = this@ConnService,
+                downloadService = downloadService,
+                bot = message.bot,
+                repository = repository
+            )
+        val messageId = getMessageId(message.ids)
+        messageId?.let {
+            lifecycleScope.launch(Dispatchers.IO) {
+                repository.insertMiraiMessage(
+                    MiraiMessageEntity(
+                        it,
+                        message.serializeToMiraiCode(),
+                        message.serializeToJsonString()
+                    )
+                )
+
+            }
+        }
+        val pluginConnection = PluginConnection(
+            connectionType = connectionType,
+            sendTargetType = SendTargetType.USER,
+            id = friend.id
+        )
+        val dto = SendMessageDto(
+            contents = messageContents,
+            timestamp = "${message.time}000".toLong(),
+            messageId = messageId,
+            pluginConnection = pluginConnection
+        )
+        syncMessage(dto) {
+            if (it is ParaboxResult.Success) {
+
+            }
         }
     }
 
@@ -355,7 +663,7 @@ class ConnService : ParaboxService() {
                     repository.getSelectedAccount()
                 }
                 val isForegroundServiceEnabled =
-                    dataStore.data.first()[DataStoreKeys.FOREGROUND_SERVICE] ?: false
+                    dataStore.data.first()[DataStoreKeys.FOREGROUND_SERVICE] ?: true
                 if (isForegroundServiceEnabled) {
                     notificationUtil.startForegroundService()
                 }
@@ -393,10 +701,10 @@ class ConnService : ParaboxService() {
                     it.login()
                     val version = MIRAI_CORE_VERSION
                     updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $version")
-                    notificationUtil.updateForegroundServiceNotification(
-                        getString(R.string.service_running_normally),
-                        "Mirai Core - $version"
-                    )
+//                    notificationUtil.updateForegroundServiceNotification(
+//                        getString(R.string.service_running_normally),
+//                        "Mirai Core - $version"
+//                    )
                 }
             } catch (e: IOException) {
                 updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_io))
@@ -407,7 +715,7 @@ class ConnService : ParaboxService() {
             } catch (e: LoginFailedException) {
                 updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_login_failed))
                 e.printStackTrace()
-            } catch (e: IllegalStateException) {
+            } catch (e: Exception) {
                 updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_unknown))
                 e.printStackTrace()
             }
@@ -607,7 +915,7 @@ class ConnService : ParaboxService() {
     }
 
     override fun onRefreshMessage() {
-
+        getRoamingMessages()
     }
 
     override fun onMainAppLaunch() {
