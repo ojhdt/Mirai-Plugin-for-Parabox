@@ -153,6 +153,7 @@ dependencies {
 
     // Mirai
     implementation('net.mamoe:mirai-core:2.14.0')
+//    implementation('net.mamoe:mirai-core:2.15.0-dev-96472d9')
     implementation 'xyz.cssxsh.mirai:mirai-device-generator:1.1.3'
 
     // Silk

@@ -892,7 +892,7 @@ class ConnService : ParaboxService() {
     }
 
     override fun onRefreshMessage() {
-//        getRoamingMessages()
+        getRoamingMessages()
     }
 
     override fun onMainAppLaunch() {
