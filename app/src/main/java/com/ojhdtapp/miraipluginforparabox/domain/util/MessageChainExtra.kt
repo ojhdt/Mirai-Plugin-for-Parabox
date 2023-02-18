@@ -30,97 +30,105 @@ suspend fun MessageChain.toMessageContentList(
     group: Group? = null,
     bot: Bot,
     exceptQuote: Boolean = false,
-    repository: MainRepository
+    fromRoaming: Boolean = false,
+    repository: MainRepository,
 ): List<MessageContent> {
-    return this
-        .filter {
-            if (exceptQuote) (it !is QuoteReply) else true
-        }
-        .filter {
-            it is QuoteReply || (it is net.mamoe.mirai.message.data.MessageContent)
-        }
-        .filter {
-            !(it is PlainText && it.content.isBlank())
-        }
-        .map {
-            when (it) {
-                is QuoteReply -> {
-                    val quoteMessageId = getMessageId(it.source.ids)
+    return try {
+        this
+            .filter {
+                if (exceptQuote) (it !is QuoteReply) else true
+            }
+            .filter {
+                it is QuoteReply || (it is net.mamoe.mirai.message.data.MessageContent)
+            }
+            .filter {
+                !(it is PlainText && it.content.isBlank())
+            }
+            .map {
+                when (it) {
+                    is QuoteReply -> {
+                        val quoteMessageId = getMessageId(it.source.ids)
 //                    val quoteMessage = it.source.originalMessage
 //                quoteMessage.bot.asStranger.nameCardOrNick
-                    val quoteMessage = quoteMessageId?.let {
-                        withContext(Dispatchers.IO) {
-                            repository.getMiraiMessageById(it).let {
-                                if (it != null) {
-                                    MiraiCode.deserializeMiraiCode(it.miraiCode)
-                                } else null
-                            }
-                        }
-                    } ?: it.source.originalMessage
-                    val nick = try {
-                        group?.getMember(it.source.fromId)?.nameCardOrNick
-                            ?: bot.getFriend(it.source.fromId)?.nameCardOrNick
-                            ?: bot.getStranger(it.source.fromId)?.nameCardOrNick
-                            ?: it.source.fromId.toString()
-                    } catch (e: NoSuchElementException) {
-                        e.printStackTrace()
-                        null
-                    }
-                     com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.QuoteReply(
-                        nick,
-                        "${it.source.time}000".toLong(),
-                        quoteMessageId,
-                        quoteMessage.toMessageContentList(
-                            context = context,
-                            downloadService = downloadService,
-                            bot = bot,
-                            exceptQuote = true,
-                            repository = repository
-                        )
-                    )
-                }
-                is PlainText ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
-                    it.content
-                )
-                is Image ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image(
-                    it.queryUrl(),
-                    it.width,
-                    it.height
-                )
-                is FlashImage ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image(
-                    it.image.queryUrl(),
-                    it.image.width,
-                    it.image.height
-                )
-                is At ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.At(
-                    it.target, it.getDisplay(group).replace("@","")
-                )
-                is AtAll ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.AtAll
-                is Face ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
-                    FaceMap.query(it.id) ?: it.content
-                )
-                is Audio -> {
-                    val url = (it as OnlineAudio).urlForDownload
-                    Log.d("parabox", url)
-                    val tempPath =
-                        File(context.externalCacheDir, it.filename.replace(".amr", ".silk"))
-                    val uri = try {
-                        coroutineScope {
+                        val quoteMessage = quoteMessageId?.let {
                             withContext(Dispatchers.IO) {
-                                downloadService.download(url).let {
-                                    if (it.isSuccessful) {
-                                        it.body().let {
-                                            FileUtil.saveFile(body = it, path = tempPath)
-                                            AudioUtils.init(context.externalCacheDir!!.absolutePath)
-                                            AudioUtils.silkToMp3(tempPath).let {
-                                                FileUtil.getUriOfFile(context, it).apply {
-                                                    context.grantUriPermission(
-                                                        "com.ojhdtapp.parabox",
-                                                        this,
-                                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                                    )
-                                                }
-                                            }
+                                repository.getMiraiMessageById(it).let {
+                                    if (it != null) {
+                                        MiraiCode.deserializeMiraiCode(it.miraiCode)
+                                    } else null
+                                }
+                            }
+                        } ?: it.source.originalMessage
+                        val nick = try {
+                            group?.getMember(it.source.fromId)?.nameCardOrNick
+                                ?: bot.getFriend(it.source.fromId)?.nameCardOrNick
+                                ?: bot.getStranger(it.source.fromId)?.nameCardOrNick
+                                ?: it.source.fromId.toString()
+                        } catch (e: NoSuchElementException) {
+                            e.printStackTrace()
+                            null
+                        }
+                        com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.QuoteReply(
+                            nick,
+                            "${it.source.time}000".toLong(),
+                            quoteMessageId,
+                            quoteMessage.toMessageContentList(
+                                context = context,
+                                downloadService = downloadService,
+                                bot = bot,
+                                exceptQuote = true,
+                                fromRoaming = fromRoaming,
+                                repository = repository
+                            )
+                        )
+                    }
+                    is PlainText -> com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
+                        it.content
+                    )
+                    is Image -> com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image(
+                        it.queryUrl(),
+                        it.width,
+                        it.height
+                    )
+                    is FlashImage -> com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Image(
+                        it.image.queryUrl(),
+                        it.image.width,
+                        it.image.height
+                    )
+                    is At -> com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.At(
+                        it.target, it.getDisplay(group).replace("@", "")
+                    )
+                    is AtAll -> com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.AtAll
+                    is Face -> com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
+                        FaceMap.query(it.id) ?: it.content
+                    )
+                    is Audio -> {
+                        if(fromRoaming){
+                            com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
+                                it.content
+                            )
+                        }else{
+                            val url = (it as OnlineAudio).urlForDownload
+                            Log.d("parabox", url)
+                            val tempPath =
+                                File(context.externalCacheDir, it.filename.replace(".amr", ".silk"))
+                            val uri = try {
+                                coroutineScope {
+                                    withContext(Dispatchers.IO) {
+                                        downloadService.download(url).let {
+                                            if (it.isSuccessful) {
+                                                it.body().let {
+                                                    FileUtil.saveFile(body = it, path = tempPath)
+                                                    AudioUtils.init(context.externalCacheDir!!.absolutePath)
+                                                    AudioUtils.silkToMp3(tempPath).let {
+                                                        FileUtil.getUriOfFile(context, it).apply {
+                                                            context.grantUriPermission(
+                                                                "com.ojhdtapp.parabox",
+                                                                this,
+                                                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                            )
+                                                        }
+                                                    }
 //                                            AudioUtils.silkToMp3(tempPath).let {
 //                                                FileUtil.getUriOfFile(context, it).apply {
 //                                                    context.grantUriPermission(
@@ -130,45 +138,61 @@ suspend fun MessageChain.toMessageContentList(
 //                                                    )
 //                                                }
 //                                            }
+                                                }
+                                            } else null
                                         }
-                                    } else null
+                                    }
                                 }
+                            } catch (e: IOException) {
+                                e.printStackTrace()
+                                null
                             }
-                        }
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                        null
-                    }
-                     com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Audio(
-                        url,
-                        it.length,
-                        uri?.let { it.path?.substringAfterLast("/") } ?: it.filename,
-                        it.fileSize,
-                        uri,
-                    )
-                }
-                is FileMessage -> {
-                    group?.let { group ->
-                        it.toAbsoluteFile(group)?.let { file ->
-                             com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.File(
-                                url = file.getUrl(),
-                                name = file.name,
-                                extension = file.extension,
-                                size = file.size,
-                                lastModifiedTime = "${file.lastModifiedTime}000".toLong(),
-                                expiryTime = "${file.expiryTime}000".toLong(),
+                            com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.Audio(
+                                url,
+                                it.length,
+                                uri?.let { it.path?.substringAfterLast("/") } ?: it.filename,
+                                it.fileSize,
+                                uri,
                             )
                         }
+
                     }
-                        ?:  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
-                            it.content
-                        )
+                    is FileMessage -> {
+                        if(fromRoaming){
+                            com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
+                                it.content
+                            )
+                        }else{
+                            group?.let { group ->
+                                it.toAbsoluteFile(group)?.let { file ->
+                                    com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.File(
+                                        url = file.getUrl(),
+                                        name = file.name,
+                                        extension = file.extension,
+                                        size = file.size,
+                                        lastModifiedTime = "${file.lastModifiedTime}000".toLong(),
+                                        expiryTime = "${file.expiryTime}000".toLong(),
+                                    )
+                                }
+                            }
+                                ?: com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
+                                    it.content
+                                )
+                        }
+                    }
+                    else -> com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
+                        it.content
+                    )
                 }
-                else ->  com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
-                    it.content
-                )
             }
-        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        listOf<MessageContent>(
+            com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
+                text = "[消息解析失败]"
+            )
+        )
+    }
 }
 
 fun getMessageId(ids: IntArray): Long? {
