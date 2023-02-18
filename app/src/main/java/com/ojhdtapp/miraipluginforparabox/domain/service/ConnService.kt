@@ -100,250 +100,252 @@ class ConnService : ParaboxService() {
     @OptIn(MiraiInternalApi::class)
     private fun registerEventListener() {
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<MessageEvent> { event ->
-            when (event) {
-                is GroupMessageEvent -> {
-                    val messageContents = event.message.toMessageContentList(
-                        context = this@ConnService,
-                        downloadService = downloadService,
-                        group = event.group,
-                        bot = bot,
-                        repository = repository
-                    )
-                    val messageId = getMessageId(event.message.ids)
-                    messageId?.let {
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            repository.insertMiraiMessage(
-                                MiraiMessageEntity(
-                                    it,
-                                    event.message.serializeToMiraiCode(),
-                                    event.message.serializeToJsonString()
-                                )
-                            )
-                        }
-                    }
-
-                    val senderProfile = Profile(
-                        name = event.senderName,
-                        avatar = event.sender.avatarUrl,
-                        id = event.sender.id,
-                        avatarUri = null,
-                    )
-                    val groupProfile = Profile(
-                        name = event.group.name,
-                        avatar = event.group.avatarUrl,
-                        id = event.subject.id,
-                        avatarUri = null,
-                    )
-                    val pluginConnection = PluginConnection(
-                        connectionType = connectionType,
-                        sendTargetType = SendTargetType.GROUP,
-                        id = event.subject.id
-                    )
-                    val dto = ReceiveMessageDto(
-                        contents = messageContents,
-                        profile = senderProfile,
-                        subjectProfile = groupProfile,
-                        timestamp = "${event.time}000".toLong(),
-                        messageId = messageId,
-                        pluginConnection = pluginConnection
-                    )
-                    receiveMessage(dto) {
-                        if (it is ParaboxResult.Success) {
-                            lifecycleScope.launch {
-                                updateLastSuccessfulHandleTimestamp()
-                            }
-                        }
-                    }
-                }
-
-                is FriendMessageEvent -> {
-                    val messageContents =
-                        event.message.toMessageContentList(
+            try {
+                when (event) {
+                    is GroupMessageEvent -> {
+                        val messageContents = event.message.toMessageContentList(
                             context = this@ConnService,
                             downloadService = downloadService,
+                            group = event.group,
                             bot = bot,
                             repository = repository
                         )
-                    val messageId = getMessageId(event.message.ids)
-                    messageId?.let {
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            repository.insertMiraiMessage(
-                                MiraiMessageEntity(
-                                    it,
-                                    event.message.serializeToMiraiCode(),
-                                    event.message.serializeToJsonString()
+                        val messageId = getMessageId(event.message.ids)
+                        messageId?.let {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                repository.insertMiraiMessage(
+                                    MiraiMessageEntity(
+                                        it,
+                                        event.message.serializeToMiraiCode(),
+                                        event.message.serializeToJsonString()
+                                    )
                                 )
-                            )
-
-                        }
-                    }
-                    val profile = Profile(
-                        name = event.senderName,
-                        avatar = event.sender.avatarUrl,
-                        id = event.subject.id,
-                        avatarUri = null,
-                    )
-                    val pluginConnection = PluginConnection(
-                        connectionType = connectionType,
-                        sendTargetType = SendTargetType.USER,
-                        id = event.subject.id
-                    )
-                    val dto = ReceiveMessageDto(
-                        contents = messageContents,
-                        profile = profile,
-                        subjectProfile = profile,
-                        timestamp = "${event.time}000".toLong(),
-                        messageId = messageId,
-                        pluginConnection = pluginConnection
-                    )
-                    receiveMessage(dto) {
-                        if (it is ParaboxResult.Success) {
-                            lifecycleScope.launch {
-                                updateLastSuccessfulHandleTimestamp()
                             }
                         }
-                    }
-                }
 
-                is GroupMessageSyncEvent -> {
-                    val messageContents =
-                        event.message.toMessageContentList(
-                            context = this@ConnService,
-                            downloadService = downloadService,
-                            bot = bot,
-                            repository = repository
+                        val senderProfile = Profile(
+                            name = event.senderName,
+                            avatar = event.sender.avatarUrl,
+                            id = event.sender.id,
+                            avatarUri = null,
                         )
-                    val messageId = getMessageId(event.message.ids)
-                    messageId?.let {
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            repository.insertMiraiMessage(
-                                MiraiMessageEntity(
-                                    it,
-                                    event.message.serializeToMiraiCode(),
-                                    event.message.serializeToJsonString()
-                                )
-                            )
-
-                        }
-                    }
-                    val pluginConnection = PluginConnection(
-                        connectionType = connectionType,
-                        sendTargetType = SendTargetType.GROUP,
-                        id = event.subject.id
-                    )
-                    val dto = SendMessageDto(
-                        contents = messageContents,
-                        timestamp = "${event.time}000".toLong(),
-                        pluginConnection = pluginConnection,
-                        messageId = messageId,
-                    )
-                    syncMessage(dto) {
-                        if (it is ParaboxResult.Success) {
-                            lifecycleScope.launch {
-                                updateLastSuccessfulHandleTimestamp()
-                            }
-                        }
-                    }
-                }
-
-                is FriendMessageSyncEvent -> {
-                    val messageContents =
-                        event.message.toMessageContentList(
-                            context = this@ConnService,
-                            downloadService = downloadService,
-                            bot = bot,
-                            repository = repository
+                        val groupProfile = Profile(
+                            name = event.group.name,
+                            avatar = event.group.avatarUrl,
+                            id = event.subject.id,
+                            avatarUri = null,
                         )
-                    val messageId = getMessageId(event.message.ids)
-                    messageId?.let {
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            repository.insertMiraiMessage(
-                                MiraiMessageEntity(
-                                    it,
-                                    event.message.serializeToMiraiCode(),
-                                    event.message.serializeToJsonString()
-                                )
-                            )
-
-                        }
-                    }
-                    val pluginConnection = PluginConnection(
-                        connectionType = connectionType,
-                        sendTargetType = SendTargetType.USER,
-                        id = event.subject.id
-                    )
-                    val dto = SendMessageDto(
-                        contents = messageContents,
-                        timestamp = "${event.time}000".toLong(),
-                        pluginConnection = pluginConnection,
-                        messageId = messageId,
-                    )
-                    syncMessage(dto) {
-                        if (it is ParaboxResult.Success) {
-                            lifecycleScope.launch {
-                                updateLastSuccessfulHandleTimestamp()
-                            }
-                        }
-                    }
-                }
-
-                else -> {
-                    Log.d("parabox", event.toString())
-                    val messageContents =
-                        event.message.toMessageContentList(
-                            context = this@ConnService,
-                            downloadService = downloadService,
-                            bot = bot,
-                            repository = repository
+                        val pluginConnection = PluginConnection(
+                            connectionType = connectionType,
+                            sendTargetType = SendTargetType.GROUP,
+                            id = event.subject.id
                         )
-                    val messageId = getMessageId(event.message.ids)
-                    messageId?.let {
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            repository.insertMiraiMessage(
-                                MiraiMessageEntity(
-                                    it,
-                                    event.message.serializeToMiraiCode(),
-                                    event.message.serializeToJsonString()
-                                )
-                            )
-
+                        val dto = ReceiveMessageDto(
+                            contents = messageContents,
+                            profile = senderProfile,
+                            subjectProfile = groupProfile,
+                            timestamp = "${event.time}000".toLong(),
+                            messageId = messageId,
+                            pluginConnection = pluginConnection
+                        )
+                        receiveMessage(dto) {
+                            if (it is ParaboxResult.Success) {
+                                lifecycleScope.launch {
+                                    updateLastSuccessfulHandleTimestamp()
+                                }
+                            }
                         }
                     }
-                    val profile = Profile(
-                        name = event.senderName,
-                        avatar = event.sender.avatarUrl,
-                        id = event.subject.id,
-                        avatarUri = null,
-                    )
-                    val pluginConnection = PluginConnection(
-                        connectionType = connectionType,
-                        sendTargetType = SendTargetType.USER,
-                        id = event.subject.id
-                    )
-                    val dto = ReceiveMessageDto(
-                        contents = messageContents,
-                        profile = profile,
-                        subjectProfile = profile,
-                        timestamp = "${event.time}000".toLong(),
-                        messageId = messageId,
-                        pluginConnection = pluginConnection
-                    )
-                    receiveMessage(dto) {
-                        if (it is ParaboxResult.Success) {
-                            lifecycleScope.launch {
-                                updateLastSuccessfulHandleTimestamp()
+
+                    is FriendMessageEvent -> {
+                        val messageContents =
+                            event.message.toMessageContentList(
+                                context = this@ConnService,
+                                downloadService = downloadService,
+                                bot = bot,
+                                repository = repository
+                            )
+                        val messageId = getMessageId(event.message.ids)
+                        messageId?.let {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                repository.insertMiraiMessage(
+                                    MiraiMessageEntity(
+                                        it,
+                                        event.message.serializeToMiraiCode(),
+                                        event.message.serializeToJsonString()
+                                    )
+                                )
+
+                            }
+                        }
+                        val profile = Profile(
+                            name = event.senderName,
+                            avatar = event.sender.avatarUrl,
+                            id = event.subject.id,
+                            avatarUri = null,
+                        )
+                        val pluginConnection = PluginConnection(
+                            connectionType = connectionType,
+                            sendTargetType = SendTargetType.USER,
+                            id = event.subject.id
+                        )
+                        val dto = ReceiveMessageDto(
+                            contents = messageContents,
+                            profile = profile,
+                            subjectProfile = profile,
+                            timestamp = "${event.time}000".toLong(),
+                            messageId = messageId,
+                            pluginConnection = pluginConnection
+                        )
+                        receiveMessage(dto) {
+                            if (it is ParaboxResult.Success) {
+                                lifecycleScope.launch {
+                                    updateLastSuccessfulHandleTimestamp()
+                                }
+                            }
+                        }
+                    }
+
+                    is GroupMessageSyncEvent -> {
+                        val messageContents =
+                            event.message.toMessageContentList(
+                                context = this@ConnService,
+                                downloadService = downloadService,
+                                bot = bot,
+                                repository = repository
+                            )
+                        val messageId = getMessageId(event.message.ids)
+                        messageId?.let {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                repository.insertMiraiMessage(
+                                    MiraiMessageEntity(
+                                        it,
+                                        event.message.serializeToMiraiCode(),
+                                        event.message.serializeToJsonString()
+                                    )
+                                )
+
+                            }
+                        }
+                        val pluginConnection = PluginConnection(
+                            connectionType = connectionType,
+                            sendTargetType = SendTargetType.GROUP,
+                            id = event.subject.id
+                        )
+                        val dto = SendMessageDto(
+                            contents = messageContents,
+                            timestamp = "${event.time}000".toLong(),
+                            pluginConnection = pluginConnection,
+                            messageId = messageId,
+                        )
+                        syncMessage(dto) {
+                            if (it is ParaboxResult.Success) {
+                                lifecycleScope.launch {
+                                    updateLastSuccessfulHandleTimestamp()
+                                }
+                            }
+                        }
+                    }
+
+                    is FriendMessageSyncEvent -> {
+                        val messageContents =
+                            event.message.toMessageContentList(
+                                context = this@ConnService,
+                                downloadService = downloadService,
+                                bot = bot,
+                                repository = repository
+                            )
+                        val messageId = getMessageId(event.message.ids)
+                        messageId?.let {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                repository.insertMiraiMessage(
+                                    MiraiMessageEntity(
+                                        it,
+                                        event.message.serializeToMiraiCode(),
+                                        event.message.serializeToJsonString()
+                                    )
+                                )
+
+                            }
+                        }
+                        val pluginConnection = PluginConnection(
+                            connectionType = connectionType,
+                            sendTargetType = SendTargetType.USER,
+                            id = event.subject.id
+                        )
+                        val dto = SendMessageDto(
+                            contents = messageContents,
+                            timestamp = "${event.time}000".toLong(),
+                            pluginConnection = pluginConnection,
+                            messageId = messageId,
+                        )
+                        syncMessage(dto) {
+                            if (it is ParaboxResult.Success) {
+                                lifecycleScope.launch {
+                                    updateLastSuccessfulHandleTimestamp()
+                                }
+                            }
+                        }
+                    }
+
+                    else -> {
+                        Log.d("parabox", event.toString())
+                        val messageContents =
+                            event.message.toMessageContentList(
+                                context = this@ConnService,
+                                downloadService = downloadService,
+                                bot = bot,
+                                repository = repository
+                            )
+                        val messageId = getMessageId(event.message.ids)
+                        messageId?.let {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                repository.insertMiraiMessage(
+                                    MiraiMessageEntity(
+                                        it,
+                                        event.message.serializeToMiraiCode(),
+                                        event.message.serializeToJsonString()
+                                    )
+                                )
+
+                            }
+                        }
+                        val profile = Profile(
+                            name = event.senderName,
+                            avatar = event.sender.avatarUrl,
+                            id = event.subject.id,
+                            avatarUri = null,
+                        )
+                        val pluginConnection = PluginConnection(
+                            connectionType = connectionType,
+                            sendTargetType = SendTargetType.USER,
+                            id = event.subject.id
+                        )
+                        val dto = ReceiveMessageDto(
+                            contents = messageContents,
+                            profile = profile,
+                            subjectProfile = profile,
+                            timestamp = "${event.time}000".toLong(),
+                            messageId = messageId,
+                            pluginConnection = pluginConnection
+                        )
+                        receiveMessage(dto) {
+                            if (it is ParaboxResult.Success) {
+                                lifecycleScope.launch {
+                                    updateLastSuccessfulHandleTimestamp()
+                                }
                             }
                         }
                     }
                 }
+            } catch(e: Exception){
+                e.printStackTrace()
             }
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOnlineEvent> {
-//            notificationUtil.updateForegroundServiceNotification(
-//                getString(R.string.service_running_normally),
-//                "Mirai Core - $MIRAI_CORE_VERSION"
-//            )
+            updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
         }
+
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotOfflineEvent> {
             when (it) {
                 is BotOfflineEvent.Active -> {
@@ -392,7 +394,6 @@ class ConnService : ParaboxService() {
     }
 
     private fun getRoamingMessages() {
-        Log.d("parabox", "gettingRoamingMessage: $gettingRoamingMessage")
         if (bot != null && !gettingRoamingMessage) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
@@ -477,12 +478,17 @@ class ConnService : ParaboxService() {
     }
 
     private suspend fun handleGroupRoamingReceiveMessage(message: MessageChain, group: Group) {
+//        val sender = try{
+//            message.sourceOrNull?.fromId?.let { group.getOrFail(it) }
+//        } catch (e: NoSuchElementException){
+//            null
+//        }
         val messageContents =
             message.toMessageContentList(
                 context = this@ConnService,
                 downloadService = downloadService,
-                group = group,
                 bot = message.bot,
+                fromRoaming = true,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -499,8 +505,8 @@ class ConnService : ParaboxService() {
             }
         }
         val profile = Profile(
-            name = group.get(message.source.fromId)?.nameCardOrNick ?: "Unknown",
-            avatar = group.get(message.source.fromId)?.avatarUrl,
+            name = group.getOrFail(message.source.fromId).remarkOrNameCardOrNick ?: "Unknown",
+            avatar = group.getOrFail(message.source.fromId).avatarUrl,
             id = message.source.fromId,
             avatarUri = null,
         )
@@ -536,6 +542,7 @@ class ConnService : ParaboxService() {
                 context = this@ConnService,
                 downloadService = downloadService,
                 bot = message.bot,
+                fromRoaming = true,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -575,6 +582,7 @@ class ConnService : ParaboxService() {
                 context = this@ConnService,
                 downloadService = downloadService,
                 bot = message.bot,
+                fromRoaming = true,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -591,7 +599,7 @@ class ConnService : ParaboxService() {
             }
         }
         val profile = Profile(
-            name = friend.nick,
+            name = friend.remarkOrNick,
             avatar = friend.avatarUrl,
             id = friend.id,
             avatarUri = null,
@@ -622,6 +630,7 @@ class ConnService : ParaboxService() {
                 context = this@ConnService,
                 downloadService = downloadService,
                 bot = message.bot,
+                fromRoaming = true,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -674,13 +683,13 @@ class ConnService : ParaboxService() {
                 val isContactCacheEnabled =
                     dataStore.data.first()[DataStoreKeys.CONTACT_CACHE] ?: false
                 val selectedProtocol =
-                    when (dataStore.data.first()[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Phone) {
+                    when (dataStore.data.first()[DataStoreKeys.PROTOCOL] ?: MiraiProtocol.Pad) {
                         MiraiProtocol.Phone -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
                         MiraiProtocol.Pad -> BotConfiguration.MiraiProtocol.ANDROID_PAD
                         MiraiProtocol.Watch -> BotConfiguration.MiraiProtocol.ANDROID_WATCH
                         MiraiProtocol.IPad -> BotConfiguration.MiraiProtocol.IPAD
                         MiraiProtocol.MacOS -> BotConfiguration.MiraiProtocol.MACOS
-                        else -> BotConfiguration.MiraiProtocol.ANDROID_PHONE
+                        else -> BotConfiguration.MiraiProtocol.ANDROID_PAD
                     }
                 if (secret == null) {
                     updateServiceState(
@@ -699,8 +708,7 @@ class ConnService : ParaboxService() {
                 }.also {
                     registerEventListener()
                     it.login()
-                    val version = MIRAI_CORE_VERSION
-                    updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $version")
+                    updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
 //                    notificationUtil.updateForegroundServiceNotification(
 //                        getString(R.string.service_running_normally),
 //                        "Mirai Core - $version"
@@ -858,34 +866,7 @@ class ConnService : ParaboxService() {
                     }
                 }
                 true
-            } catch (e: PermissionDeniedException) {
-                e.printStackTrace()
-                false
-            } catch (e: SecurityException) {
-                e.printStackTrace()
-                false
-            } catch (e: NoSuchElementException) {
-                e.printStackTrace()
-                false
-            } catch (e: EventCancelledException) {
-                e.printStackTrace()
-                false
-            } catch (e: BotIsBeingMutedException) {
-                e.printStackTrace()
-                false
-            } catch (e: MessageTooLargeException) {
-                e.printStackTrace()
-                false
-            } catch (e: IllegalArgumentException) {
-                e.printStackTrace()
-                false
-            } catch (e: FileNotFoundException) {
-                e.printStackTrace()
-                false
-            } catch (e: ServiceConfigurationError) {
-                e.printStackTrace()
-                false
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 e.printStackTrace()
                 false
             }
@@ -904,18 +885,14 @@ class ConnService : ParaboxService() {
                     }
                 }
                 true
-            } catch (e: TimeoutCancellationException) {
-                false
-            } catch (e: java.util.NoSuchElementException) {
-                false
-            } catch (e: IllegalStateException) {
+            } catch (e: Exception) {
                 false
             }
         }
     }
 
     override fun onRefreshMessage() {
-        getRoamingMessages()
+//        getRoamingMessages()
     }
 
     override fun onMainAppLaunch() {
