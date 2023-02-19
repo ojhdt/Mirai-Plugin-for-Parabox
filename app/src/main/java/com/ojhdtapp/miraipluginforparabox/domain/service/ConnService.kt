@@ -338,7 +338,7 @@ class ConnService : ParaboxService() {
                         }
                     }
                 }
-            } catch(e: Exception){
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
@@ -401,19 +401,27 @@ class ConnService : ParaboxService() {
                     val currentTime = System.currentTimeMillis()
                     val lastSuccessfulHandleTimestamp =
                         dataStore.data.first()[DataStoreKeys.LAST_SUCCESSFUL_HANDLE_TIMESTAMP] ?: 0
+                    Log.d(
+                        "RoamingMessage",
+                        "lastSuccessfulHandleTimestamp: ${lastSuccessfulHandleTimestamp.getTimestampInSecond()}"
+                    )
 //                    val jobMap = mutableMapOf<String, Job>()
                     val jobMap = ConcurrentHashMap<String, Job>()
 //                    val timestampMap = mutableMapOf<String, Long>()
                     val timestampMap = ConcurrentHashMap<String, Long>()
                     bot!!.groups.forEach { group ->
                         launch {
-                            group.roamingMessages.getMessagesIn(
-                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
-                                timeEnd = currentTime.getTimestampInSecond(),
-                                filter = RoamingMessageFilter.RECEIVED
-                            ).collect {
-                                timestampMap["${group.id}gr"] = System.currentTimeMillis()
-                                handleGroupRoamingReceiveMessage(it, group)
+                            try {
+                                group.roamingMessages.getMessagesIn(
+                                    timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                    timeEnd = currentTime.getTimestampInSecond(),
+                                    filter = RoamingMessageFilter.RECEIVED
+                                ).collect {
+                                    timestampMap["${group.id}gr"] = System.currentTimeMillis()
+                                    handleGroupRoamingReceiveMessage(it, group)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         }.also { jobMap["${group.id}gr"] = it }
                         launch {
@@ -450,7 +458,7 @@ class ConnService : ParaboxService() {
                         }.also { jobMap["${friend.id}fs"] = it }
                     }
                     launch {
-                        while (jobMap.values.any { it.isActive } && System.currentTimeMillis() - currentTime < 16000){
+                        while (jobMap.values.any { it.isActive } && System.currentTimeMillis() - currentTime < 16000) {
                             delay(1000)
                             timestampMap.forEach { id, timestamp ->
                                 if (System.currentTimeMillis() - timestamp > 2000) {
@@ -460,7 +468,10 @@ class ConnService : ParaboxService() {
                                 }
                             }
                         }
-                        Log.d("Roaming", "Roaming message collection finished:${System.currentTimeMillis()}")
+                        Log.d(
+                            "Roaming",
+                            "Roaming message collection finished:${System.currentTimeMillis()}"
+                        )
                         gettingRoamingMessage = false
                         jobMap.values.forEach { it.cancel() }
                         jobMap.clear()
@@ -478,11 +489,9 @@ class ConnService : ParaboxService() {
     }
 
     private suspend fun handleGroupRoamingReceiveMessage(message: MessageChain, group: Group) {
-//        val sender = try{
-//            message.sourceOrNull?.fromId?.let { group.getOrFail(it) }
-//        } catch (e: NoSuchElementException){
-//            null
-//        }
+        val sender = group.get(message.source.fromId)
+            ?: bot!!.getStranger(message.source.fromId)
+
         val messageContents =
             message.toMessageContentList(
                 context = this@ConnService,
@@ -494,19 +503,24 @@ class ConnService : ParaboxService() {
         val messageId = getMessageId(message.ids)
         messageId?.let {
             lifecycleScope.launch(Dispatchers.IO) {
-                repository.insertMiraiMessage(
-                    MiraiMessageEntity(
-                        it,
-                        message.serializeToMiraiCode(),
-                        message.serializeToJsonString()
+                try {
+                    repository.insertMiraiMessage(
+                        MiraiMessageEntity(
+                            it,
+                            message.serializeToMiraiCode(),
+                            message.serializeToJsonString()
+                        )
                     )
-                )
 
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
+
         val profile = Profile(
-            name = group.getOrFail(message.source.fromId).remarkOrNameCardOrNick ?: "Unknown",
-            avatar = group.getOrFail(message.source.fromId).avatarUrl,
+            name = sender?.remarkOrNick ?: "Unknown",
+            avatar = sender?.avatarUrl,
             id = message.source.fromId,
             avatarUri = null,
         )
@@ -546,16 +560,21 @@ class ConnService : ParaboxService() {
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
+
         messageId?.let {
             lifecycleScope.launch(Dispatchers.IO) {
-                repository.insertMiraiMessage(
-                    MiraiMessageEntity(
-                        it,
-                        message.serializeToMiraiCode(),
-                        message.serializeToJsonString()
+                try {
+                    repository.insertMiraiMessage(
+                        MiraiMessageEntity(
+                            it,
+                            message.serializeToMiraiCode(),
+                            message.serializeToJsonString()
+                        )
                     )
-                )
 
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
         val pluginConnection = PluginConnection(
@@ -588,14 +607,18 @@ class ConnService : ParaboxService() {
         val messageId = getMessageId(message.ids)
         messageId?.let {
             lifecycleScope.launch(Dispatchers.IO) {
-                repository.insertMiraiMessage(
-                    MiraiMessageEntity(
-                        it,
-                        message.serializeToMiraiCode(),
-                        message.serializeToJsonString()
+                try {
+                    repository.insertMiraiMessage(
+                        MiraiMessageEntity(
+                            it,
+                            message.serializeToMiraiCode(),
+                            message.serializeToJsonString()
+                        )
                     )
-                )
 
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
         val profile = Profile(
@@ -636,14 +659,18 @@ class ConnService : ParaboxService() {
         val messageId = getMessageId(message.ids)
         messageId?.let {
             lifecycleScope.launch(Dispatchers.IO) {
-                repository.insertMiraiMessage(
-                    MiraiMessageEntity(
-                        it,
-                        message.serializeToMiraiCode(),
-                        message.serializeToJsonString()
+                try {
+                    repository.insertMiraiMessage(
+                        MiraiMessageEntity(
+                            it,
+                            message.serializeToMiraiCode(),
+                            message.serializeToJsonString()
+                        )
                     )
-                )
 
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
         val pluginConnection = PluginConnection(
@@ -753,8 +780,8 @@ class ConnService : ParaboxService() {
             try {
                 val targetId = dto.pluginConnection.id
                 val targetContact = when (dto.pluginConnection.sendTargetType) {
-                    SendTargetType.USER -> bot?.getFriendOrFail(targetId)
-                    SendTargetType.GROUP -> bot?.getGroupOrFail(targetId)
+                    SendTargetType.USER -> bot?.getFriend(targetId)
+                    SendTargetType.GROUP -> bot?.getGroup(targetId)
                     else -> {
                         throw java.util.NoSuchElementException("wrong id")
                     }
