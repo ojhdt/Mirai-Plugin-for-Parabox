@@ -68,4 +68,5 @@
     <string name="service_status_running">服务正常运行</string>
     <string name="service_status_stop">服务已停止</string>
     <string name="service_status_pause">等待事务处理</string>
+    <string name="mirai_running">Mirai 服务正在运行</string>
 </resources>

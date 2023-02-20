@@ -353,11 +353,17 @@ class ConnService : ParaboxService() {
                         ParaboxKey.STATE_STOP,
                         getString(R.string.account_offline_initiative)
                     )
+                    notificationUtil.updateForegroundServiceNotification(
+                        getString(R.string.account_offline_initiative)
+                    )
                 }
 
                 is BotOfflineEvent.Force -> {
                     updateServiceState(
                         ParaboxKey.STATE_ERROR,
+                        getString(R.string.account_offline_signin_else_where)
+                    )
+                    notificationUtil.updateForegroundServiceNotification(
                         getString(R.string.account_offline_signin_else_where)
                     )
                 }
@@ -367,11 +373,17 @@ class ConnService : ParaboxService() {
                         ParaboxKey.STATE_LOADING,
                         getString(R.string.account_offline_poor_network)
                     )
+                    notificationUtil.updateForegroundServiceNotification(
+                        getString(R.string.account_offline_poor_network)
+                    )
                 }
 
                 is BotOfflineEvent.RequireReconnect -> {
                     updateServiceState(
                         ParaboxKey.STATE_LOADING,
+                        getString(R.string.account_offline_server_changed)
+                    )
+                    notificationUtil.updateForegroundServiceNotification(
                         getString(R.string.account_offline_server_changed)
                     )
                 }
@@ -381,15 +393,15 @@ class ConnService : ParaboxService() {
                         ParaboxKey.STATE_ERROR,
                         getString(R.string.account_offline_unknown)
                     )
+                    notificationUtil.updateForegroundServiceNotification(
+                        getString(R.string.account_offline_unknown)
+                    )
                 }
             }
         }
         GlobalEventChannel.parentScope(lifecycleScope).subscribeAlways<BotReloginEvent> {
             updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
-//            notificationUtil.updateForegroundServiceNotification(
-//                getString(R.string.service_running_normally),
-//                "Mirai Core - $MIRAI_CORE_VERSION"
-//            )
+            notificationUtil.updateForegroundServiceNotification(getString(R.string.mirai_running))
         }
     }
 
@@ -497,7 +509,7 @@ class ConnService : ParaboxService() {
                 context = this@ConnService,
                 downloadService = downloadService,
                 bot = message.bot,
-                fromRoaming = true,
+                fromRoaming = false,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -556,7 +568,7 @@ class ConnService : ParaboxService() {
                 context = this@ConnService,
                 downloadService = downloadService,
                 bot = message.bot,
-                fromRoaming = true,
+                fromRoaming = false,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -601,7 +613,7 @@ class ConnService : ParaboxService() {
                 context = this@ConnService,
                 downloadService = downloadService,
                 bot = message.bot,
-                fromRoaming = true,
+                fromRoaming = false,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -653,7 +665,7 @@ class ConnService : ParaboxService() {
                 context = this@ConnService,
                 downloadService = downloadService,
                 bot = message.bot,
-                fromRoaming = true,
+                fromRoaming = false,
                 repository = repository
             )
         val messageId = getMessageId(message.ids)
@@ -938,6 +950,7 @@ class ConnService : ParaboxService() {
 
     inner class AndroidLoginSolver() : LoginSolver() {
         override suspend fun onSolvePicCaptcha(bot: Bot, data: ByteArray): String? {
+            Log.d("parabox", "onSolvePicCaptcha")
             return suspendCoroutine<String?> { cot ->
                 updateServiceState(
                     ParaboxKey.STATE_PAUSE,
@@ -977,6 +990,7 @@ class ConnService : ParaboxService() {
         }
 
         override suspend fun onSolveSliderCaptcha(bot: Bot, url: String): String? {
+            Log.d("parabox", "onSolveSliderCaptcha")
             return suspendCoroutine<String?> { cot ->
                 updateServiceState(
                     ParaboxKey.STATE_PAUSE,
@@ -1071,7 +1085,7 @@ class ConnService : ParaboxService() {
                     )
                     val res = suspendCoroutine<Boolean> { cot ->
                         sendRequest(
-                            request = ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_SMS,
+                            request = ConnService.REQUEST_SOLVE_DEVICE_VERIFICATION_FALLBACK,
                             client = ParaboxKey.CLIENT_CONTROLLER,
                             extra = Bundle().apply {
                                 putString("url", it.url)

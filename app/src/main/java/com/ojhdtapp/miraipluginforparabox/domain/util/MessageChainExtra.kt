@@ -103,11 +103,11 @@ suspend fun MessageChain.toMessageContentList(
                         FaceMap.query(it.id) ?: it.content
                     )
                     is Audio -> {
-                        if(fromRoaming){
+                        if (fromRoaming) {
                             com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
                                 it.content
                             )
-                        }else{
+                        } else {
                             val url = (it as OnlineAudio).urlForDownload
                             Log.d("parabox", url)
                             val tempPath =
@@ -158,11 +158,11 @@ suspend fun MessageChain.toMessageContentList(
 
                     }
                     is FileMessage -> {
-                        if(fromRoaming){
+                        if (fromRoaming) {
                             com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.PlainText(
                                 it.content
                             )
-                        }else{
+                        } else {
                             group?.let { group ->
                                 it.toAbsoluteFile(group)?.let { file ->
                                     com.ojhdtapp.paraboxdevelopmentkit.messagedto.message_content.File(

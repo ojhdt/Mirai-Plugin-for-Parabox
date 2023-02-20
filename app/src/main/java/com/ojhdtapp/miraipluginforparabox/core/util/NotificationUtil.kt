@@ -1,9 +1,12 @@
 package com.ojhdtapp.miraipluginforparabox.core.util
 
+import android.Manifest
 import android.util.Log
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import com.ojhdtapp.miraipluginforparabox.MainActivity
 import com.ojhdtapp.miraipluginforparabox.R
@@ -47,36 +50,34 @@ class NotificationUtilForService(val service: Service) {
         val notification: Notification =
             Notification.Builder(service, SERVICE_STATE_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_outline_extension_24)
-                .setContentTitle("Mirai 服务正在运行")
+                .setContentTitle(service.getString(R.string.mirai_running))
                 .setContentIntent(pendingIntent)
                 .build()
         service.startForeground(FOREGROUND_SERVICE_NOTIFICATION_ID, notification)
     }
 
-//    fun updateForegroundServiceNotification(title: String, text: String) {
-//        val pendingIntent: PendingIntent = Intent(service, MainActivity::class.java).apply {
-//            action = Intent.ACTION_MAIN
-//            addCategory(Intent.CATEGORY_LAUNCHER)
-//        }.let {
-//            PendingIntent.getActivity(
-//                service, 0, it,
-//                PendingIntent.FLAG_IMMUTABLE
-//            )
-//        }
-//        val notification: Notification =
-//            Notification.Builder(service, SERVICE_STATE_CHANNEL_ID)
-//                .setSmallIcon(R.drawable.ic_outline_extension_24)
-//                .setContentTitle(text)
-////                .setContentText(text)
-//                .setContentIntent(pendingIntent)
-//                .setCategory(Notification.CATEGORY_SERVICE)
-//                .setOnlyAlertOnce(true)
-//                .build()
-//        notificationManager.notify(
-//            FOREGROUND_SERVICE_NOTIFICATION_ID,
-//            notification
-//        )
-//    }
+    fun updateForegroundServiceNotification(title: String) {
+        val pendingIntent: PendingIntent = Intent(service, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }.let {
+            PendingIntent.getActivity(
+                service, 0, it,
+                PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+        val notification: Notification =
+            Notification.Builder(service, SERVICE_STATE_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_outline_extension_24)
+                .setContentTitle(title)
+                .setContentIntent(pendingIntent)
+                .setOnlyAlertOnce(true)
+                .build()
+        notificationManager.notify(
+            FOREGROUND_SERVICE_NOTIFICATION_ID,
+            notification
+        )
+    }
 
     fun stopForegroundService() {
         notificationManager.cancel(FOREGROUND_SERVICE_NOTIFICATION_ID)
@@ -123,6 +124,13 @@ class NotificationUtilForActivity(val context: Context) {
                 .setAutoCancel(true)
                 .build()
         NotificationManagerCompat.from(context).run {
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return
+            }
             notify(NORMAL_NOTIFICATION_ID, notification)
         }
     }
