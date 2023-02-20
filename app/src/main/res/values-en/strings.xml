@@ -69,4 +69,5 @@
     <string name="service_status_running">Service is running normally</string>
     <string name="service_status_stop">Service has stopped</string>
     <string name="service_status_pause">Waiting for transaction</string>
+    <string name="mirai_running">Mirai service is running</string>
 </resources>
