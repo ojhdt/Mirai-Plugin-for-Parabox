@@ -11,10 +11,7 @@ import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.PauseCircleOutline
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -22,12 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ojhdtapp.miraipluginforparabox.R
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 
 @Composable
-fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
+fun StatusIndicator(
+    modifier: Modifier = Modifier, status: ServiceStatus,
+    shouldShowRetryButton: Boolean = false,
+    onRetryButtonClick: () -> Unit = {}
+) {
     AnimatedVisibility(
         visible = status !is ServiceStatus.Stop,
         enter = expandVertically(),
@@ -66,7 +68,9 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                     tint = textColor
                 )
                 is ServiceStatus.Loading -> CircularProgressIndicator(
-                    modifier = Modifier.padding(PaddingValues(end = 24.dp)).size(24.dp),
+                    modifier = Modifier
+                        .padding(PaddingValues(end = 24.dp))
+                        .size(24.dp),
                     color = textColor,
                     strokeWidth = 3.dp
                 )
@@ -89,7 +93,9 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                     tint = textColor
                 )
             }
-            Column() {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = when (status) {
                         is ServiceStatus.Error -> stringResource(R.string.service_status_error)
@@ -99,14 +105,24 @@ fun StatusIndicator(modifier: Modifier = Modifier, status: ServiceStatus) {
                         is ServiceStatus.Pause -> stringResource(R.string.service_status_pause)
                     },
                     style = MaterialTheme.typography.titleMedium,
-                    color = textColor
+                    color = textColor,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = status.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = textColor
-                )
+                if (!status.message.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = status.message!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = textColor,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1
+                    )
+                }
+            }
+            AnimatedVisibility(visible = shouldShowRetryButton) {
+                FilledTonalButton(
+                    onClick = onRetryButtonClick) {
+                    Text(text = "重试")
+                }
             }
         }
     }

@@ -66,15 +66,13 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
     }
 
     override fun onParaboxServiceStateChanged(state: Int, message: String?) {
-        Log.d("parabox", "received update state: ${state}")
+        Log.d("parabox", "received update state: $state")
         val serviceState = when (state) {
-            ParaboxKey.STATE_ERROR -> ServiceStatus.Error(message ?: "发生错误")
-            ParaboxKey.STATE_LOADING -> ServiceStatus.Loading(message ?: "服务加载中")
-            ParaboxKey.STATE_PAUSE -> ServiceStatus.Pause(message ?: "服务已暂停")
+            ParaboxKey.STATE_ERROR -> ServiceStatus.Error(message)
+            ParaboxKey.STATE_LOADING -> ServiceStatus.Loading(message)
+            ParaboxKey.STATE_PAUSE -> ServiceStatus.Pause(message)
             ParaboxKey.STATE_STOP -> ServiceStatus.Stop
-            ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(
-                message ?: "Mirai Core - $MIRAI_CORE_VERSION"
-            )
+            ParaboxKey.STATE_RUNNING -> ServiceStatus.Running(message)
 
             else -> ServiceStatus.Stop
         }
@@ -275,6 +273,10 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
                 serviceForceStop()
             }
 
+            is StatusPageEvent.OnServiceLogin -> {
+                serviceLogin()
+            }
+
             is StatusPageEvent.OnRequestIgnoreBatteryOptimizations -> {
                 batteryUtil.ignoreBatteryOptimization()
             }
@@ -383,6 +385,24 @@ class MainActivity : ParaboxActivity<ConnService>(ConnService::class.java) {
 //        viewModel.updateServiceStatusStateFlow(ServiceStatus.Stop)
 //        viewModel.setMainSwitchEnabledState(true)
 //        viewModel.setMainSwitchState(false)
+    }
+
+    private fun serviceLogin(){
+        sendCommand(
+            command = ConnService.COMMAND_SERVICE_LOGIN,
+            onResult = {
+                if (it is ParaboxResult.Fail) {
+                    val errorMessage = when (it.errorCode) {
+                        ParaboxKey.ERROR_DISCONNECTED -> "与服务的连接断开"
+                        ParaboxKey.ERROR_REPEATED_CALL -> "重复正在执行的操作"
+                        ParaboxKey.ERROR_TIMEOUT -> "操作超时"
+                        else -> "未知错误"
+                    }
+                    viewModel.updateServiceStatusStateFlow(ServiceStatus.Error(errorMessage))
+                    notificationUtil.sendNotification("执行指令时发生错误", errorMessage)
+                }
+            }
+        )
     }
 
     private fun requestNotificationPermission(){
