@@ -252,7 +252,9 @@ class StatusPageViewModel @Inject constructor(
     val protocolOptionsMap = mapOf<Int, String>(
         MiraiProtocol.Phone to context.getString(R.string.protocol_phone),
         MiraiProtocol.Pad to context.getString(R.string.protocol_tablet),
-        MiraiProtocol.Watch to context.getString(R.string.protocol_watch)
+        MiraiProtocol.Watch to context.getString(R.string.protocol_watch),
+        MiraiProtocol.IPad to context.getString(R.string.protocol_ipad),
+        MiraiProtocol.MacOS to context.getString(R.string.protocol_macos),
     )
     val protocolSimpleMenuFLow: Flow<Int> = context.dataStore.data
         .catch { exception ->

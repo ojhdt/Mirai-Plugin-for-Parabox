@@ -47,6 +47,7 @@ import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.MiraiInternalApi
 import net.mamoe.mirai.utils.ProgressionCallback.Companion.asProgressionCallback
 import xyz.cssxsh.mirai.device.MiraiDeviceGenerator
+import xyz.cssxsh.mirai.tool.FixProtocolVersion
 import java.io.*
 import java.util.*
 import javax.inject.Inject
@@ -83,6 +84,7 @@ class ConnService : ParaboxService() {
 
         init {
             System.loadLibrary("silkcodec")
+            FixProtocolVersion.update()
         }
     }
 
@@ -485,7 +487,7 @@ class ConnService : ParaboxService() {
                         }.also { jobMap["${friend.id}fs"] = it }
                     }
                     launch {
-                        while (jobMap.values.any { it.isActive } && System.currentTimeMillis() - currentTime < 30000) {
+                        while (jobMap.values.any { it.isActive } && System.currentTimeMillis() - currentTime < 60000) {
                             delay(500)
                             timestampMap.forEach { id, timestamp ->
                                 if (System.currentTimeMillis() - timestamp > 1000) {

@@ -54,6 +54,8 @@
     <string name="protocol_phone">Android 手机（默认）</string>
     <string name="protocol_tablet">Android 平板</string>
     <string name="protocol_watch">Android 手表</string>
+    <string name="protocol_ipad">iPad</string>
+    <string name="protocol_macos">MacOS</string>
     <string name="confirm_not_options_selected_notice">未选择任何选项</string>
     <string name="add_account">添加账户</string>
     <string name="select_account">选择账户</string>
