@@ -18,11 +18,8 @@ import com.ojhdtapp.miraipluginforparabox.domain.util.MiraiProtocol
 import com.ojhdtapp.miraipluginforparabox.domain.util.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.mamoe.mirai.utils.BotConfiguration
 import java.io.IOException
 import javax.inject.Inject
@@ -73,7 +70,9 @@ class StatusPageViewModel @Inject constructor(
     private val _serviceStatusStateFlow = MutableStateFlow<ServiceStatus>(ServiceStatus.Stop)
     val serviceStatusStateFlow = _serviceStatusStateFlow.asStateFlow()
     fun updateServiceStatusStateFlow(value: ServiceStatus) {
-        when(value){
+        countLoading(value)
+        val originalValue = _serviceStatusStateFlow.value
+        when (value) {
             is ServiceStatus.Error, ServiceStatus.Stop -> {
                 setMainSwitchState(false)
                 setMainSwitchEnabledState(true)
@@ -91,7 +90,42 @@ class StatusPageViewModel @Inject constructor(
                 setMainSwitchEnabledState(false)
             }
         }
-        _serviceStatusStateFlow.tryEmit(value)
+        if (!value.message.isNullOrBlank()) {
+            _serviceStatusStateFlow.tryEmit(value)
+        } else {
+            if (value::class.java != originalValue::class.java) {
+                _serviceStatusStateFlow.tryEmit(value)
+            }
+        }
+    }
+
+    private val _shouldShowRetryButtonStateFlow = MutableStateFlow<Boolean>(false)
+    val shouldShowRetryButtonStateFlow = _shouldShowRetryButtonStateFlow.asStateFlow()
+
+    private var loadingTimeCountingJob: Job? = null
+
+    fun countLoading(status: ServiceStatus) {
+        if (status is ServiceStatus.Loading) {
+            if(loadingTimeCountingJob == null){
+                loadingTimeCountingJob = viewModelScope.launch {
+                    delay(20000)
+                    _shouldShowRetryButtonStateFlow.emit(true)
+                }
+            }
+
+        } else {
+            viewModelScope.launch {
+                _shouldShowRetryButtonStateFlow.emit(false)
+            }
+            loadingTimeCountingJob?.cancel()
+            loadingTimeCountingJob = null
+        }
+    }
+
+    fun onRetryButtonClicked() {
+        viewModelScope.launch {
+            _shouldShowRetryButtonStateFlow.emit(false)
+        }
     }
 
     // Account Dialog
@@ -102,7 +136,7 @@ class StatusPageViewModel @Inject constructor(
         it.indexOfFirst { secret -> secret.selected }
     }.onEach {
         // Update AutoLogin Switch
-        if(it == -1){
+        if (it == -1) {
             setAutoLoginSwitch(false)
         }
     }
@@ -218,7 +252,9 @@ class StatusPageViewModel @Inject constructor(
     val protocolOptionsMap = mapOf<Int, String>(
         MiraiProtocol.Phone to context.getString(R.string.protocol_phone),
         MiraiProtocol.Pad to context.getString(R.string.protocol_tablet),
-        MiraiProtocol.Watch to context.getString(R.string.protocol_watch)
+        MiraiProtocol.Watch to context.getString(R.string.protocol_watch),
+        MiraiProtocol.IPad to context.getString(R.string.protocol_ipad),
+        MiraiProtocol.MacOS to context.getString(R.string.protocol_macos),
     )
     val protocolSimpleMenuFLow: Flow<Int> = context.dataStore.data
         .catch { exception ->

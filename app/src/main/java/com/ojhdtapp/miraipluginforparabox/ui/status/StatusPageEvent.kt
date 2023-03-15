@@ -7,6 +7,7 @@ sealed class StatusPageEvent {
     object OnServiceStart : StatusPageEvent()
     object OnServiceStop : StatusPageEvent()
     object OnServiceForceStop : StatusPageEvent()
+    object OnServiceLogin : StatusPageEvent()
     data class OnLoginResourceConfirm(val res: String, val metadata: ParaboxMetadata) : StatusPageEvent()
     data class OnDeviceVerificationSmsConfirm(val res: String, val metadata: ParaboxMetadata): StatusPageEvent()
     data class OnDeviceVerificationFallbackConfirm(val metadata: ParaboxMetadata): StatusPageEvent()

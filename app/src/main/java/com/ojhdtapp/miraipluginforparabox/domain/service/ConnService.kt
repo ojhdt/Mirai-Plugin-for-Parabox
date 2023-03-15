@@ -47,6 +47,7 @@ import net.mamoe.mirai.utils.LoginSolver
 import net.mamoe.mirai.utils.MiraiInternalApi
 import net.mamoe.mirai.utils.ProgressionCallback.Companion.asProgressionCallback
 import xyz.cssxsh.mirai.device.MiraiDeviceGenerator
+import xyz.cssxsh.mirai.tool.FixProtocolVersion
 import java.io.*
 import java.util.*
 import javax.inject.Inject
@@ -79,8 +80,11 @@ class ConnService : ParaboxService() {
         const val REQUEST_SOLVE_DEVICE_VERIFICATION_SMS = 33
         const val REQUEST_SOLVE_DEVICE_VERIFICATION_FALLBACK = 34
 
+        const val COMMAND_SERVICE_LOGIN = 99
+
         init {
             System.loadLibrary("silkcodec")
+            FixProtocolVersion.update()
         }
     }
 
@@ -150,6 +154,7 @@ class ConnService : ParaboxService() {
                         )
                         receiveMessage(dto) {
                             if (it is ParaboxResult.Success) {
+                                Log.d("Parabox", "Successfully handle message: ${messageId}")
                                 lifecycleScope.launch {
                                     updateLastSuccessfulHandleTimestamp()
                                 }
@@ -437,43 +442,55 @@ class ConnService : ParaboxService() {
                             }
                         }.also { jobMap["${group.id}gr"] = it }
                         launch {
-                            group.roamingMessages.getMessagesIn(
-                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
-                                timeEnd = currentTime.getTimestampInSecond(),
-                                filter = RoamingMessageFilter.SENT
-                            ).collect {
-                                timestampMap["${group.id}gs"] = System.currentTimeMillis()
-                                handleGroupRoamingSendMessage(it, group)
+                            try {
+                                group.roamingMessages.getMessagesIn(
+                                    timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                    timeEnd = currentTime.getTimestampInSecond(),
+                                    filter = RoamingMessageFilter.SENT
+                                ).collect {
+                                    timestampMap["${group.id}gs"] = System.currentTimeMillis()
+                                    handleGroupRoamingSendMessage(it, group)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         }.also { jobMap["${group.id}gs"] = it }
                     }
                     bot!!.friends.forEach { friend ->
                         launch {
-                            friend.roamingMessages.getMessagesIn(
-                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
-                                timeEnd = currentTime.getTimestampInSecond(),
-                                filter = RoamingMessageFilter.RECEIVED
-                            ).collect {
-                                timestampMap["${friend.id}fr"] = System.currentTimeMillis()
-                                handleFriendRoamingReceiveMessage(it, friend)
+                            try {
+                                friend.roamingMessages.getMessagesIn(
+                                    timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                    timeEnd = currentTime.getTimestampInSecond(),
+                                    filter = RoamingMessageFilter.RECEIVED
+                                ).collect {
+                                    timestampMap["${friend.id}fr"] = System.currentTimeMillis()
+                                    handleFriendRoamingReceiveMessage(it, friend)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         }.also { jobMap["${friend.id}fr"] = it }
                         launch {
-                            friend.roamingMessages.getMessagesIn(
-                                timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
-                                timeEnd = currentTime.getTimestampInSecond(),
-                                filter = RoamingMessageFilter.SENT
-                            ).collect {
-                                timestampMap["${friend.id}fs"] = System.currentTimeMillis()
-                                handleFriendRoamingSendMessage(it, friend)
+                            try {
+                                friend.roamingMessages.getMessagesIn(
+                                    timeStart = lastSuccessfulHandleTimestamp.getTimestampInSecond(),
+                                    timeEnd = currentTime.getTimestampInSecond(),
+                                    filter = RoamingMessageFilter.SENT
+                                ).collect {
+                                    timestampMap["${friend.id}fs"] = System.currentTimeMillis()
+                                    handleFriendRoamingSendMessage(it, friend)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
                         }.also { jobMap["${friend.id}fs"] = it }
                     }
                     launch {
-                        while (jobMap.values.any { it.isActive } && System.currentTimeMillis() - currentTime < 16000) {
-                            delay(1000)
+                        while (jobMap.values.any { it.isActive } && System.currentTimeMillis() - currentTime < 60000) {
+                            delay(500)
                             timestampMap.forEach { id, timestamp ->
-                                if (System.currentTimeMillis() - timestamp > 2000) {
+                                if (System.currentTimeMillis() - timestamp > 1000) {
                                     jobMap[id]?.cancel()
                                     jobMap.remove(id)
                                     timestampMap.remove(id)
@@ -703,6 +720,28 @@ class ConnService : ParaboxService() {
         }
     }
 
+    fun retryLogin(){
+        updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.try_to_login))
+        lifecycleScope.launch {
+            try {
+                bot?.login()
+                updateServiceState(ParaboxKey.STATE_RUNNING, "Mirai Core - $MIRAI_CORE_VERSION")
+            } catch (e: IOException) {
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_io))
+                e.printStackTrace()
+            } catch (e: NoSuchElementException) {
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_data_lost))
+                e.printStackTrace()
+            } catch (e: LoginFailedException) {
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_login_failed))
+                e.printStackTrace()
+            } catch (e: Exception) {
+                updateServiceState(ParaboxKey.STATE_ERROR, getString(R.string.error_unknown))
+                e.printStackTrace()
+            }
+        }
+    }
+
     override fun onStartParabox() {
         updateServiceState(ParaboxKey.STATE_LOADING, getString(R.string.authentication_running))
         lifecycleScope.launch {
@@ -781,7 +820,15 @@ class ConnService : ParaboxService() {
     }
 
     override fun customHandleMessage(msg: Message, metadata: ParaboxMetadata) {
-
+        when (msg.what) {
+            ConnService.COMMAND_SERVICE_LOGIN -> {
+                retryLogin()
+                sendCommandResponse(
+                    isSuccess = true,
+                    metadata = metadata
+                )
+            }
+        }
     }
 
     @OptIn(FlowPreview::class)

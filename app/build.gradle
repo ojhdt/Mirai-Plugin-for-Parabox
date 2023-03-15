@@ -14,8 +14,8 @@ android {
         applicationId "com.ojhdtapp.miraipluginforparabox"
         minSdk 26
         targetSdk 33
-        versionCode 13
-        versionName "0.2.13"
+        versionCode 14
+        versionName "0.2.14"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -153,8 +153,9 @@ dependencies {
 
     // Mirai
 //    implementation('net.mamoe:mirai-core:2.14.0')
-    implementation('net.mamoe:mirai-core:2.15.0-dev-96472d9e')
+    implementation('net.mamoe:mirai-core:2.15.0-dev-24')
     implementation 'xyz.cssxsh.mirai:mirai-device-generator:1.1.3'
+    implementation files('libs/fix-protocol-version-1.3.0.mirai2.jar')
 
     // Silk
 //    implementation 'io.github.kasukusakura:silk-codec:0.0.5'

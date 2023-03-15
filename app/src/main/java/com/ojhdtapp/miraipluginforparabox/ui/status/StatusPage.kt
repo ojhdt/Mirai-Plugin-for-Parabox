@@ -185,7 +185,12 @@ fun AnimatedVisibilityScope.StatusPage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    status = viewModel.serviceStatusStateFlow.collectAsState().value
+                    status = viewModel.serviceStatusStateFlow.collectAsState().value,
+                    shouldShowRetryButton = viewModel.shouldShowRetryButtonStateFlow.collectAsState().value,
+                    onRetryButtonClick = {
+                        viewModel.onRetryButtonClicked()
+                        onEvent(StatusPageEvent.OnServiceLogin)
+                    }
                 )
             }
 

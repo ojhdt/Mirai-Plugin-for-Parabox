@@ -70,4 +70,6 @@
     <string name="service_status_stop">Service has stopped</string>
     <string name="service_status_pause">Waiting for transaction</string>
     <string name="mirai_running">Mirai service is running</string>
+    <string name="protocol_ipad">iPad</string>
+    <string name="protocol_macos">MacOS</string>
 </resources>
