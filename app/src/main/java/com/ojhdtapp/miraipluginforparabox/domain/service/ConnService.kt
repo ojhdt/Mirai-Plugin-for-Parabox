@@ -84,7 +84,7 @@ class ConnService : ParaboxService() {
 
         init {
             System.loadLibrary("silkcodec")
-            FixProtocolVersion.update()
+//            FixProtocolVersion.update()
         }
     }
 
